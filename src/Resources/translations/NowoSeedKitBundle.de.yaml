@@ -1,0 +1,65 @@
+# NowoSeedKitBundle translations (de): error codes, reader reasons and row rules (keys are flat dot paths).
+seed_kit:
+  error:
+    SEED_001: Der Seed-Provider ist nicht registriert oder für diese Bereichsart nicht verfügbar.
+    SEED_002: Das Seed-Dokument kann nicht gelesen werden.
+    SEED_003: Das Seed-Dokument ist ungültig; es wurde nichts geschrieben.
+    SEED_004: Ein geheimes Feld enthält einen Klartextwert oder eine hier nicht nutzbare Referenz; nur Vault-Referenzen sind erlaubt.
+    SEED_005: Die Daten haben sich seit dem geprüften Plan geändert; prüfen Sie den neuen Diff und wenden Sie erneut an.
+    SEED_006: Eine Zeile hat sich während der Anwendung geändert; bereits angewendete Batches bleiben. Wenden Sie das Dokument erneut an.
+    SEED_007: Die Bereichsart des Dokuments passt nicht zum Zielbereich.
+    SEED_010: Der Provider konnte einen Batch nicht anwenden; bereits angewendete Batches bleiben.
+    SEED_011: Ein Seed-Provider hat seinen Vertrag verletzt; das Bundle hat nichts geschrieben.
+    SEED_012: Ein Löschschutz hat den Plan abgelehnt; bestätigen Sie ihn ausdrücklich.
+    ACCESS_001: Der Bereich existiert nicht oder ist nicht sichtbar.
+    ACCESS_002: Zugriff verweigert.
+    CONFLICT_001: Die Datenbank lehnte das Schreiben wegen eines Sperrkonflikts weiter ab; es wurde nichts geschrieben. Später erneut versuchen.
+    CONFLICT_002: Die Datenbank lehnte das Schreiben wegen eines Sperrkonflikts weiter ab; ein Teil des Laufs wurde angewendet. Wenden Sie das Dokument erneut an.
+  read:
+    too_large: Die Datei ist größer als erlaubt.
+    too_large_for_tree: Die Datei ist für YAML oder JSON zu groß; verwenden Sie JSON Lines.
+    encoding: Die Datei muss UTF-8-Text ohne NUL-Bytes sein.
+    yaml_tag: YAML-Tags sind nicht erlaubt.
+    yaml_anchor: YAML-Anker sind nicht erlaubt.
+    yaml_alias: YAML-Aliasse sind nicht erlaubt.
+    yaml_merge_key: YAML-Merge-Schlüssel sind nicht erlaubt.
+    yaml_directive: YAML-Direktiven sind nicht erlaubt.
+    yaml_parse: Der YAML-Text kann nicht geparst werden.
+    json_parse: Der JSON-Text kann nicht geparst werden.
+    duplicate_key: Ein Schlüssel kommt im selben Objekt zweimal vor.
+    unknown_key: Unbekannter Schlüssel auf oberster Ebene.
+    header_invalid: Der Dokumentkopf ist ungültig.
+    items_not_a_list: items muss eine Liste sein.
+    too_many_items: Zu viele Einträge in einem Dokument.
+    too_many_documents: Zu viele Dokumente in einer Datei.
+    line_too_long: Eine JSON-Lines-Zeile ist zu lang.
+    not_a_document: Das Dokument ist kein Objekt.
+    no_document: Die Datei enthält kein Dokument.
+    duplicate_provider: Ein Provider kommt in der Datei zweimal vor.
+    too_many_nodes: Ein Eintrag ist zu groß.
+    string_too_long: Ein Text ist zu lang.
+    too_deep: Ein Eintrag ist zu tief verschachtelt.
+    too_many_properties: Ein Objekt hat zu viele Eigenschaften.
+    unsupported_value: Werttyp nicht unterstützt.
+    unreadable: Die Datei kann nicht gelesen werden.
+  row:
+    not_an_object: Der Eintrag muss ein Objekt sein.
+    float_not_allowed: Dezimalzahlen sind in diesem Feld nicht erlaubt.
+    key_invalid: Der natürliche Schlüssel fehlt oder ist ungültig.
+    duplicate_key: Der natürliche Schlüssel kommt im Dokument zweimal vor.
+    secret_plaintext: Ein geheimes Feld muss eine vault:-Referenz enthalten, nie das Geheimnis.
+    secret_refused: Die Vault-Referenz existiert nicht, gehört nicht zu diesem Bereich oder darf nicht verwendet werden.
+    schema_type: Falscher Werttyp.
+    schema_required: Ein Pflichtfeld fehlt.
+    schema_enum: Der Wert ist keiner der erlaubten Werte.
+    schema_const: Der Wert muss der feste Wert sein.
+    schema_maxLength: Der Text ist zu lang.
+    schema_minLength: Der Text ist zu kurz.
+    schema_pattern: Der Text entspricht nicht dem erwarteten Muster.
+    schema_format: Der Wert hat nicht das erwartete Format.
+    schema_additionalProperties: Unbekanntes Feld.
+    schema_minimum: Die Zahl ist zu klein.
+    schema_maximum: Die Zahl ist zu groß.
+    schema_maxItems: Die Liste hat zu viele Einträge.
+    schema_minItems: Die Liste hat zu wenige Einträge.
+    schema_uniqueItems: Die Liste hat doppelte Einträge.

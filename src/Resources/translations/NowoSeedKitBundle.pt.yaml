@@ -1,0 +1,65 @@
+# NowoSeedKitBundle translations (pt): error codes, reader reasons and row rules (keys are flat dot paths).
+seed_kit:
+  error:
+    SEED_001: O fornecedor de seeds não está registado ou não está disponível para este tipo de âmbito.
+    SEED_002: Não é possível ler o documento de seeds.
+    SEED_003: O documento de seeds é inválido; nada foi escrito.
+    SEED_004: Um campo secreto contém um valor em claro ou uma referência que não pode ser usada aqui; só são aceites referências vault.
+    SEED_005: Os dados mudaram desde o plano revisto; reveja o novo diff e aplique de novo.
+    SEED_006: Uma linha mudou enquanto o plano era aplicado; os lotes já aplicados mantêm-se. Aplique o documento de novo.
+    SEED_007: O tipo de âmbito do documento não corresponde ao âmbito de destino.
+    SEED_010: O fornecedor falhou ao aplicar um lote; os lotes já aplicados mantêm-se.
+    SEED_011: Um fornecedor de seeds violou o seu contrato; o bundle não escreveu nada.
+    SEED_012: Uma proteção de eliminação recusou o plano; confirme-o explicitamente.
+    ACCESS_001: O âmbito não existe ou não é visível.
+    ACCESS_002: Acesso negado.
+    CONFLICT_001: A base de dados continuou a recusar a escrita devido a um conflito de bloqueio; nada foi escrito. Tente mais tarde.
+    CONFLICT_002: A base de dados continuou a recusar a escrita devido a um conflito de bloqueio; parte da execução foi aplicada. Aplique o documento de novo.
+  read:
+    too_large: O ficheiro é maior do que o permitido.
+    too_large_for_tree: O ficheiro é demasiado grande para YAML ou JSON; use JSON Lines.
+    encoding: O ficheiro tem de ser texto UTF-8 sem bytes NUL.
+    yaml_tag: As etiquetas YAML não são permitidas.
+    yaml_anchor: As âncoras YAML não são permitidas.
+    yaml_alias: Os aliases YAML não são permitidos.
+    yaml_merge_key: As chaves de fusão YAML não são permitidas.
+    yaml_directive: As diretivas YAML não são permitidas.
+    yaml_parse: Não é possível analisar o texto YAML.
+    json_parse: Não é possível analisar o texto JSON.
+    duplicate_key: Uma chave aparece duas vezes no mesmo objeto.
+    unknown_key: Chave de primeiro nível desconhecida.
+    header_invalid: O cabeçalho do documento é inválido.
+    items_not_a_list: items tem de ser uma lista.
+    too_many_items: Demasiados elementos num documento.
+    too_many_documents: Demasiados documentos num ficheiro.
+    line_too_long: Uma linha JSON Lines é demasiado longa.
+    not_a_document: O documento não é um objeto.
+    no_document: O ficheiro não contém nenhum documento.
+    duplicate_provider: Um fornecedor aparece duas vezes no ficheiro.
+    too_many_nodes: Um elemento é demasiado grande.
+    string_too_long: Um texto é demasiado longo.
+    too_deep: Um elemento está demasiado aninhado.
+    too_many_properties: Um objeto tem demasiadas propriedades.
+    unsupported_value: Tipo de valor não suportado.
+    unreadable: Não é possível ler o ficheiro.
+  row:
+    not_an_object: O elemento tem de ser um objeto.
+    float_not_allowed: Não são permitidos números decimais neste campo.
+    key_invalid: A chave natural falta ou é inválida.
+    duplicate_key: A chave natural aparece duas vezes no documento.
+    secret_plaintext: Um campo secreto tem de conter uma referência vault:, nunca o segredo.
+    secret_refused: A referência vault não existe, não é deste âmbito ou não pode ser usada.
+    schema_type: Tipo de valor errado.
+    schema_required: Falta um campo obrigatório.
+    schema_enum: O valor não é um dos permitidos.
+    schema_const: O valor tem de ser o valor fixo.
+    schema_maxLength: O texto é demasiado longo.
+    schema_minLength: O texto é demasiado curto.
+    schema_pattern: O texto não segue o padrão esperado.
+    schema_format: O valor não tem o formato esperado.
+    schema_additionalProperties: Campo desconhecido.
+    schema_minimum: O número é demasiado pequeno.
+    schema_maximum: O número é demasiado grande.
+    schema_maxItems: A lista tem demasiadas entradas.
+    schema_minItems: A lista tem poucas entradas.
+    schema_uniqueItems: A lista tem entradas repetidas.

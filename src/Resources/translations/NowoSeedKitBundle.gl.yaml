@@ -1,0 +1,65 @@
+# NowoSeedKitBundle translations (gl): error codes, reader reasons and row rules (keys are flat dot paths).
+seed_kit:
+  error:
+    SEED_001: O provedor de seeds non está rexistrado ou non está dispoñible para este tipo de ámbito.
+    SEED_002: Non se pode ler o documento de seeds.
+    SEED_003: O documento de seeds non é válido; non se escribiu nada.
+    SEED_004: Un campo secreto contén un valor en claro ou unha referencia que non se pode usar aquí; só se aceptan referencias vault.
+    SEED_005: Os datos cambiaron desde o plan revisado; revisa o novo diff e volve aplicar.
+    SEED_006: Unha fila cambiou mentres se aplicaba o plan; os lotes xa aplicados mantéñense. Volve aplicar o documento.
+    SEED_007: O tipo de ámbito do documento non coincide co ámbito de destino.
+    SEED_010: O provedor fallou ao aplicar un lote; os lotes xa aplicados mantéñense.
+    SEED_011: Un provedor de seeds incumpriu o seu contrato; o bundle non escribiu nada.
+    SEED_012: Unha protección de borrado rexeitou o plan; confírmao explicitamente.
+    ACCESS_001: O ámbito non existe ou non é visible.
+    ACCESS_002: Acceso denegado.
+    CONFLICT_001: A base de datos seguiu rexeitando a escritura por un conflito de bloqueo; non se escribiu nada. Volve tentalo máis tarde.
+    CONFLICT_002: A base de datos seguiu rexeitando a escritura por un conflito de bloqueo; aplicouse parte da execución. Volve aplicar o documento.
+  read:
+    too_large: O ficheiro supera o tamaño permitido.
+    too_large_for_tree: O ficheiro é demasiado grande para YAML ou JSON; usa JSON Lines.
+    encoding: O ficheiro debe ser texto UTF-8 sen bytes NUL.
+    yaml_tag: As etiquetas YAML non están permitidas.
+    yaml_anchor: As áncoras YAML non están permitidas.
+    yaml_alias: Os alias YAML non están permitidos.
+    yaml_merge_key: As claves de fusión YAML non están permitidas.
+    yaml_directive: As directivas YAML non están permitidas.
+    yaml_parse: Non se pode analizar o texto YAML.
+    json_parse: Non se pode analizar o texto JSON.
+    duplicate_key: Unha clave aparece dúas veces no mesmo obxecto.
+    unknown_key: Clave de primeiro nivel descoñecida.
+    header_invalid: A cabeceira do documento non é válida.
+    items_not_a_list: items debe ser unha lista.
+    too_many_items: Demasiados elementos nun documento.
+    too_many_documents: Demasiados documentos nun ficheiro.
+    line_too_long: Unha liña JSON Lines é demasiado longa.
+    not_a_document: O documento non é un obxecto.
+    no_document: O ficheiro non contén ningún documento.
+    duplicate_provider: Un provedor aparece dúas veces no ficheiro.
+    too_many_nodes: Un elemento é demasiado grande.
+    string_too_long: Un texto é demasiado longo.
+    too_deep: Un elemento está demasiado aniñado.
+    too_many_properties: Un obxecto ten demasiadas propiedades.
+    unsupported_value: Tipo de valor non admitido.
+    unreadable: Non se pode ler o ficheiro.
+  row:
+    not_an_object: O elemento debe ser un obxecto.
+    float_not_allowed: Non se permiten números decimais neste campo.
+    key_invalid: A clave natural falta ou non é válida.
+    duplicate_key: A clave natural aparece dúas veces no documento.
+    secret_plaintext: Un campo secreto debe conter unha referencia vault:, nunca o segredo.
+    secret_refused: A referencia vault non existe, non é deste ámbito ou non se pode usar.
+    schema_type: Tipo de valor incorrecto.
+    schema_required: Falta un campo obrigatorio.
+    schema_enum: O valor non é un dos permitidos.
+    schema_const: O valor debe ser o valor fixo.
+    schema_maxLength: O texto é demasiado longo.
+    schema_minLength: O texto é demasiado curto.
+    schema_pattern: O texto non segue o patrón esperado.
+    schema_format: O valor non ten o formato esperado.
+    schema_additionalProperties: Campo descoñecido.
+    schema_minimum: O número é demasiado pequeno.
+    schema_maximum: O número é demasiado grande.
+    schema_maxItems: A lista ten demasiadas entradas.
+    schema_minItems: A lista ten moi poucas entradas.
+    schema_uniqueItems: A lista ten entradas repetidas.

@@ -1,0 +1,65 @@
+# NowoSeedKitBundle translations (ca): error codes, reader reasons and row rules (keys are flat dot paths).
+seed_kit:
+  error:
+    SEED_001: El proveïdor de seeds no està registrat o no està disponible per a aquest tipus d'àmbit.
+    SEED_002: No es pot llegir el document de seeds.
+    SEED_003: El document de seeds no és vàlid; no s'ha escrit res.
+    SEED_004: Un camp secret conté un valor en clar o una referència que no es pot fer servir aquí; només s'accepten referències vault.
+    SEED_005: Les dades han canviat des del pla revisat; revisa el nou diff i torna a aplicar.
+    SEED_006: Una fila ha canviat mentre s'aplicava el pla; els lots ja aplicats es mantenen. Torna a aplicar el document.
+    SEED_007: El tipus d'àmbit del document no coincideix amb l'àmbit de destinació.
+    SEED_010: El proveïdor ha fallat en aplicar un lot; els lots ja aplicats es mantenen.
+    SEED_011: Un proveïdor de seeds ha incomplert el seu contracte; el bundle no ha escrit res.
+    SEED_012: Una protecció d'esborrat ha rebutjat el pla; confirma-ho explícitament.
+    ACCESS_001: L'àmbit no existeix o no és visible.
+    ACCESS_002: Accés denegat.
+    CONFLICT_001: La base de dades ha continuat rebutjant l'escriptura per un conflicte de bloqueig; no s'ha escrit res. Torna-ho a provar més tard.
+    CONFLICT_002: La base de dades ha continuat rebutjant l'escriptura per un conflicte de bloqueig; part de l'execució s'ha aplicat. Torna a aplicar el document.
+  read:
+    too_large: El fitxer supera la mida permesa.
+    too_large_for_tree: El fitxer és massa gran per a YAML o JSON; fes servir JSON Lines.
+    encoding: El fitxer ha de ser text UTF-8 sense bytes NUL.
+    yaml_tag: Les etiquetes YAML no estan permeses.
+    yaml_anchor: Les àncores YAML no estan permeses.
+    yaml_alias: Els àlies YAML no estan permesos.
+    yaml_merge_key: Les claus de fusió YAML no estan permeses.
+    yaml_directive: Les directives YAML no estan permeses.
+    yaml_parse: No es pot analitzar el text YAML.
+    json_parse: No es pot analitzar el text JSON.
+    duplicate_key: Una clau apareix dues vegades al mateix objecte.
+    unknown_key: Clau de primer nivell desconeguda.
+    header_invalid: La capçalera del document no és vàlida.
+    items_not_a_list: items ha de ser una llista.
+    too_many_items: Massa elements en un document.
+    too_many_documents: Massa documents en un fitxer.
+    line_too_long: Una línia JSON Lines és massa llarga.
+    not_a_document: El document no és un objecte.
+    no_document: El fitxer no conté cap document.
+    duplicate_provider: Un proveïdor apareix dues vegades al fitxer.
+    too_many_nodes: Un element és massa gran.
+    string_too_long: Un text és massa llarg.
+    too_deep: Un element està massa niat.
+    too_many_properties: Un objecte té massa propietats.
+    unsupported_value: Tipus de valor no admès.
+    unreadable: No es pot llegir el fitxer.
+  row:
+    not_an_object: L'element ha de ser un objecte.
+    float_not_allowed: No es permeten nombres decimals en aquest camp.
+    key_invalid: La clau natural falta o no és vàlida.
+    duplicate_key: La clau natural apareix dues vegades al document.
+    secret_plaintext: Un camp secret ha de contenir una referència vault:, mai el secret.
+    secret_refused: La referència vault no existeix, no és d'aquest àmbit o no es pot fer servir.
+    schema_type: Tipus de valor incorrecte.
+    schema_required: Falta un camp obligatori.
+    schema_enum: El valor no és un dels permesos.
+    schema_const: El valor ha de ser el valor fix.
+    schema_maxLength: El text és massa llarg.
+    schema_minLength: El text és massa curt.
+    schema_pattern: El text no segueix el patró esperat.
+    schema_format: El valor no té el format esperat.
+    schema_additionalProperties: Camp desconegut.
+    schema_minimum: El nombre és massa petit.
+    schema_maximum: El nombre és massa gran.
+    schema_maxItems: La llista té massa entrades.
+    schema_minItems: La llista té massa poques entrades.
+    schema_uniqueItems: La llista té entrades repetides.

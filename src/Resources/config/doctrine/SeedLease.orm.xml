@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Read-only mapping of <prefix>seed_lease (the prefix and the binary collations are added by SchemaMetadataListener). -->
+<doctrine-mapping xmlns="http://doctrine-project.org/schemas/orm/doctrine-mapping"
+                  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                  xsi:schemaLocation="http://doctrine-project.org/schemas/orm/doctrine-mapping https://www.doctrine-project.org/schemas/orm/doctrine-mapping.xsd">
+    <entity name="Nowo\SeedKitBundle\Infrastructure\Doctrine\Entity\SeedLease" table="seed_lease" read-only="true">
+        <id name="provider" type="string" column="provider" length="64"/>
+        <id name="scopeKind" type="string" column="scope_kind" length="32"/>
+        <id name="scopeId" type="string" column="scope_id" length="128"/>
+        <field name="runId" type="string" column="run_id" length="36"/>
+        <field name="lockedUntil" type="datetime_immutable" column="locked_until"/>
+    </entity>
+</doctrine-mapping>

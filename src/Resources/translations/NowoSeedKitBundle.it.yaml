@@ -1,0 +1,65 @@
+# NowoSeedKitBundle translations (it): error codes, reader reasons and row rules (keys are flat dot paths).
+seed_kit:
+  error:
+    SEED_001: Il provider di seed non è registrato o non è disponibile per questo tipo di ambito.
+    SEED_002: Il documento di seed non può essere letto.
+    SEED_003: Il documento di seed non è valido; non è stato scritto nulla.
+    SEED_004: Un campo segreto contiene un valore in chiaro o un riferimento non utilizzabile qui; sono accettati solo riferimenti vault.
+    SEED_005: I dati sono cambiati dal piano revisionato; rivedi il nuovo diff e applica di nuovo.
+    SEED_006: Una riga è cambiata durante l'applicazione del piano; i lotti già applicati restano. Applica di nuovo il documento.
+    SEED_007: Il tipo di ambito del documento non corrisponde all'ambito di destinazione.
+    SEED_010: Il provider non è riuscito ad applicare un lotto; i lotti già applicati restano.
+    SEED_011: Un provider di seed ha violato il suo contratto; il bundle non ha scritto nulla.
+    SEED_012: Una protezione di eliminazione ha rifiutato il piano; confermalo esplicitamente.
+    ACCESS_001: L'ambito non esiste o non è visibile.
+    ACCESS_002: Accesso negato.
+    CONFLICT_001: Il database ha continuato a rifiutare la scrittura per un conflitto di lock; non è stato scritto nulla. Riprova più tardi.
+    CONFLICT_002: Il database ha continuato a rifiutare la scrittura per un conflitto di lock; parte dell'esecuzione è stata applicata. Applica di nuovo il documento.
+  read:
+    too_large: Il file supera la dimensione consentita.
+    too_large_for_tree: Il file è troppo grande per YAML o JSON; usa JSON Lines.
+    encoding: Il file deve essere testo UTF-8 senza byte NUL.
+    yaml_tag: I tag YAML non sono consentiti.
+    yaml_anchor: Le ancore YAML non sono consentite.
+    yaml_alias: Gli alias YAML non sono consentiti.
+    yaml_merge_key: Le chiavi di merge YAML non sono consentite.
+    yaml_directive: Le direttive YAML non sono consentite.
+    yaml_parse: Il testo YAML non può essere analizzato.
+    json_parse: Il testo JSON non può essere analizzato.
+    duplicate_key: Una chiave compare due volte nello stesso oggetto.
+    unknown_key: Chiave di primo livello sconosciuta.
+    header_invalid: L'intestazione del documento non è valida.
+    items_not_a_list: items deve essere una lista.
+    too_many_items: Troppi elementi in un documento.
+    too_many_documents: Troppi documenti in un file.
+    line_too_long: Una riga JSON Lines è troppo lunga.
+    not_a_document: Il documento non è un oggetto.
+    no_document: Il file non contiene alcun documento.
+    duplicate_provider: Un provider compare due volte nel file.
+    too_many_nodes: Un elemento è troppo grande.
+    string_too_long: Un testo è troppo lungo.
+    too_deep: Un elemento è troppo annidato.
+    too_many_properties: Un oggetto ha troppe proprietà.
+    unsupported_value: Tipo di valore non supportato.
+    unreadable: Il file non può essere letto.
+  row:
+    not_an_object: L'elemento deve essere un oggetto.
+    float_not_allowed: I numeri decimali non sono consentiti in questo campo.
+    key_invalid: La chiave naturale manca o non è valida.
+    duplicate_key: La chiave naturale compare due volte nel documento.
+    secret_plaintext: Un campo segreto deve contenere un riferimento vault:, mai il segreto.
+    secret_refused: Il riferimento vault non esiste, non è di questo ambito o non può essere usato.
+    schema_type: Tipo di valore errato.
+    schema_required: Manca un campo obbligatorio.
+    schema_enum: Il valore non è tra quelli consentiti.
+    schema_const: Il valore deve essere il valore fisso.
+    schema_maxLength: Il testo è troppo lungo.
+    schema_minLength: Il testo è troppo corto.
+    schema_pattern: Il testo non rispetta il pattern previsto.
+    schema_format: Il valore non ha il formato previsto.
+    schema_additionalProperties: Campo sconosciuto.
+    schema_minimum: Il numero è troppo piccolo.
+    schema_maximum: Il numero è troppo grande.
+    schema_maxItems: La lista ha troppe voci.
+    schema_minItems: La lista ha troppo poche voci.
+    schema_uniqueItems: La lista ha voci ripetute.
