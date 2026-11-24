@@ -1,0 +1,23 @@
+{
+    "name": "nowo-tech/seed-kit-bundle",
+    "description": "Seed data for Symfony: provider-based export/import of reference data with JSON Schema validation, dry-run diff, plan hash and idempotent batched apply through the host's own handlers. FrankenPHP worker safe.",
+    "type": "symfony-bundle",
+    "license": "MIT",
+    "keywords": ["php", "symfony", "symfony-bundle", "seed", "seeding", "import", "export", "fixtures", "json-schema", "ddd", "nowo", "frankenphp"],
+    "homepage": "https://github.com/nowo-tech/SeedKitBundle",
+    "support": {
+        "issues": "https://github.com/nowo-tech/SeedKitBundle/issues",
+        "source": "https://github.com/nowo-tech/SeedKitBundle"
+    },
+    "authors": [
+        {"name": "Héctor Franco Aceituno", "email": "hectorfranco@nowo.tech", "homepage": "https://github.com/HecFranco", "role": "Developer"},
+        {"name": "Nowo.tech", "homepage": "https://nowo.tech"}
+    ],
+    "require": {
+        "php": ">=8.2 <8.6"
+    },
+    "autoload": {
+        "psr-4": {"Nowo\\SeedKitBundle\\": "src/"}
+    },
+    "minimum-stability": "stable"
+}
