@@ -83,7 +83,7 @@ final class ArticleProvider extends AbstractSeedProvider
             if ($context->actor->value === 'bob' && ($row['owner'] ?? null) !== 'bob') {
                 continue;
             }
-            yield new SeedItem(0, new NaturalKey([(string) $row['code']]), $row);
+            yield new SeedItem(0, new NaturalKey([InMemoryStore::text($row['code'])]), $row);
         }
     }
 

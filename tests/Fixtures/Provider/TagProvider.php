@@ -79,9 +79,9 @@ final class TagProvider extends AbstractSeedProvider
         foreach ($rows as $row) {
             $data = $row;
             if (isset($data['apiToken'])) {
-                $data['apiToken'] = new SecretReference((string) $data['apiToken']);
+                $data['apiToken'] = new SecretReference(InMemoryStore::text($data['apiToken']));
             }
-            yield new SeedItem(0, new NaturalKey([(string) $row['slug']]), $data);
+            yield new SeedItem(0, new NaturalKey([InMemoryStore::text($row['slug'])]), $data);
         }
     }
 
@@ -90,7 +90,7 @@ final class TagProvider extends AbstractSeedProvider
         $rows = $this->store->rows['demo.tags'] ?? [];
         ksort($rows, SORT_STRING);
         foreach ($rows as $row) {
-            $key = new NaturalKey([(string) $row['slug']]);
+            $key = new NaturalKey([InMemoryStore::text($row['slug'])]);
             if (!$seen->has($key)) {
                 yield RowChange::delete($key, $this->fingerprint($row));
             }
