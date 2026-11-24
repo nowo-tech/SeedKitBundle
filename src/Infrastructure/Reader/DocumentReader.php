@@ -39,8 +39,8 @@ use function is_string;
 use function json_decode;
 use function ltrim;
 use function max;
-use function preg_replace;
 use function preg_match;
+use function preg_replace;
 use function preg_split;
 use function rewind;
 use function rtrim;
@@ -86,7 +86,7 @@ final readonly class DocumentReader
      */
     public function read($input, ?DocumentFormat $format, ReaderLimits $limits): DocumentSet
     {
-        $buffer = fopen('php://temp/maxmemory:2097152', 'w+b');
+        $buffer = fopen('php://temp/maxmemory:2097152', 'w+');
         if (!is_resource($buffer)) {
             throw new DocumentReadException('unreadable');
         }
@@ -108,7 +108,7 @@ final readonly class DocumentReader
         }
         $documentHash = new DocumentHash('sha256:' . hash_final($hash));
         rewind($buffer);
-        $head   = (string) fread($buffer, 4096);
+        $head = (string) fread($buffer, 4096);
         $format ??= $this->guess($head);
         if ($format === DocumentFormat::JsonLines) {
             return new DocumentSet([$this->jsonLines($buffer, $limits)], $format, $documentHash);
@@ -167,10 +167,10 @@ final readonly class DocumentReader
     public static function formatOfName(string $name): ?DocumentFormat
     {
         return match (true) {
-            preg_match('/\.(ya?ml)\z/i', $name) === 1    => DocumentFormat::Yaml,
+            preg_match('/\.(ya?ml)\z/i', $name) === 1        => DocumentFormat::Yaml,
             preg_match('/\.(jsonl|ndjson)\z/i', $name) === 1 => DocumentFormat::JsonLines,
-            preg_match('/\.json\z/i', $name) === 1       => DocumentFormat::Json,
-            default                                      => null,
+            preg_match('/\.json\z/i', $name) === 1           => DocumentFormat::Json,
+            default                                          => null,
         };
     }
 
@@ -196,9 +196,9 @@ final readonly class DocumentReader
     /**
      * The YAML documents of a stream.
      *
-     * @return list<array<string, mixed>>
-     *
      * @throws DocumentReadException
+     *
+     * @return list<array<string, mixed>>
      */
     private function yaml(string $text, ReaderLimits $limits): array
     {
@@ -226,9 +226,9 @@ final readonly class DocumentReader
     /**
      * The JSON document(s): one document object, or `{"documents": [...]}`.
      *
-     * @return list<array<string, mixed>>
-     *
      * @throws DocumentReadException
+     *
+     * @return list<array<string, mixed>>
      */
     private function json(string $text, ReaderLimits $limits): array
     {
@@ -327,9 +327,9 @@ final readonly class DocumentReader
     /**
      * A JSON object / YAML mapping with string keys.
      *
-     * @return array<string, mixed>
-     *
      * @throws DocumentReadException
+     *
+     * @return array<string, mixed>
      */
     private function map(mixed $tree): array
     {

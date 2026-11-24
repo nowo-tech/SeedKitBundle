@@ -141,11 +141,11 @@ final readonly class CommandSupport
         $path = $input->getArgument($argument);
         $path = is_string($path) ? $path : '-';
         if ($path === '-') {
-            $stream = fopen('php://stdin', 'rb');
+            $stream = fopen('php://stdin', 'r');
             $format = null;
         } else {
             $real   = $this->paths->input($path, (bool) $input->getOption('allow-any-path'));
-            $stream = fopen($real, 'rb');
+            $stream = fopen($real, 'r');
             $format = DocumentReader::formatOfName($real);
         }
         if (!is_resource($stream)) {
@@ -161,16 +161,16 @@ final readonly class CommandSupport
     /**
      * Opens the `--output` target (`-` = stdout).
      *
-     * @return resource
-     *
      * @throws InvalidValueException
+     *
+     * @return resource
      */
     public function output(InputInterface $input)
     {
-        $path = $input->getOption('output');
-        $path = is_string($path) && $path !== '' ? $path : '-';
-        $real = $path === '-' ? 'php://stdout' : $this->paths->output($path, (bool) $input->getOption('allow-any-path'), (bool) $input->getOption('force'));
-        $stream = fopen($real, 'wb');
+        $path   = $input->getOption('output');
+        $path   = is_string($path) && $path !== '' ? $path : '-';
+        $real   = $path === '-' ? 'php://stdout' : $this->paths->output($path, (bool) $input->getOption('allow-any-path'), (bool) $input->getOption('force'));
+        $stream = fopen($real, 'w');
         if (!is_resource($stream)) {
             throw new InvalidValueException('The output cannot be opened.');
         }
@@ -225,12 +225,12 @@ final readonly class CommandSupport
         }
 
         return match (true) {
-            $e instanceof ApplyInterruptedException      => $this->interruptedCode($e),
-            $e instanceof LeaseHeldException             => self::EXIT_CONFLICT,
-            $e instanceof StalePlanException             => self::EXIT_STALE,
+            $e instanceof ApplyInterruptedException => $this->interruptedCode($e),
+            $e instanceof LeaseHeldException        => self::EXIT_CONFLICT,
+            $e instanceof StalePlanException        => self::EXIT_STALE,
             $e instanceof AccessDeniedException,
-            $e instanceof ScopeNotFoundException         => self::EXIT_DENIED,
-            default                                      => self::EXIT_INVALID,
+            $e instanceof ScopeNotFoundException => self::EXIT_DENIED,
+            default                              => self::EXIT_INVALID,
         };
     }
 

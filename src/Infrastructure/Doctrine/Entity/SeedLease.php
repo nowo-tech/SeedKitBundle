@@ -6,10 +6,11 @@ namespace Nowo\SeedKitBundle\Infrastructure\Doctrine\Entity;
 
 use DateTimeImmutable;
 use Doctrine\ORM\Mapping as ORM;
+use Nowo\SeedKitBundle\Infrastructure\Dbal\DbalLeaseStore;
 
 /**
  * Read-only mapping of `<prefix>seed_lease` (one row per provider and scope). Written through DBAL only
- * ({@see \Nowo\SeedKitBundle\Infrastructure\Dbal\DbalLeaseStore}); XML twin in `Resources/config/doctrine`.
+ * ({@see DbalLeaseStore}); XML twin in `Resources/config/doctrine`.
  */
 #[ORM\Entity(readOnly: true)]
 #[ORM\Table(name: 'seed_lease')]

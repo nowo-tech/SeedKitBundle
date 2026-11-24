@@ -51,9 +51,9 @@ final readonly class ItemNormaliser
     /**
      * The item, or its errors.
      *
-     * @return SeedItem|list<RowError>
-     *
      * @throws DocumentReadException when the item breaks the structure budget
+     *
+     * @return list<RowError>|SeedItem
      */
     public function normalise(SeedSchema $schema, int $index, mixed $raw, SeedContext $context): SeedItem|array
     {

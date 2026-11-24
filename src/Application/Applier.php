@@ -228,9 +228,9 @@ final readonly class Applier
      */
     private function batch(BatchStep $step, PreparedDocument $document, SeedContext $context, int $number, string $digest, callable $replan, array $items, array &$counts, int &$done): void
     {
-        $name     = $document->provider->name();
-        $sequence = $done + 1;
-        $before   = $done;
+        $name                        = $document->provider->name();
+        $sequence                    = $done + 1;
+        $before                      = $done;
         [$counts, $result, $changes] = $this->writer->write(function (int $attempt) use ($step, $document, $context, $number, $digest, $replan, $items, $sequence, $name, $counts, $before): array {
             if ($attempt > 1) {
                 $document->provider->afterBatch($context);

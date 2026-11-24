@@ -192,13 +192,13 @@ final readonly class DocumentWriter implements DocumentWriterInterface
      */
     private function comments(ExportDocument $document): array
     {
-        $header   = $document->header;
-        $schema   = $document->schema;
-        $lines    = [];
+        $header = $document->header;
+        $schema = $document->schema;
+        $lines  = [];
         if ($header->schemaRef !== null) {
             $lines[] = 'yaml-language-server: $schema=' . $header->schemaRef;
         }
-        $lines[] = sprintf('SeedKit document: %s (provider %s, version %d, scope %s)', $this->clean($schema->title($header->provider->value)), $header->provider->value, $header->version, $header->scope->value);
+        $lines[]    = sprintf('SeedKit document: %s (provider %s, version %d, scope %s)', $this->clean($schema->title($header->provider->value)), $header->provider->value, $header->version, $header->scope->value);
         $normalised = [];
         foreach ($schema->keyNormalisers() as $property => $mode) {
             $normalised[] = $property . ' ' . ($mode === 'lower' ? 'lower-cased' : 'NFC');

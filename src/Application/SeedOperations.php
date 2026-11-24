@@ -72,9 +72,9 @@ final readonly class SeedOperations
     /**
      * The document schema of a provider (contract section 7.1).
      *
-     * @return array<string, mixed>
-     *
      * @throws UnknownProviderException
+     *
+     * @return array<string, mixed>
      */
     public function schema(ProviderName $provider): array
     {
@@ -189,9 +189,9 @@ final readonly class SeedOperations
     /**
      * Scope, documents, access and the run context.
      *
-     * @return array{0: list<PreparedDocument>, 1: SeedContext}
-     *
      * @throws SeedKitException
+     *
+     * @return array{0: list<PreparedDocument>, 1: SeedContext}
      */
     private function prepare(DocumentSet $set, SeedScope $requested, ActorRef $actor, Channel $channel, PruneOptions $prune): array
     {

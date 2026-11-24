@@ -76,9 +76,9 @@ final readonly class Exporter
     /**
      * The prepared current rows.
      *
-     * @return Generator<int, array<string, mixed>>
-     *
      * @throws ProviderContractException
+     *
+     * @return Generator<int, array<string, mixed>>
      */
     private function current(SeedProviderInterface $provider, SeedSchema $schema, SeedContext $context): Generator
     {
@@ -112,9 +112,9 @@ final readonly class Exporter
      *
      * @param list<string> $properties
      *
-     * @return array<string, mixed>
-     *
      * @throws ProviderContractException
+     *
+     * @return array<string, mixed>
      */
     private function row(SeedSchema $schema, array $properties, SeedItem $item, SeedContext $context): array
     {

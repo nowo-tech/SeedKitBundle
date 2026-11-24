@@ -8,12 +8,15 @@ use Generator;
 use Nowo\SeedKitBundle\Domain\Context\SeedContext;
 use Nowo\SeedKitBundle\Domain\Document\DocumentSet;
 use Nowo\SeedKitBundle\Domain\Document\SeedItem;
+use Nowo\SeedKitBundle\Domain\Exception\DocumentInvalidException;
 use Nowo\SeedKitBundle\Domain\Exception\DocumentReadException;
 use Nowo\SeedKitBundle\Domain\Exception\ProviderContractException;
 use Nowo\SeedKitBundle\Domain\Exception\PruneRefusedException;
 use Nowo\SeedKitBundle\Domain\Exception\ScopeMismatchException;
+use Nowo\SeedKitBundle\Domain\Exception\SecretValueRefusedException;
 use Nowo\SeedKitBundle\Domain\Exception\UnknownProviderException;
 use Nowo\SeedKitBundle\Domain\Model\ScopeId;
+use Nowo\SeedKitBundle\Domain\Model\SecretReference;
 use Nowo\SeedKitBundle\Domain\Model\SeedScope;
 use Nowo\SeedKitBundle\Domain\Plan\ChangeOp;
 use Nowo\SeedKitBundle\Domain\Plan\DocumentPlan;
@@ -26,7 +29,6 @@ use Nowo\SeedKitBundle\Domain\Plan\RowError;
 use Nowo\SeedKitBundle\Domain\Plan\SeedPlan;
 use Nowo\SeedKitBundle\Domain\Schema\SeedSchema;
 use Nowo\SeedKitBundle\Domain\Support\CanonicalJson;
-use Nowo\SeedKitBundle\Domain\Model\SecretReference;
 
 use function count;
 use function hash;
@@ -60,11 +62,11 @@ final readonly class Planner
     /**
      * Matches the documents to their providers, checks the headers, sorts them by dependency order.
      *
-     * @return list<PreparedDocument>
-     *
      * @throws DocumentReadException for an empty set or a provider present twice
      * @throws ScopeMismatchException when a document's kind differs from the target or the provider is not available in it
      * @throws UnknownProviderException for an unknown provider or version
+     *
+     * @return list<PreparedDocument>
      */
     public function prepare(DocumentSet $set, SeedScope $scope): array
     {
@@ -129,8 +131,8 @@ final readonly class Planner
      *
      * @param list<PreparedDocument> $documents from {@see prepare()}
      *
-     * @throws \Nowo\SeedKitBundle\Domain\Exception\DocumentInvalidException
-     * @throws \Nowo\SeedKitBundle\Domain\Exception\SecretValueRefusedException
+     * @throws DocumentInvalidException
+     * @throws SecretValueRefusedException
      * @throws PruneRefusedException
      * @throws ProviderContractException
      */
@@ -143,14 +145,14 @@ final readonly class Planner
         foreach ($documents as $document) {
             $provider = $document->provider->name();
             $hasher->document($provider, $document->provider->version(), $document->schema->fingerprint());
-            $counts   = [ChangeOp::Create->value => 0, ChangeOp::Update->value => 0, ChangeOp::Unchanged->value => 0, ChangeOp::Delete->value => 0];
-            $preview  = [];
-            $upserts  = [];
-            $deletes  = [];
-            $writes   = [];
-            $seen     = new NaturalKeySet();
-            $batch    = 0;
-            $items    = 0;
+            $counts  = [ChangeOp::Create->value => 0, ChangeOp::Update->value => 0, ChangeOp::Unchanged->value => 0, ChangeOp::Delete->value => 0];
+            $preview = [];
+            $upserts = [];
+            $deletes = [];
+            $writes  = [];
+            $seen    = new NaturalKeySet();
+            $batch   = 0;
+            $items   = 0;
             foreach ($this->slices($document, $context, $seen, $errors) as $slice) {
                 $items += count($slice);
                 $changes = $this->planSlice($document, $context, $slice, $noLock, $errors);
@@ -231,9 +233,9 @@ final readonly class Planner
      *
      * @param list<SeedItem> $items
      *
-     * @return list<RowChange>
-     *
      * @throws ProviderContractException
+     *
+     * @return list<RowChange>
      */
     public function planSlice(PreparedDocument $document, SeedContext $context, array $items, PlanOptions $options, ErrorBag $errors): array
     {
@@ -258,9 +260,9 @@ final readonly class Planner
      * The deletions of a document in slices (prune only), re-checked: op Delete, key not in the document, strictly
      * ascending canonical keys.
      *
-     * @return Generator<int, list<RowChange>>
-     *
      * @throws ProviderContractException
+     *
+     * @return Generator<int, list<RowChange>>
      */
     public function deletionSlices(PreparedDocument $document, SeedContext $context, NaturalKeySet $seen, PlanOptions $options): Generator
     {

@@ -5,9 +5,10 @@ declare(strict_types=1);
 namespace Nowo\SeedKitBundle\Domain\Plan;
 
 use Nowo\SeedKitBundle\Domain\Document\SeedItem;
+use Nowo\SeedKitBundle\Domain\Port\SeedProviderInterface;
 
 /**
- * One batch handed to {@see \Nowo\SeedKitBundle\Domain\Port\SeedProviderInterface::applyBatch()} inside the batch
+ * One batch handed to {@see SeedProviderInterface::applyBatch()} inside the batch
  * transaction: the changes that write (creates, updates or deletes; unchanged rows are left out) and, for creates and
  * updates, the normalised item of each change by canonical key.
  */

@@ -33,7 +33,7 @@ final readonly class SchemaPublisher
         $item   = $schema->item;
         $defs   = is_array($item['$defs'] ?? null) ? $item['$defs'] : [];
         unset($item['$defs']);
-        $kinds  = [];
+        $kinds = [];
         foreach ($provider->scopes() as $kind) {
             $kinds[] = $kind->value;
         }

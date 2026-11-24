@@ -6,10 +6,11 @@ namespace Nowo\SeedKitBundle\Infrastructure\Doctrine\Entity;
 
 use DateTimeImmutable;
 use Doctrine\ORM\Mapping as ORM;
+use Nowo\SeedKitBundle\Infrastructure\Dbal\DbalRunStore;
 
 /**
  * Read-only mapping of `<prefix>seed_run` (contract section 11), so the host's schema tool and migrations see the
- * table. The bundle never persists or flushes it: rows are written through DBAL ({@see \Nowo\SeedKitBundle\Infrastructure\Dbal\DbalRunStore}).
+ * table. The bundle never persists or flushes it: rows are written through DBAL ({@see DbalRunStore}).
  * The XML mapping (`Resources/config/doctrine/SeedRun.orm.xml`) is the default; this attribute twin is used with
  * `doctrine.mapping: attribute`.
  */

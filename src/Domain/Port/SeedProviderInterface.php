@@ -8,6 +8,7 @@ use Nowo\SeedKitBundle\Domain\Context\SeedContext;
 use Nowo\SeedKitBundle\Domain\Document\SeedItem;
 use Nowo\SeedKitBundle\Domain\Model\ProviderName;
 use Nowo\SeedKitBundle\Domain\Model\ScopeKind;
+use Nowo\SeedKitBundle\Domain\Model\SecretReference;
 use Nowo\SeedKitBundle\Domain\Plan\AppliedBatch;
 use Nowo\SeedKitBundle\Domain\Plan\BatchPlan;
 use Nowo\SeedKitBundle\Domain\Plan\BatchResult;
@@ -15,6 +16,7 @@ use Nowo\SeedKitBundle\Domain\Plan\NaturalKeySet;
 use Nowo\SeedKitBundle\Domain\Plan\PlanOptions;
 use Nowo\SeedKitBundle\Domain\Plan\RowChange;
 use Nowo\SeedKitBundle\Domain\Schema\SeedSchema;
+use Nowo\SeedKitBundle\Testing\SeedProviderContractTestCase;
 
 /**
  * A kind of seed data (contract section 6), implemented by the host and tagged `nowo_seed_kit.provider` (or
@@ -22,7 +24,7 @@ use Nowo\SeedKitBundle\Domain\Schema\SeedSchema;
  * provider owns the data and writes **only through the host's own handlers** (same validation, events and audit as the
  * CRUD; no generic entity writes, Q-SK-10).
  *
- * Rules (checked by {@see \Nowo\SeedKitBundle\Testing\SeedProviderContractTestCase}):
+ * Rules (checked by {@see SeedProviderContractTestCase}):
  * - stateless and worker-safe: nothing kept between calls;
  * - filter every read, plan and prune by the actor in the context (row-level visibility);
  * - never put database ids in items; natural keys only;
@@ -70,7 +72,7 @@ interface SeedProviderInterface
     public function exportEmpty(SeedContext $context): iterable;
 
     /**
-     * The rows the actor may read, in natural-key byte order; secret properties as {@see \Nowo\SeedKitBundle\Domain\Model\SecretReference}
+     * The rows the actor may read, in natural-key byte order; secret properties as {@see SecretReference}
      * or absent, never plain text.
      *
      * @return iterable<SeedItem>

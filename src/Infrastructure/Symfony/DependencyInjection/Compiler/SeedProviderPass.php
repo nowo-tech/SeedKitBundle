@@ -83,9 +83,9 @@ final class SeedProviderPass implements CompilerPassInterface
      *
      * @param array<string, list<string>> $depends
      *
-     * @return list<string>
-     *
      * @throws InvalidArgumentException for an unknown dependency or a cycle
+     *
+     * @return list<string>
      */
     public static function order(array $depends): array
     {
