@@ -238,6 +238,7 @@ final readonly class SeedSchema
     {
         $kept = [];
         foreach (array_keys($this->properties()) as $property) {
+            $property = (string) $property;
             if ($accept($property)) {
                 $kept[] = $property;
             }

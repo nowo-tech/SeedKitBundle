@@ -76,6 +76,10 @@ final readonly class SchemaLinter
             }
         }
         foreach ($properties as $name => $definition) {
+            $name = (string) $name;
+            if (preg_match('/\A(0|-?[1-9][0-9]*)\z/D', $name) === 1) {
+                $errors[] = sprintf('Property "%s" has an integer-like name (PHP arrays turn it into an int key); rename it.', $name);
+            }
             if (preg_match(self::SECRET_NAME, $name) === 1 && !array_key_exists('x-seed-secret', $definition)) {
                 $errors[] = sprintf('Property "%s" looks like a secret: declare "x-seed-secret": true or false.', $name);
             }

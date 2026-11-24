@@ -176,12 +176,10 @@ final readonly class Applier
                     [$seen, $first] = $seenByProvider[$name->value];
                     $slices         = count($digests[$name->value]) - $first;
                     for ($slice = 1; $slice <= $slices; ++$slice) {
-                        $replan = function (PlanOptions $options) use ($document, $runContext, $seen, $slice): array {
-                            $position = 0;
+                        // The earlier deletion slices are committed, so the planned slice N is now the first one.
+                        $replan = function (PlanOptions $options) use ($document, $runContext, $seen): array {
                             foreach ($this->planner->deletionSlices($document, $runContext, $seen, $options) as $changes) {
-                                if (++$position === $slice) {
-                                    return $changes;
-                                }
+                                return $changes;
                             }
 
                             return [];
