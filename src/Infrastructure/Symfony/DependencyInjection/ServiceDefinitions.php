@@ -283,12 +283,12 @@ final class ServiceDefinitions
         }
 
         $container->setDefinition(PsrLogAuditSink::class, (new Definition(PsrLogAuditSink::class, [$logger, $config['audit']['log_level']]))->addTag('monolog.logger', ['channel' => 'seed_kit']));
-        $sink = PsrLogAuditSink::class;
-        if ($config['audit']['auditkit'] && interface_exists(ActionLogRecorderInterface::class)) {
+        $container->setAlias(SeedAuditSinkInterface::class, $config['audit']['sink'] ?? PsrLogAuditSink::class);
+        if ($config['audit']['sink'] === null && $config['audit']['auditkit'] && interface_exists(ActionLogRecorderInterface::class)) {
+            // Switched on by SeedProviderPass only when the AuditKit recorder service really exists (package installed
+            // but bundle not registered: the log sink stays).
             $container->setDefinition(AuditKitSeedAuditSink::class, new Definition(AuditKitSeedAuditSink::class, [new Reference(ActionLogRecorderInterface::class)]));
-            $sink = AuditKitSeedAuditSink::class;
         }
-        $container->setAlias(SeedAuditSinkInterface::class, $config['audit']['sink'] ?? $sink);
 
         $secrets = $config['secrets'];
         if ($secrets['vault_bridge']['enabled']) {

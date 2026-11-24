@@ -4,9 +4,12 @@ declare(strict_types=1);
 
 namespace Nowo\SeedKitBundle\Infrastructure\Symfony\DependencyInjection\Compiler;
 
+use Nowo\AuditKitBundle\ActionLog\ActionLogRecorderInterface;
 use Nowo\SeedKitBundle\Application\ProviderRegistry;
+use Nowo\SeedKitBundle\Bridge\AuditKit\AuditKitSeedAuditSink;
 use Nowo\SeedKitBundle\Domain\Exception\InvalidValueException;
 use Nowo\SeedKitBundle\Domain\Model\ProviderName;
+use Nowo\SeedKitBundle\Domain\Port\SeedAuditSinkInterface;
 use Symfony\Component\DependencyInjection\Compiler\CompilerPassInterface;
 use Symfony\Component\DependencyInjection\Compiler\ServiceLocatorTagPass;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
@@ -29,7 +32,8 @@ use const SORT_STRING;
  * Collects the providers (tag `nowo_seed_kit.provider` with `name` and optional `depends_on`, or `#[AsSeedProvider]`)
  * when the container is compiled (contract section 6): valid and unique names, dependencies that exist, no cycle
  * (the build fails and names the cycle), then the dependency order with Kahn's algorithm (ties by name byte order).
- * The registry gets a lazy service locator and the order.
+ * The registry gets a lazy service locator and the order. Also switches the audit sink to the AuditKit bridge when
+ * `audit.auditkit` is on and the AuditKit recorder service exists (else the log sink stays).
  */
 final class SeedProviderPass implements CompilerPassInterface
 {
@@ -41,6 +45,13 @@ final class SeedProviderPass implements CompilerPassInterface
      */
     public function process(ContainerBuilder $container): void
     {
+        if ($container->hasDefinition(AuditKitSeedAuditSink::class)) {
+            if ($container->has(ActionLogRecorderInterface::class)) {
+                $container->setAlias(SeedAuditSinkInterface::class, AuditKitSeedAuditSink::class);
+            } else {
+                $container->removeDefinition(AuditKitSeedAuditSink::class);
+            }
+        }
         if (!$container->hasDefinition(ProviderRegistry::class)) {
             return;
         }
