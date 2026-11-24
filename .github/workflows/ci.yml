@@ -1,0 +1,436 @@
+name: CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+
+# Superseded PR runs are cancelled. Push runs (main/master) get their own group (run_id), so a main run is never
+# cancelled, not even while pending: tag_when_green.sh needs a completed run on every release commit.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  # Light mode (docs/GITHUB_CI.md#light-mode-for-deps-and-docs-only-prs): one representative cell plus the cheap
+  # gates. The org (or repo) Actions variable NOWO_CI_PR_MODE picks the PR mode: light = every PR light; full = every
+  # PR full; auto / unset = light only when the PR touches nothing but composer.json / composer.lock (root or demo),
+  # docs/**, *.md, .github/ISSUE_TEMPLATE/**, specs/** or .cursor/**. push, tags, workflow_dispatch and schedule are
+  # always full. Fail-closed: any error, unknown value or empty output means full (jobs reduce only on 'light').
+  changes:
+    name: Change scope (light or full)
+    runs-on: ubuntu-latest
+    outputs:
+      mode: ${{ steps.classify.outputs.mode }}
+    steps:
+      - name: Checkout code (PR merge commit and its base parent)
+        if: github.event_name == 'pull_request'
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 2
+
+      - name: Classify the change
+        id: classify
+        env:
+          EVENT: ${{ github.event_name }}
+          SWITCH: ${{ vars.NOWO_CI_PR_MODE }}
+          LIGHT: '^((demo/([^/]+/)?)?composer\.(json|lock)|docs/.*|specs/.*|\.cursor/.*|\.github/ISSUE_TEMPLATE/.*|.*\.md)$'
+        run: |
+          mode=full; paths=""
+          if [ "$EVENT" != pull_request ]; then
+            reason="event '$EVENT' always runs full"
+          else
+            case "$SWITCH" in
+              light) mode=light; reason="NOWO_CI_PR_MODE=light: every PR is light" ;;
+              full) reason="NOWO_CI_PR_MODE=full: every PR is full" ;;
+              ''|auto)
+                if files=$(git diff --name-only --no-renames HEAD^1 HEAD); then
+                  mode=light; reason="NOWO_CI_PR_MODE=${SWITCH:-unset} (auto): only deps/docs paths changed"
+                  while IFS= read -r f; do
+                    [ -n "$f" ] || continue
+                    if ! printf '%s\n' "$f" | grep -Eq "$LIGHT"; then mode=full; paths="$paths $f"; fi
+                  done <<< "$files"
+                  [ "$mode" = light ] || reason="NOWO_CI_PR_MODE=${SWITCH:-unset} (auto): non deps/docs paths changed:$paths"
+                else
+                  reason="NOWO_CI_PR_MODE=${SWITCH:-unset} (auto): git diff failed, fail-closed"
+                fi ;;
+              *) reason="NOWO_CI_PR_MODE='$SWITCH' is not light/auto/full, fail-closed" ;;
+            esac
+          fi
+          echo "mode=$mode ($reason)"
+          echo "mode=$mode" >> "$GITHUB_OUTPUT"
+          {
+            echo "### CI mode: \`$mode\`"
+            echo ""
+            echo "$reason"
+            if [ "$EVENT" = pull_request ] && [ -n "${files:-}" ]; then echo ""; echo "Changed paths:"; echo '```'; echo "$files" | head -200; echo '```'; fi
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  git-hygiene:
+    name: Git history (no agent co-author)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: No Cursor or Claude co-author trailers in the history (REQ-GIT-001)
+        run: |
+          chmod +x .scripts/check-no-cursor-coauthor.sh .scripts/check-no-claude-coauthor.sh
+          ./.scripts/check-no-cursor-coauthor.sh HEAD
+
+  # REQ-SF-002: matrix must include mandatory Symfony minors 7.4, 8.1.
+  test:
+    name: PHP ${{ matrix.php }} - Symfony ${{ matrix.symfony }}
+    runs-on: ubuntu-latest
+    needs: changes
+    # Never skip this job: a skipped matrix job reports its un-expanded name and the required "PHP x - Symfony y"
+    # contexts never appear. In light mode only the newest cell does the work; the others pass in seconds.
+    if: ${{ !cancelled() }}
+    env:
+      HEAVY: ${{ needs.changes.outputs.mode != 'light' || (matrix.php == '8.5' && matrix.symfony == '8.1') }}
+
+    strategy:
+      fail-fast: false
+      matrix:
+        php: ['8.2', '8.3', '8.4', '8.5']
+        # Symfony 8.0 reached end of maintenance (July 2026): its CI cell is dropped (REQ-SF-002); composer.json still allows ^8.0.
+        symfony: ['7.4', '8.1']
+        exclude:
+          - php: '8.2'
+            symfony: '8.1'
+          - php: '8.3'
+            symfony: '8.1'
+
+    steps:
+      - name: Light mode (deps/docs-only PR) - covered by PHP 8.5 - Symfony 8.1
+        if: env.HEAVY != 'true'
+        run: echo "Light mode, this cell has nothing to do."
+
+      - name: Checkout code
+        if: env.HEAVY == 'true'
+        uses: actions/checkout@v7
+
+      - name: Setup PHP
+        if: env.HEAVY == 'true'
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php }}
+          extensions: json, pdo_sqlite, sodium
+          coverage: pcov
+          tools: composer:v2
+
+      - name: Validate composer.json
+        if: env.HEAVY == 'true'
+        run: composer validate --strict
+
+      - name: Get Composer cache directory
+        if: env.HEAVY == 'true'
+        id: composer-cache
+        run: echo "dir=$(composer config cache-files-dir)" >> $GITHUB_OUTPUT
+
+      - name: Cache Composer dependencies
+        if: env.HEAVY == 'true'
+        uses: actions/cache@v6
+        with:
+          path: ${{ steps.composer-cache.outputs.dir }}
+          key: ${{ runner.os }}-php-${{ matrix.php }}-symfony-${{ matrix.symfony }}-composer-${{ hashFiles('**/composer.json') }}
+          restore-keys: |
+            ${{ runner.os }}-php-${{ matrix.php }}-symfony-${{ matrix.symfony }}-composer-
+            ${{ runner.os }}-php-${{ matrix.php }}-composer-
+
+      - name: Override Composer platform PHP (composer.json pins the minimum PHP for the lock)
+        if: env.HEAVY == 'true'
+        run: composer config platform.php "${{ matrix.php }}.99"
+
+      - name: Install dependencies with Symfony ${{ matrix.symfony }}
+        if: env.HEAVY == 'true'
+        run: |
+          req=""; dev=""
+          for p in $(jq -r '.require | keys[] | select(startswith("symfony/")) | select(endswith("-contracts") | not) | select(startswith("symfony/polyfill-") | not)' composer.json); do req="$req $p:^${{ matrix.symfony }}"; done
+          for p in $(jq -r '."require-dev" | keys[] | select(startswith("symfony/")) | select(endswith("-contracts") | not) | select(startswith("symfony/polyfill-") | not)' composer.json); do dev="$dev $p:^${{ matrix.symfony }}"; done
+          composer require $req --no-interaction --no-update
+          composer require --dev $dev --no-interaction --no-update
+          composer update "symfony/*" "doctrine/*" "twig/*" "nowo-tech/*" --with-all-dependencies --no-interaction --prefer-dist --no-progress
+      - name: Composer audit (Critical/High)
+        if: env.HEAVY == 'true'
+        run: composer audit --locked
+
+
+      - name: Run tests
+        if: env.HEAVY == 'true'
+        env:
+          SYMFONY_DEPRECATIONS_HELPER: max[direct]=0
+        run: composer test
+
+
+  code-style:
+    name: Code Style
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          # composer.lock is resolved for the pinned platform (config.platform.php = 8.2.0); installable on any PHP >= 8.2.
+          php-version: '8.4'
+          tools: composer:v2, cs2pr
+
+      - name: Install dependencies
+        run: composer install --prefer-dist --no-progress --no-interaction
+
+      - name: Fix code style
+        run: composer cs-fix
+
+      - name: Check for changes
+        id: verify-changed-files
+        run: |
+          if [ -n "$(git status --porcelain -- '*.php')" ]; then
+            echo "changed=true" >> $GITHUB_OUTPUT
+          else
+            echo "changed=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Commit changes
+        if: steps.verify-changed-files.outputs.changed == 'true'
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add -u -- '*.php'
+          git commit -m "Apply PHP CS Fixer fixes [skip ci]"
+          git push
+
+  code-style-check:
+    name: Code Style Check
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          # composer.lock is resolved for the pinned platform (config.platform.php = 8.2.0); installable on any PHP >= 8.2.
+          php-version: '8.4'
+          tools: composer:v2, cs2pr
+
+      - name: Install dependencies
+        run: composer install --prefer-dist --no-progress --no-interaction
+
+      - name: Check code style
+        run: composer cs-check
+
+  phpstan:
+    name: PHPStan
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          tools: composer:v2
+
+      - name: Install dependencies
+        run: composer install --prefer-dist --no-progress --no-interaction
+
+      - name: Run PHPStan (REQ-CS-006)
+        run: composer phpstan
+
+      - name: PHPDoc on every class and public method of src/ (REQ-CS-001)
+        run: composer validate-phpdoc
+
+      - name: Rector (dry run)
+        run: composer rector-dry
+
+      - name: Igor worker-state audit (REQ-CS-008)
+        run: composer igor
+
+  databases:
+    name: Databases (SQLite, MySQL, MariaDB, PostgreSQL)
+    runs-on: ubuntu-latest
+    # Light mode: skipped (a skipped non-matrix job reports its own name with success for branch protection).
+    needs: changes
+    if: ${{ !cancelled() && needs.changes.outputs.mode != 'light' }}
+
+    services:
+      mysql:
+        image: mysql:8.4
+        env:
+          MYSQL_ALLOW_EMPTY_PASSWORD: 'yes'
+          MYSQL_DATABASE: app
+        ports: ['3306:3306']
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1"
+          --health-interval=5s --health-timeout=5s --health-retries=20
+      mariadb:
+        image: mariadb:11.4
+        env:
+          MARIADB_ALLOW_EMPTY_ROOT_PASSWORD: 'yes'
+          MARIADB_DATABASE: app
+        ports: ['3307:3306']
+        options: >-
+          --health-cmd="healthcheck.sh --connect --innodb_initialized"
+          --health-interval=5s --health-timeout=5s --health-retries=20
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_HOST_AUTH_METHOD: trust
+          POSTGRES_DB: app
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd="pg_isready -U postgres"
+          --health-interval=5s --health-timeout=5s --health-retries=20
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: json, pdo_sqlite, pdo_mysql, pdo_pgsql
+          tools: composer:v2
+
+      - name: Install dependencies
+        run: composer install --prefer-dist --no-progress --no-interaction
+
+      # REQ-RUNTIME-003: the suite holds the two-connection race tests (tenant lock, row lock, 409 CONFLICT_001 /
+      # CONFLICT_002 answers, ten parallel creates against a plan limit); every step is bounded so a hang fails fast.
+      - name: Database suite on SQLite (identifier columns compare exactly, audit LQ)
+        timeout-minutes: 15
+        run: vendor/bin/phpunit --no-coverage --testsuite Database
+
+      - name: Database suite on MySQL 8.4 (utf8mb4_bin)
+        env:
+          NOWO_TEST_DATABASE_URL: mysql://root@127.0.0.1:3306/app?serverVersion=8.4.0&charset=utf8mb4
+        timeout-minutes: 15
+        run: vendor/bin/phpunit --no-coverage --testsuite Database
+
+      - name: Database suite on MariaDB 11.4 (utf8mb4_bin)
+        env:
+          NOWO_TEST_DATABASE_URL: mysql://root@127.0.0.1:3307/app?serverVersion=11.4.0-MariaDB&charset=utf8mb4
+        timeout-minutes: 15
+        run: vendor/bin/phpunit --no-coverage --testsuite Database
+
+      - name: Database suite on PostgreSQL 16
+        env:
+          NOWO_TEST_DATABASE_URL: pgsql://postgres@127.0.0.1:5432/app?serverVersion=16
+        timeout-minutes: 15
+        run: vendor/bin/phpunit --no-coverage --testsuite Database
+
+  # Dependency floor: the code must work with the LOWEST nowo-tech/transaction-* versions composer.json allows (a host
+  # can run `composer update nowo-tech/seed-kit-bundle` without updating them), and the demo lock must install
+  # what the bundle requires (the demo installs from its lock, so a requirement added later is never installed and
+  # Demo smoke fails with "class not found").
+  deps-floor:
+    name: Dependency floor (nowo-tech/transaction-* lowest, demo lock)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+
+      - name: Demo lock satisfies the bundle's nowo-tech requirements
+        run: python3 .scripts/check-demo-lock.py . --only 'nowo-tech/*'
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: json, pdo_sqlite, sodium
+          tools: composer:v2
+
+      - name: Install dependencies
+        run: |
+          composer config platform.php 8.4.1
+          composer update --prefer-dist --no-progress --no-interaction
+
+      - name: Downgrade nowo-tech/transaction-* to the lowest allowed versions
+        run: |
+          composer update 'nowo-tech/transaction-*' --prefer-lowest --prefer-dist --no-progress --no-interaction
+          composer show 'nowo-tech/transaction-*'
+
+      - name: PHPStan at the floor
+        run: composer phpstan
+
+      - name: Unit, integration and database (SQLite) suites at the floor
+        timeout-minutes: 10
+        run: vendor/bin/phpunit --no-coverage --testsuite Unit,Integration,Database
+
+  coverage:
+    name: Code Coverage
+    runs-on: ubuntu-latest
+    # Light mode: skipped (a skipped non-matrix job reports its own name with success for branch protection).
+    needs: changes
+    if: ${{ !cancelled() && needs.changes.outputs.mode != 'light' }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          extensions: json, pdo_sqlite, sodium
+          coverage: pcov
+          tools: composer:v2
+
+      - name: Install dependencies (locked, Symfony 7.4)
+        run: composer install --prefer-dist --no-progress --no-interaction
+
+      - name: Run tests with coverage (fails below 100%, REQ-TEST-003)
+        env:
+          SYMFONY_DEPRECATIONS_HELPER: max[direct]=0
+        run: composer test-coverage-100
+
+      - name: Validate coverage file
+        run: |
+          if [ ! -f coverage.xml ]; then
+            echo "ERROR: coverage.xml was not generated"
+            exit 1
+          fi
+          echo "coverage.xml generated"
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v7
+        with:
+          files: coverage.xml
+          fail_ci_if_error: false
+
+  # REQ-TEST-011: boot the FrankenPHP demo (MySQL) and expect HTTP 200 on every push / PR.
+  demo-smoke:
+    name: Demo smoke (symfony7 + symfony8, HTTP 200)
+    runs-on: ubuntu-latest
+    # Light mode: skipped (a skipped non-matrix job reports its own name with success for branch protection).
+    needs: changes
+    if: ${{ !cancelled() && needs.changes.outputs.mode != 'light' }}
+    timeout-minutes: 45
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+
+      - name: Docker Compose version
+        run: docker compose version
+
+      - name: Run demo smoke
+        run: make demo-smoke

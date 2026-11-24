@@ -1,23 +1,183 @@
 {
     "name": "nowo-tech/seed-kit-bundle",
-    "description": "Seed data for Symfony: provider-based export/import of reference data with JSON Schema validation, dry-run diff, plan hash and idempotent batched apply through the host's own handlers. FrankenPHP worker safe.",
+    "description": "Seed data for Symfony: one provider per kind of data, export (empty template or current rows) and import of YAML / JSON / JSON Lines documents validated by a JSON Schema, a dry-run diff with a plan hash, and an idempotent batched apply through the host's own handlers with leases, access checks and audit. Console in 0.1. FrankenPHP worker safe.",
     "type": "symfony-bundle",
     "license": "MIT",
-    "keywords": ["php", "symfony", "symfony-bundle", "seed", "seeding", "import", "export", "fixtures", "json-schema", "ddd", "nowo", "frankenphp"],
+    "keywords": [
+        "php",
+        "symfony",
+        "symfony-bundle",
+        "seed",
+        "seeding",
+        "seed-data",
+        "import",
+        "export",
+        "json-schema",
+        "yaml",
+        "dry-run",
+        "ddd",
+        "nowo",
+        "frankenphp"
+    ],
     "homepage": "https://github.com/nowo-tech/SeedKitBundle",
     "support": {
         "issues": "https://github.com/nowo-tech/SeedKitBundle/issues",
-        "source": "https://github.com/nowo-tech/SeedKitBundle"
+        "source": "https://github.com/nowo-tech/SeedKitBundle",
+        "docs": "https://github.com/nowo-tech/SeedKitBundle/tree/main/docs",
+        "changelog": "https://github.com/nowo-tech/SeedKitBundle/blob/main/docs/CHANGELOG.md"
     },
     "authors": [
-        {"name": "Héctor Franco Aceituno", "email": "hectorfranco@nowo.tech", "homepage": "https://github.com/HecFranco", "role": "Developer"},
-        {"name": "Nowo.tech", "homepage": "https://nowo.tech"}
+        {
+            "name": "Héctor Franco Aceituno",
+            "email": "hectorfranco@nowo.tech",
+            "homepage": "https://github.com/HecFranco",
+            "role": "Developer"
+        },
+        {
+            "name": "Nowo.tech",
+            "homepage": "https://nowo.tech"
+        }
     ],
     "require": {
-        "php": ">=8.2 <8.6"
+        "php": ">=8.2 <8.6",
+        "ext-json": "*",
+        "ext-mbstring": "*",
+        "doctrine/dbal": "^3.8.2 || ^4.0",
+        "doctrine/doctrine-bundle": "^2.8 || ^3.0",
+        "doctrine/orm": "^3.7",
+        "doctrine/persistence": "^3.4 || ^4.0",
+        "nowo-tech/transaction-contract": "^1.1",
+        "nowo-tech/transaction-doctrine": "^1.10.1",
+        "opis/json-schema": "^2.6",
+        "psr/clock": "^1.0",
+        "psr/container": "^1.1 || ^2.0",
+        "psr/event-dispatcher": "^1.0",
+        "psr/log": "^2.0 || ^3.0",
+        "symfony/clock": "^7.4 || ^8.0",
+        "symfony/config": "^7.4 || ^8.0",
+        "symfony/console": "^7.4 || ^8.0",
+        "symfony/dependency-injection": "^7.4 || ^8.0",
+        "symfony/event-dispatcher": "^7.4 || ^8.0",
+        "symfony/framework-bundle": "^7.4 || ^8.0",
+        "symfony/http-kernel": "^7.4 || ^8.0",
+        "symfony/uid": "^7.4 || ^8.0",
+        "symfony/yaml": "^7.4 || ^8.0"
+    },
+    "require-dev": {
+        "deptrac/deptrac": "^4.7.2",
+        "friendsofphp/php-cs-fixer": "^3.95",
+        "igor-php/igor-php": "^0.11",
+        "nowo-tech/audit-kit-bundle": "^2.1",
+        "nowo-tech/phpstan-frankenphp": "^1.4",
+        "nowo-tech/vault-bundle": "^2.4",
+        "phpstan/extension-installer": "^1.4",
+        "phpstan/phpstan": "^2.3",
+        "phpstan/phpstan-phpunit": "^2.0",
+        "phpstan/phpstan-symfony": "^2.0",
+        "phpunit/phpunit": "^11.5",
+        "rector/rector": "^2.8",
+        "symfony/phpunit-bridge": "^7.4 || ^8.0",
+        "symfony/security-bundle": "^7.4 || ^8.0",
+        "symfony/translation": "^7.4 || ^8.0"
+    },
+    "suggest": {
+        "symfony/security-bundle": "SEED_EXPORT / SEED_APPLY / SEED_PRUNE voter, role-based access checker and the user-identifier actor resolver",
+        "symfony/translation": "Translated console messages and row errors (domain NowoSeedKitBundle, 10 locales)",
+        "phpunit/phpunit": "Nowo\\SeedKitBundle\\Testing\\SeedProviderContractTestCase for your providers' tests",
+        "nowo-tech/audit-kit-bundle": "Audit sink bridge (audit.auditkit): applies, prunes and sensitive exports in the action log",
+        "nowo-tech/vault-bundle": "Secret-reference bridge (secrets.vault_bridge): vault:<item-uuid> checked against the target scope and the actor"
     },
     "autoload": {
-        "psr-4": {"Nowo\\SeedKitBundle\\": "src/"}
+        "psr-4": {
+            "Nowo\\SeedKitBundle\\": "src/"
+        }
     },
-    "minimum-stability": "stable"
+    "autoload-dev": {
+        "psr-4": {
+            "Nowo\\SeedKitBundle\\Tests\\": "tests/"
+        }
+    },
+    "archive": {
+        "exclude": [
+            "/.coderabbit.yaml",
+            "/.cursor",
+            "/.cursorignore",
+            "/.githooks",
+            "/.github",
+            "/.php-cs-fixer.dist.php",
+            "/.scripts",
+            "/.scrutinizer.yml",
+            "/.specify",
+            "/.symfony",
+            "/Dockerfile",
+            "/Makefile",
+            "/demo",
+            "/deptrac.yaml",
+            "/docker-compose.yml",
+            "/docs/images",
+            "/igor.json",
+            "/phpstan.neon.dist",
+            "/phpunit.xml.dist",
+            "/rector.php",
+            "/specs",
+            "/tests"
+        ]
+    },
+    "extra": {
+        "symfony": {
+            "bundle": "Nowo\\SeedKitBundle\\NowoSeedKitBundle"
+        }
+    },
+    "config": {
+        "sort-packages": true,
+        "allow-plugins": {
+            "phpstan/extension-installer": true
+        },
+        "platform": {
+            "php": "8.2.0"
+        }
+    },
+    "minimum-stability": "stable",
+    "prefer-stable": true,
+    "scripts": {
+        "test": "@php -d memory_limit=512M vendor/bin/phpunit --color=always",
+        "test-coverage": "@php -d memory_limit=512M vendor/bin/phpunit --color=always --coverage-html coverage --coverage-clover coverage.xml --coverage-text",
+        "test-coverage-100": [
+            "@test-coverage",
+            "php .scripts/check-coverage.php coverage.xml --min-percent=100"
+        ],
+        "validate-phpdoc": "php .scripts/complete-public-phpdoc.php",
+        "cs-check": "php-cs-fixer fix --dry-run --diff",
+        "cs-fix": "php-cs-fixer fix",
+        "rector": "rector process",
+        "rector-dry": "rector process --dry-run --no-progress-bar",
+        "phpstan": "phpstan analyse --memory-limit=1G",
+        "update": "composer update --no-interaction",
+        "validate": "composer validate --strict",
+        "qa": [
+            "@cs-check",
+            "@test"
+        ],
+        "igor": "igor-php --no-agent .",
+        "deptrac": [
+            "deptrac analyse --no-progress --fail-on-uncovered --report-uncovered",
+            "deptrac debug:unassigned"
+        ]
+    },
+    "scripts-descriptions": {
+        "test": "Run PHPUnit tests",
+        "test-coverage": "Run PHPUnit tests with code coverage",
+        "test-coverage-100": "Run test-coverage and fail if statement or element coverage is below 100% (REQ-TEST-003)",
+        "validate-phpdoc": "Fail when a class or public method in src/ has no PHPDoc (REQ-CS-001)",
+        "cs-check": "Check code style with PHP-CS-Fixer",
+        "cs-fix": "Fix code style with PHP-CS-Fixer",
+        "rector": "Apply Rector refactoring",
+        "rector-dry": "Run Rector in dry-run mode",
+        "phpstan": "Run PHPStan static analysis",
+        "update": "Update composer.lock (composer update)",
+        "validate": "Validate composer.json (composer validate --strict)",
+        "qa": "Run all quality assurance checks",
+        "igor": "Run Igor FrankenPHP worker-state audit (REQ-CS-008)",
+        "deptrac": "Check the layer dependencies of src/ with Deptrac; fail on violations, uncovered dependencies and unassigned classes (REQ-ARCH-002)"
+    }
 }
