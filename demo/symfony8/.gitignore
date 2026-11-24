@@ -1,0 +1,38 @@
+# Local environment (do not version secrets or machine-specific env)
+.env
+.env.dev
+.env.local
+.env.local.php
+.env.*.local
+
+# Dependencies & build artifacts
+/vendor/
+/node_modules/
+/.pnpm-store/
+/var/
+/public/build/
+/public/bundles/
+/dist/
+
+# pnpm local store (REQ-GITIGNORE-003)
+/.pnpm-store
+
+# PHPUnit
+/phpunit.xml
+/.phpunit.cache/
+
+# Caches & logs
+*.log
+
+# Archives / compressed
+*.zip
+*.tar
+*.tar.gz
+*.tgz
+*.rar
+*.7z
+
+# SQLite artifacts (REQ-DEMO-011 — demos use MySQL)
+*.db
+*.sqlite
+*.sqlite3

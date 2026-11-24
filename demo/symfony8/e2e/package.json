@@ -1,0 +1,17 @@
+{
+  "name": "nowo-seed-kit-demo-e2e",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Playwright e2e + screenshots for the Seed Kit Bundle demo (REQ-DEMO-013)",
+  "scripts": {
+    "test": "playwright test --project=chromium",
+    "test:screenshots": "playwright test --project=screenshots",
+    "install-browsers": "playwright install chromium",
+    "to-webp": "node scripts/to-webp.mjs"
+  },
+  "devDependencies": {
+    "@axe-core/playwright": "4.14.0",
+    "@playwright/test": "1.64.0",
+    "sharp": "^0.35.5"
+  }
+}

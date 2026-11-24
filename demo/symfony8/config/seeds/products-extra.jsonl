@@ -1,0 +1,4 @@
+{"provider":"catalog.products","version":1,"scope":"platform"}
+{"sku":"BK-0003","name":"Release it!","category":"books","price":39.99,"active":true}
+{"sku":"GM-0002","name":"Tile-laying game","category":"games","price":24.5,"active":true}
+{"sku":"ST-0002","name":"Fountain pen","category":"stationery","price":18,"active":true}
