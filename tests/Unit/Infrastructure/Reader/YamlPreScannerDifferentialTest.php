@@ -54,6 +54,8 @@ final class YamlPreScannerDifferentialTest extends TestCase
         '[[]*zz!!float 7- - >]',
         "[\n  [- - ',]*zz<<: , \":x>>&zz [':a:\"\n  - - : >\"---]",
         '[[]!t ::]',
+        "items: [{email: a, t: [x\n  \"y, !!binary aGVsbG8=, z\"]}]",
+        "[?x\n  \"y, !!str 1, z\"]",
         "- - k\n  - *zz",
         "--- > #::\n  !!float 7?a{",
         "a?&zz :><<: \n      '':\":x? ---,::!!str 8\n?- - : !!binary QUJD",

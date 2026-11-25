@@ -50,6 +50,8 @@ final class YamlPreScannerTest extends TestCase
         yield 'legitimate look-alikes' => ["u: {link: http://x.test/a?b=1#c, at: 10:30}\nj: {\"k\":\"v\",\"n\":[1,2]}\nq: 'it''s: fine'\n"
             . "p: first line\n  second line\ns: \"multi\n  line\"\nh: Hello! # note\nw: Wow!!\n- [a-b, c]\n"];
         yield 'quoted sibling key after a plain value' => ["- a: x\n  \"b\": y\n"];
+        yield 'bang after a dash inside a word' => ["a: b-!x\nnote: e-!\n"];
+        yield 'flow list over several lines' => ["tags: [\n  news,\n  sport\n]\nk: {a: 1,\n  b: 2}\n"];
         yield 'flow collections followed by separators' => ["k: [a, [b], {c: [d]}]\nl: {m: [n]}\n[o]: p\nq: [r]\n"];
         yield 'nested sequences and maps' => ["- - a\n  - b\n  - c: 1\n    d: 2\n"];
         yield 'quoted values and keys in a row' => ["- \"a\"\n- 'b'\nk: \"v\"\nl: 'w'\n- k: \"v\"\n  \"l\": 'w'\n"];
@@ -158,7 +160,9 @@ final class YamlPreScannerTest extends TestCase
         yield 'quoted scalar over lines of a flow' => ["[\"a #b\n  *zz\"]\n", 'yaml_ambiguous', 1];
         yield 'quote after a colon glued inside a flow plain scalar' => ["[#:>{'!!str 8- [,\n!!float 7:>]\n", 'yaml_ambiguous', 1];
         yield 'quote after a glued colon in a flow' => ["a: [b:'c, *x']\n", 'yaml_ambiguous', 1];
-        yield 'tag after a dash inside text' => ["a: b-!x\n", 'yaml_tag', 1];
+        yield 'quote on a line continuing a flow plain scalar' => ["items: [{email: a, t: [x\n  \"y, !!binary aGVsbG8=, z\"]}]\n", 'yaml_ambiguous', 2];
+        yield 'quote continuing a flow plain scalar after a question mark' => ["[?x\n  \"y, !!str 1, z\"]\n", 'yaml_ambiguous', 2];
+        yield 'tag after a real dash indicator' => ["- !x\n", 'yaml_tag', 1];
         yield 'anchor after a quoted flow key and a bare colon' => ["a: [{\"k\":&x [1]}, {\"k\":*x}]\n", 'yaml_anchor', 1];
         yield 'alias after a quoted flow key and a bare colon' => ["a: {\"k\":*x}\n", 'yaml_alias', 1];
         yield 'tag after a quoted flow key and a bare colon' => ["a: {\"k\":!!binary YQ==}\n", 'yaml_tag', 1];

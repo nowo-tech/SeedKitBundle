@@ -21,8 +21,11 @@ use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 
+use function count;
 use function fopen;
 use function fwrite;
+use function mt_rand;
+use function mt_srand;
 use function rewind;
 use function stream_get_contents;
 
@@ -390,5 +393,54 @@ final class DocumentWriterTest extends TestCase
         rewind($stream);
 
         return $stream;
+    }
+
+    #[Test]
+    public function randomExportsReadBackIdenticalInEveryFormat(): void
+    {
+        // ZBK-v3: export → import must hold for any value (e.g. `e-!` once came back refused); fixed seed, bounded.
+        mt_srand(20261125);
+        $items = [];
+        for ($n = 0; $n < 400; ++$n) {
+            $item = ['slug' => 's' . $n, 'note' => 'e-!', self::randomText(8) . 'k' => self::randomValue(2)];
+            for ($field = 0; $field < 5; ++$field) {
+                $item['f' . $field] = self::randomValue(2);
+            }
+            $items[] = $item;
+        }
+        foreach (DocumentFormat::cases() as $format) {
+            [, $output] = $this->write(ExportMode::Current, $format, $items, $this->bareHeader(), $this->bareSchema());
+            $set        = (new DocumentReader())->read($this->stream($output), $format, new ReaderLimits());
+            $back       = [];
+            foreach ($set->documents[0]->items() as $item) {
+                $back[] = $item;
+            }
+            self::assertSame($items, $back, $format->value);
+        }
+    }
+
+    private static function randomValue(int $depth): mixed
+    {
+        $kind = mt_rand(0, $depth > 0 ? 7 : 5);
+
+        return match ($kind) {
+            0       => mt_rand(-1000, 1000),
+            1       => mt_rand(0, 1) === 1,
+            2       => null,
+            3, 4, 5 => self::randomText(mt_rand(0, 12)),
+            6       => [self::randomValue($depth - 1), self::randomValue($depth - 1)],
+            default => ['a' . self::randomText(3) => self::randomValue($depth - 1), 'b' => self::randomValue($depth - 1)],
+        };
+    }
+
+    private static function randomText(int $length): string
+    {
+        $alphabet = ['a', 'b', '1', ' ', '-', '!', '?', ':', ',', '[', ']', '{', '}', '#', '&', '*', '|', '>', "'", '"', '%', '@', '`', '\\', "\t", "\n", '~', '<<', 'é', '---', '...'];
+        $text     = '';
+        for ($i = 0; $i < $length; ++$i) {
+            $text .= $alphabet[mt_rand(0, count($alphabet) - 1)];
+        }
+
+        return $text;
     }
 }

@@ -34,7 +34,7 @@ use const PHP_INT_MAX;
  * it; its tokens are still checked as nodes), text right after a closed flow collection without a separator, a
  * bracket or a quote right after a `:` glued inside a flow plain scalar, a quoted scalar over several lines of a flow
  * collection and a block-scalar indentation indicator. `- ` after a key or inside a flow, and `]` / `}` outside a
- * flow, are plain text, as for Symfony. A `!` after a space, a tab or `[ { , : ? -` is refused
+ * flow, are plain text, as for Symfony. A `!` after a space, a tab or `[ { , : ?` is refused
  * anywhere outside quoted scalars and comments, so no desync can carry a tag (`Hello!` stays fine).
  *
  * When a depth is given, the nesting is bounded before the parser recurses (`too_deep`): flow brackets, the block
@@ -67,6 +67,8 @@ final class YamlPreScanner
         $openedOwner = null;
         // A flow collection just closed: only `,`, `]`, `}` or `:` may follow it.
         $closed = false;
+        // The previous line ended inside a plain scalar of a flow collection (Symfony folds the next line into it).
+        $flowPlain = false;
         for ($i = 0; $i < $count; ++$i) {
             $line      = $lines[$i];
             $length    = strlen($line);
@@ -85,6 +87,10 @@ final class YamlPreScanner
                 if ($continued && in_array($line[$pos], ['"', "'", '[', '{', '|', '>'], true)) {
                     // Symfony reads this line as more text of the plain scalar above, not as a new quoted, flow or
                     // block node: refuse rather than guess (fail closed).
+                    throw new DocumentReadException('yaml_ambiguous', $i + 1);
+                }
+                if ($flowPlain && in_array($line[$pos], ['"', "'", '[', '{', '|', '>'], true)) {
+                    // `[x` then `"y, …"`: for Symfony the quote is more text of `x`; refuse rather than guess.
                     throw new DocumentReadException('yaml_ambiguous', $i + 1);
                 }
                 if ($pos === 0 && $flow === 0 && $line[0] === '%') {
@@ -277,7 +283,7 @@ final class YamlPreScanner
 
                     continue;
                 }
-                if ($char === '!' && ($pos === 0 || in_array($line[$pos - 1], [' ', "\t", '[', '{', ',', ':', '?', '-'], true))) {
+                if ($char === '!' && ($pos === 0 || in_array($line[$pos - 1], [' ', "\t", '[', '{', ',', ':', '?'], true))) {
                     // A tag-like token inside text: refused whatever the scanner thinks the node is (fail closed).
                     throw new DocumentReadException('yaml_tag', $i + 1);
                 }
@@ -311,6 +317,7 @@ final class YamlPreScanner
                 // Nothing but a comment on this line: the open plain scalar or pending key carries on.
                 continue;
             }
+            $flowPlain = $flow > 0 && $quote === null && !$start && !$afterQuote && !$closed;
             if ($continued) {
                 // More text of the plain scalar above: the owner of the scalar does not change.
                 $pending = null;

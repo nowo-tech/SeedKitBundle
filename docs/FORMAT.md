@@ -217,7 +217,7 @@ skipped, so `a&b`, `"*"` or `'!important'` are fine. A node starts after any `:`
 `:` that follows a quoted key even without a space (JSON style `{"k":v}` or `'k':v`), so `{"k":*a}` is refused
 too; inside a flow collection a plain scalar such as `a:*b` is refused as well (fail closed: quote it). A `:` or `?`
 glued to the next character starts a plain scalar (`:|p`, `:"p` are keys). A plain scalar continued on a new line
-that starts with one of these characters is refused too, and a `!` after a space or `[ { , : ? -` is refused even
+that starts with one of these characters is refused too, and a `!` after a space or `[ { , : ?` is refused even
 inside plain text (`Hello!` is fine, `a !b` is not).
 
 Where Symfony could read the text differently from the pre-scanner, the reader refuses it (`yaml_ambiguous`)
@@ -229,7 +229,7 @@ instead of guessing. Write seed files with spaces and keep these out:
 | A quoted, flow or block scalar opening on a line deeper than the key or first `-` whose value ended above (`k: x` then a deeper `"y`; `- - a` then `  - "b"`) | quote the whole value, or put it on its own item |
 | Text right after a closed `[ ]` / `{ }` other than `,`, `]`, `}` or `:` (`[[]*a]`, `k: [a] b`) | add the separator |
 | Text after the closing quote of a quoted scalar that spans lines | end the line after the quote |
-| A quoted scalar over several lines inside `[ ]` / `{ }` | keep it on one line, or use block style |
+| A quoted scalar over several lines inside `[ ]` / `{ }`, or a line inside them that starts with a quote, `[`, `{`, `\|` or `>` right after a plain scalar left open (`[x` then `"y…`) | keep it on one line, or use block style |
 | `[` / `{` inside a plain scalar of a flow collection (`[a[b]]`), or a quote right after `a:` in one (`[a:'b']`) | quote the value |
 | A block scalar header other than `\|` / `>` with an optional `+` / `-` and a comment (`\|2`, `>- text`) | the plain header |
 

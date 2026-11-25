@@ -265,6 +265,8 @@ final class DocumentReaderTest extends TestCase
         yield 'tab comment hiding a quote' => [$h . "  - email: a\n    n: x\t# y: '\n    m: !!binary aGVsbG8=\n    # '\n", 'yaml_ambiguous', 6];
         yield 'tab comment line hiding a quote' => [$h . "\t# x: '\n  - m: !!binary aGVsbG8=\n# '\n", 'yaml_ambiguous', 5];
         yield 'quote opening a plain continuation line' => [$h . "  - c: x\n      \"y\n    d: !!binary aGVsbG8=\n    e: '\"'\n", 'yaml_ambiguous', 6];
+        // ZBK-v3 probe: a quote on a line that Symfony folds into a flow plain scalar.
+        yield 'quote continuing a flow plain scalar' => [self::HEADER_YAML . "items: [{email: a, t: [x\n  \"y, !!binary aGVsbG8=, z\"]}]\n", 'yaml_ambiguous', 5];
         yield 'dash inside a flow hiding a quote' => [$h . "  - [- -   ',!x ]\n", 'yaml_tag', 5];
     }
 
