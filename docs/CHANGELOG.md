@@ -7,6 +7,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.1.0] - 2026-11-25
+
 First release (0.1.0): core, console and provider contract test kit. The import / export pages and the Messenger apply
 follow in 0.2.0.
 
