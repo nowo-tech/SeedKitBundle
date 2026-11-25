@@ -264,6 +264,6 @@ final class BundleWiringTest extends KernelTestCase
     {
         $driver = $manager->getConfiguration()->getMetadataDriverImpl();
 
-        return $driver === null ? [] : array_values($driver->getAllClassNames());
+        return $driver instanceof MappingDriver ? array_values($driver->getAllClassNames()) : [];
     }
 }
