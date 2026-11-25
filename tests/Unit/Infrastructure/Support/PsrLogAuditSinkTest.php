@@ -24,7 +24,7 @@ final class PsrLogAuditSinkTest extends TestCase
     #[Test]
     public function logsAtNoticeByDefaultWithTheFlatContext(): void
     {
-        $record = self::record();
+        $record = $this->record();
         $logger = $this->createMock(LoggerInterface::class);
         $logger->expects(self::once())->method('log')->with(LogLevel::NOTICE, 'Seed {action} by {actor} in {scope}: {outcome}.', [
             'action'        => 'apply',
@@ -56,10 +56,10 @@ final class PsrLogAuditSinkTest extends TestCase
     {
         $this->expectNotToPerformAssertions();
 
-        (new PsrLogAuditSink(null))->record(self::record());
+        (new PsrLogAuditSink(null))->record($this->record());
     }
 
-    private static function record(): SeedAuditRecord
+    private function record(): SeedAuditRecord
     {
         return new SeedAuditRecord(
             SeedAuditRecord::APPLY,

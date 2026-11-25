@@ -22,17 +22,17 @@ final readonly class ConflictingRunStore implements RunStoreInterface
 {
     public function create(RunRecord $run): void
     {
-        throw self::conflict();
+        throw $this->conflict();
     }
 
     public function markBatch(RunId $run, int $number, array $counts): bool
     {
-        throw self::conflict();
+        throw $this->conflict();
     }
 
     public function finish(RunId $run, RunStatus $status, ?string $errorCode): void
     {
-        throw self::conflict();
+        throw $this->conflict();
     }
 
     public function find(RunId $run): ?RunRecord
@@ -47,7 +47,7 @@ final readonly class ConflictingRunStore implements RunStoreInterface
 
     public function purge(DateTimeImmutable $before, int $batchSize): int
     {
-        throw self::conflict();
+        throw $this->conflict();
     }
 
     public function countPurgeable(DateTimeImmutable $before): int
@@ -57,10 +57,10 @@ final readonly class ConflictingRunStore implements RunStoreInterface
 
     public function forgetActor(ActorRef $actor, int $batchSize): int
     {
-        throw self::conflict();
+        throw $this->conflict();
     }
 
-    private static function conflict(): ConcurrencyConflict
+    private function conflict(): ConcurrencyConflict
     {
         return new ConcurrencyConflict(3, TransientFailureKind::Deadlock, 1, new RuntimeException('deadlock'));
     }

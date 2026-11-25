@@ -16,7 +16,6 @@ use Nowo\SeedKitBundle\Domain\Plan\NaturalKeySet;
 use Nowo\SeedKitBundle\Domain\Plan\PlanOptions;
 use Nowo\SeedKitBundle\Domain\Plan\RowChange;
 use Nowo\SeedKitBundle\Domain\Schema\SeedSchema;
-use Nowo\SeedKitBundle\Testing\SeedProviderContractTestCase;
 
 /**
  * A kind of seed data (contract section 6), implemented by the host and tagged `nowo_seed_kit.provider` (or
@@ -24,7 +23,7 @@ use Nowo\SeedKitBundle\Testing\SeedProviderContractTestCase;
  * provider owns the data and writes **only through the host's own handlers** (same validation, events and audit as the
  * CRUD; no generic entity writes, Q-SK-10).
  *
- * Rules (checked by {@see SeedProviderContractTestCase}):
+ * Rules (checked by `Nowo\SeedKitBundle\Testing\SeedProviderContractTestCase`):
  * - stateless and worker-safe: nothing kept between calls;
  * - filter every read, plan and prune by the actor in the context (row-level visibility);
  * - never put database ids in items; natural keys only;

@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Nowo\SeedKitBundle\Domain\Schema;
 
-use Nowo\SeedKitBundle\Application\SchemaLinter;
 use Nowo\SeedKitBundle\Domain\Support\CanonicalJson;
 
 use function array_keys;
@@ -23,7 +22,7 @@ use function is_string;
  * - property: `x-seed-secret`, `x-seed-personal-data`, `x-seed-readonly`, `x-seed-float`, `x-seed-omit-means`
  *   (`keep` default, `clear`).
  *
- * The constructor accepts any array; {@see SchemaLinter} reports what is wrong (the
+ * The constructor accepts any array; the application's `SchemaLinter` reports what is wrong (the
  * warmer, the `lint` command and the contract test kit run it). Immutable and stateless.
  */
 final readonly class SeedSchema

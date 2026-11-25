@@ -25,7 +25,7 @@ final class HookedWriteRunner implements WriteRunnerInterface
     public function write(callable $work): mixed
     {
         ++$this->calls;
-        if ($this->before !== null) {
+        if ($this->before instanceof Closure) {
             ($this->before)($this->calls);
         }
 

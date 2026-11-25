@@ -24,7 +24,7 @@ final class ConfigurationTreeTest extends TestCase
      *
      * @return array<string, mixed>
      */
-    private static function process(array $input): array
+    private function process(array $input): array
     {
         $extension = (new NowoSeedKitBundle())->getContainerExtension();
         self::assertInstanceOf(ConfigurationExtensionInterface::class, $extension);
@@ -43,7 +43,7 @@ final class ConfigurationTreeTest extends TestCase
      *
      * @param array<string, mixed> $config
      */
-    private static function at(array $config, string ...$path): mixed
+    private function at(array $config, string ...$path): mixed
     {
         $value = $config;
         foreach ($path as $key) {
@@ -58,7 +58,7 @@ final class ConfigurationTreeTest extends TestCase
     #[Test]
     public function defaultsFollowTheContract(): void
     {
-        $config = self::process([]);
+        $config = $this->process([]);
 
         self::assertSame(['platform' => ['requires_id' => false]], $config['scope_kinds']);
         self::assertNull($config['scope_resolver']);
@@ -70,19 +70,19 @@ final class ConfigurationTreeTest extends TestCase
         self::assertSame(['history_days' => 365], $config['runs']);
         self::assertSame(['validator' => null, 'vault_bridge' => ['enabled' => false, 'scope_format' => '{kind}:{id}']], $config['secrets']);
         self::assertSame(['auditkit' => true, 'sink' => null, 'log_level' => 'notice'], $config['audit']);
-        self::assertTrue(self::at($config, 'console', 'require_actor'));
-        self::assertTrue(self::at($config, 'console', 'short_aliases'));
-        self::assertSame(['%kernel.project_dir%/config/seeds', '%kernel.project_dir%/var/seeds'], self::at($config, 'console', 'allowed_dirs'));
-        self::assertSame(['ROLE_ADMIN'], self::at($config, 'security', 'access_roles'));
-        self::assertSame([], self::at($config, 'security', 'prune_roles'));
-        self::assertFalse(self::at($config, 'security', 'allow_unauthenticated'));
-        self::assertSame([], self::at($config, 'security', 'providers'));
+        self::assertTrue($this->at($config, 'console', 'require_actor'));
+        self::assertTrue($this->at($config, 'console', 'short_aliases'));
+        self::assertSame(['%kernel.project_dir%/config/seeds', '%kernel.project_dir%/var/seeds'], $this->at($config, 'console', 'allowed_dirs'));
+        self::assertSame(['ROLE_ADMIN'], $this->at($config, 'security', 'access_roles'));
+        self::assertSame([], $this->at($config, 'security', 'prune_roles'));
+        self::assertFalse($this->at($config, 'security', 'allow_unauthenticated'));
+        self::assertSame([], $this->at($config, 'security', 'providers'));
     }
 
     #[Test]
     public function scopeKindsDefaultToRequiringAnId(): void
     {
-        $config = self::process(['scope_kinds' => ['platform' => ['requires_id' => false], 'organization' => []]]);
+        $config = $this->process(['scope_kinds' => ['platform' => ['requires_id' => false], 'organization' => []]]);
 
         self::assertSame(['platform' => ['requires_id' => false], 'organization' => ['requires_id' => true]], $config['scope_kinds']);
     }
@@ -90,24 +90,24 @@ final class ConfigurationTreeTest extends TestCase
     #[Test]
     public function roleOverridesAcceptNullOrAList(): void
     {
-        $config = self::process(['security' => ['providers' => ['crm.contacts' => ['export_roles' => ['ROLE_CRM'], 'apply_roles' => null, 'prune_roles' => []]]]]);
+        $config = $this->process(['security' => ['providers' => ['crm.contacts' => ['export_roles' => ['ROLE_CRM'], 'apply_roles' => null, 'prune_roles' => []]]]]);
 
-        self::assertEquals(['export_roles' => ['ROLE_CRM'], 'apply_roles' => null, 'prune_roles' => []], self::at($config, 'security', 'providers', 'crm.contacts'));
+        self::assertEquals(['export_roles' => ['ROLE_CRM'], 'apply_roles' => null, 'prune_roles' => []], $this->at($config, 'security', 'providers', 'crm.contacts'));
     }
 
     #[Test]
     public function allowAllWithAllowUnauthenticatedIsAccepted(): void
     {
-        $config = self::process(['security' => ['access_checker' => 'allow_all', 'allow_unauthenticated' => true]]);
+        $config = $this->process(['security' => ['access_checker' => 'allow_all', 'allow_unauthenticated' => true]]);
 
-        self::assertSame('allow_all', self::at($config, 'security', 'access_checker'));
+        self::assertSame('allow_all', $this->at($config, 'security', 'access_checker'));
     }
 
     #[Test]
     public function aValidatorWithoutTheVaultBridgeIsAccepted(): void
     {
-        self::assertSame('app.secrets', self::at(self::process(['secrets' => ['validator' => 'app.secrets']]), 'secrets', 'validator'));
-        self::assertSame('', self::at(self::process(['doctrine' => ['table_prefix' => '']]), 'doctrine', 'table_prefix'));
+        self::assertSame('app.secrets', $this->at($this->process(['secrets' => ['validator' => 'app.secrets']]), 'secrets', 'validator'));
+        self::assertSame('', $this->at($this->process(['doctrine' => ['table_prefix' => '']]), 'doctrine', 'table_prefix'));
     }
 
     /**
@@ -142,6 +142,6 @@ final class ConfigurationTreeTest extends TestCase
         $this->expectException(InvalidConfigurationException::class);
         $this->expectExceptionMessage($message);
 
-        self::process($input);
+        $this->process($input);
     }
 }

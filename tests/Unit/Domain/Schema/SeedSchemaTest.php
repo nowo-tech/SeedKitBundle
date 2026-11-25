@@ -13,7 +13,7 @@ use PHPUnit\Framework\TestCase;
  */
 final class SeedSchemaTest extends TestCase
 {
-    private static function schema(): SeedSchema
+    private function schema(): SeedSchema
     {
         return new SeedSchema([
             'title'                => 'Contacts',
@@ -38,7 +38,7 @@ final class SeedSchemaTest extends TestCase
     #[Test]
     public function readsTheKeywords(): void
     {
-        $schema = self::schema();
+        $schema = $this->schema();
         self::assertSame('Contacts', $schema->title('fallback'));
         self::assertSame(['email', 'name', 'token', 'price', 'note', 'created', 'company', 'broken', '3'], array_map('strval', array_keys($schema->properties())));
         self::assertSame([], $schema->properties()['broken']);

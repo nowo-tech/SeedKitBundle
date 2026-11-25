@@ -16,7 +16,7 @@ use PHPUnit\Framework\TestCase;
  */
 final class ErrorBagTest extends TestCase
 {
-    private static function error(int $index, string $rule = 'type'): RowError
+    private function error(int $index, string $rule = 'type'): RowError
     {
         return new RowError($index, null, '', $rule, 'seed_kit.row.' . $rule);
     }
@@ -35,8 +35,8 @@ final class ErrorBagTest extends TestCase
     public function capsAndTruncates(): void
     {
         $bag = new ErrorBag(2);
-        $bag->add([self::error(0), self::error(1)], 'demo.a');
-        $bag->add([self::error(2)]);
+        $bag->add([$this->error(0), $this->error(1)], 'demo.a');
+        $bag->add([$this->error(2)]);
         self::assertFalse($bag->isEmpty());
         try {
             $bag->throwIfAny();
@@ -52,7 +52,7 @@ final class ErrorBagTest extends TestCase
     public function withoutProviderTheErrorIsKeptAsIs(): void
     {
         $bag   = new ErrorBag(5);
-        $error = self::error(0);
+        $error = $this->error(0);
         $bag->add([$error]);
         try {
             $bag->throwIfAny();
@@ -67,7 +67,7 @@ final class ErrorBagTest extends TestCase
     public function aSecretErrorEvenOverTheCapRefusesTheSecret(): void
     {
         $bag = new ErrorBag(1);
-        $bag->add([self::error(0), self::error(1, 'secret_refused')]);
+        $bag->add([$this->error(0), $this->error(1, 'secret_refused')]);
         try {
             $bag->throwIfAny();
             self::fail('expected');

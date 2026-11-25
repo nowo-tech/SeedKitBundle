@@ -23,18 +23,18 @@ final class TestOverridesPass implements CompilerPassInterface
     {
         $container->setAlias('clock', 'test.mock_clock')->setPublic(true);
         foreach ($container->getDefinitions() as $id => $definition) {
-            if (self::exposed($id)) {
+            if ($this->exposed($id)) {
                 $definition->setPublic(true);
             }
         }
         foreach ($container->getAliases() as $id => $alias) {
-            if (self::exposed($id)) {
+            if ($this->exposed($id)) {
                 $alias->setPublic(true);
             }
         }
     }
 
-    private static function exposed(string $id): bool
+    private function exposed(string $id): bool
     {
         return str_starts_with($id, 'nowo_seed_kit.') || str_starts_with($id, 'Nowo\\SeedKitBundle\\') || in_array($id, self::PUBLIC, true);
     }

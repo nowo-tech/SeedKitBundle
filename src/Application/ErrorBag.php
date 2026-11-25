@@ -39,13 +39,16 @@ final class ErrorBag
     {
         foreach ($errors as $error) {
             if (str_starts_with($error->rule, 'secret_')) {
+                // @igor-ignore - per-plan error collection created per call, never a shared service.
                 $this->secret = true;
             }
             if (count($this->errors) >= $this->max) {
+                // @igor-ignore - per-plan error collection created per call, never a shared service.
                 $this->truncated = true;
 
                 continue;
             }
+            // @igor-ignore - per-plan error collection created per call, never a shared service.
             $this->errors[] = $provider !== null ? $error->forProvider($provider) : $error;
         }
     }

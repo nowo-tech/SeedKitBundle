@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Nowo\SeedKitBundle\Infrastructure\Symfony\Security;
 
 use Nowo\SeedKitBundle\Domain\Model\ActorRef;
+use Nowo\SeedKitBundle\Domain\Model\ScopeId;
 use Nowo\SeedKitBundle\Domain\Model\ScopeKind;
 use Nowo\SeedKitBundle\Domain\Model\SeedScope;
 use Nowo\SeedKitBundle\Domain\Port\SeedScopeResolverInterface;
@@ -22,6 +23,6 @@ final readonly class PlatformScopeResolver implements SeedScopeResolverInterface
      */
     public function resolve(SeedScope $requested, ActorRef $actor, Channel $channel): ?SeedScope
     {
-        return $requested->kind->value === ScopeKind::PLATFORM && $requested->id === null ? $requested : null;
+        return $requested->kind->value === ScopeKind::PLATFORM && !$requested->id instanceof ScopeId ? $requested : null;
     }
 }

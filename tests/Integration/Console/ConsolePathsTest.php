@@ -74,18 +74,18 @@ final class ConsolePathsTest extends TestCase
     public function inputsOutsideOrNotRegularAreRefused(): void
     {
         $paths = $this->paths();
-        $this->refused('outside console.allowed_dirs', fn () => $paths->input($this->outside . '/secret.yaml', false));
-        $this->refused('outside console.allowed_dirs', fn () => $paths->input($this->allowed . '/../outside/secret.yaml', false));
-        $this->refused('does not exist or is not a regular file', fn () => $paths->input($this->allowed . '/missing.yaml', false));
-        $this->refused('does not exist or is not a regular file', fn () => $paths->input($this->allowed, true));
+        $this->refused('outside console.allowed_dirs', fn (): string => $paths->input($this->outside . '/secret.yaml', false));
+        $this->refused('outside console.allowed_dirs', fn (): string => $paths->input($this->allowed . '/../outside/secret.yaml', false));
+        $this->refused('does not exist or is not a regular file', fn (): string => $paths->input($this->allowed . '/missing.yaml', false));
+        $this->refused('does not exist or is not a regular file', fn (): string => $paths->input($this->allowed, true));
 
         symlink($this->outside . '/secret.yaml', $this->allowed . '/escape.yaml');
-        $this->refused('outside console.allowed_dirs', fn () => $paths->input($this->allowed . '/escape.yaml', false));
+        $this->refused('outside console.allowed_dirs', fn (): string => $paths->input($this->allowed . '/escape.yaml', false));
         self::assertSame(realpath($this->outside . '/secret.yaml'), $paths->input($this->allowed . '/escape.yaml', true));
 
         if (function_exists('posix_mkfifo')) {
             posix_mkfifo($this->allowed . '/fifo.yaml', 0o600);
-            $this->refused('not a regular file', fn () => $paths->input($this->allowed . '/fifo.yaml', true));
+            $this->refused('not a regular file', fn (): string => $paths->input($this->allowed . '/fifo.yaml', true));
         }
     }
 
@@ -106,8 +106,8 @@ final class ConsolePathsTest extends TestCase
     #[DataProvider('wrappers')]
     public function streamWrappersAreRefused(string $path): void
     {
-        $this->refused('Stream wrappers and URLs are not accepted', fn () => $this->paths()->input($path, true));
-        $this->refused('Stream wrappers and URLs are not accepted', fn () => $this->paths()->output($path, true, true));
+        $this->refused('Stream wrappers and URLs are not accepted', fn (): string => $this->paths()->input($path, true));
+        $this->refused('Stream wrappers and URLs are not accepted', fn (): string => $this->paths()->output($path, true, true));
     }
 
     #[Test]
@@ -118,14 +118,14 @@ final class ConsolePathsTest extends TestCase
         self::assertSame(realpath($this->allowed) . '/new.yaml', $paths->output($this->allowed . '/new.yaml', false, false));
         self::assertSame(realpath($this->allowed) . '/tags.yaml', $paths->output($this->allowed . '/tags.yaml', false, true), '--force');
         self::assertSame(realpath($this->outside) . '/new.yaml', $paths->output($this->outside . '/new.yaml', true, false));
-        $this->refused('The output file exists (use --force', fn () => $paths->output($this->allowed . '/tags.yaml', false, false));
-        $this->refused('The output is outside console.allowed_dirs', fn () => $paths->output($this->outside . '/new.yaml', false, false));
-        $this->refused('The output directory does not exist', fn () => $paths->output($this->allowed . '/nope/new.yaml', false, false));
-        $this->refused('The output must be a regular file, not a link', fn () => $paths->output($this->root . '/allowed', true, true));
+        $this->refused('The output file exists (use --force', fn (): string => $paths->output($this->allowed . '/tags.yaml', false, false));
+        $this->refused('The output is outside console.allowed_dirs', fn (): string => $paths->output($this->outside . '/new.yaml', false, false));
+        $this->refused('The output directory does not exist', fn (): string => $paths->output($this->allowed . '/nope/new.yaml', false, false));
+        $this->refused('The output must be a regular file, not a link', fn (): string => $paths->output($this->root . '/allowed', true, true));
 
         symlink($this->outside . '/secret.yaml', $this->allowed . '/link.yaml');
-        $this->refused('The output must be a regular file, not a link', fn () => $paths->output($this->allowed . '/link.yaml', false, true));
+        $this->refused('The output must be a regular file, not a link', fn (): string => $paths->output($this->allowed . '/link.yaml', false, true));
         symlink($this->outside, $this->allowed . '/dirlink');
-        $this->refused('The output is outside console.allowed_dirs', fn () => $paths->output($this->allowed . '/dirlink/new.yaml', false, false));
+        $this->refused('The output is outside console.allowed_dirs', fn (): string => $paths->output($this->allowed . '/dirlink/new.yaml', false, false));
     }
 }

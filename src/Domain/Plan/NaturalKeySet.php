@@ -26,6 +26,7 @@ final class NaturalKeySet implements Countable
         if (isset($this->keys[$key->canonical])) {
             return false;
         }
+        // @igor-ignore - per-run key set created per call, never a shared service.
         $this->keys[$key->canonical] = true;
 
         return true;

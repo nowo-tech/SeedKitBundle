@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Nowo\SeedKitBundle\Bridge\Vault;
 
 use Nowo\SeedKitBundle\Domain\Model\ActorRef;
+use Nowo\SeedKitBundle\Domain\Model\ScopeId;
 use Nowo\SeedKitBundle\Domain\Model\SecretReference;
 use Nowo\SeedKitBundle\Domain\Model\SeedScope;
 use Nowo\SeedKitBundle\Domain\Port\SecretReferenceValidatorInterface;
@@ -66,7 +67,7 @@ final readonly class VaultSecretReferenceValidator implements SecretReferenceVal
      */
     private function ownerScope(SeedScope $scope): string
     {
-        if ($scope->id === null) {
+        if (!$scope->id instanceof ScopeId) {
             return $scope->kind->value;
         }
 

@@ -36,7 +36,7 @@ final class AbstractSeedProviderTest extends TestCase
     /**
      * @param array<string, mixed> $schema
      */
-    private static function provider(array $schema): MinimalProvider
+    private function provider(array $schema): MinimalProvider
     {
         return new MinimalProvider($schema);
     }
@@ -44,7 +44,7 @@ final class AbstractSeedProviderTest extends TestCase
     #[Test]
     public function defaults(): void
     {
-        $provider = self::provider(['properties' => ['code' => ['type' => 'string']]]);
+        $provider = $this->provider(['properties' => ['code' => ['type' => 'string']]]);
         self::assertSame([], $provider->dependsOn());
         self::assertSame([], $provider->exportEmpty(self::context()));
         self::assertSame([], iterator_to_array((static fn () => yield from $provider->planDeletions(self::context(), new NaturalKeySet(), new PlanOptions()))()));
@@ -54,16 +54,16 @@ final class AbstractSeedProviderTest extends TestCase
     #[Test]
     public function exportEmptyKeepsOnlyObjectExamples(): void
     {
-        $provider = self::provider(['examples' => [['code' => 'a', 5 => 'x'], ['list'], 'scalar', []]]);
+        $provider = $this->provider(['examples' => [['code' => 'a', 5 => 'x'], ['list'], 'scalar', []]]);
         self::assertSame([['code' => 'a', '5' => 'x']], $provider->exportEmpty(self::context()));
-        self::assertSame([], self::provider(['examples' => 'nope'])->exportEmpty(self::context()));
+        self::assertSame([], $this->provider(['examples' => 'nope'])->exportEmpty(self::context()));
     }
 
     #[Test]
     public function planBatchDiffsAgainstCurrentRowsWithOneLookup(): void
     {
         $schema   = ['properties' => ['code' => ['type' => 'string'], 'label' => ['type' => 'string']]];
-        $provider = self::provider($schema);
+        $provider = $this->provider($schema);
         $items    = [
             new SeedItem(0, new NaturalKey(['a']), ['code' => 'a', 'label' => 'A']),
             new SeedItem(1, new NaturalKey(['b']), ['code' => 'b', 'label' => 'New']),

@@ -210,20 +210,20 @@ final readonly class DbalRunStore implements RunStoreInterface
         $scopeId = is_string($row['scope_id']) && $row['scope_id'] !== '' ? new ScopeId($row['scope_id']) : null;
 
         return new RunRecord(
-            new RunId(self::text($row['id'])),
-            new SeedScope(new ScopeKind(self::text($row['scope_kind'])), $scopeId),
+            new RunId($this->text($row['id'])),
+            new SeedScope(new ScopeKind($this->text($row['scope_kind'])), $scopeId),
             is_string($row['actor_ref']) ? new ActorRef($row['actor_ref']) : null,
-            Channel::from(self::text($row['channel'])),
-            RunStatus::from(self::text($row['status'])),
+            Channel::from($this->text($row['channel'])),
+            RunStatus::from($this->text($row['status'])),
             $this->intMap($row['providers']),
             (bool) $row['prune'],
             is_string($row['document_hash']) ? new DocumentHash($row['document_hash']) : null,
-            new PlanHash(self::text($row['plan_hash'])),
+            new PlanHash($this->text($row['plan_hash'])),
             $this->stringList($row['batch_digests']),
             is_numeric($row['batches_done']) ? (int) $row['batches_done'] : 0,
             $this->intMap($row['counts']),
             is_string($row['error_code']) ? $row['error_code'] : null,
-            new DateTimeImmutable(self::text($row['created_at']), new DateTimeZone('UTC')),
+            new DateTimeImmutable($this->text($row['created_at']), new DateTimeZone('UTC')),
             is_string($row['finished_at']) ? new DateTimeImmutable($row['finished_at'], new DateTimeZone('UTC')) : null,
         );
     }
@@ -271,7 +271,7 @@ final readonly class DbalRunStore implements RunStoreInterface
     /**
      * A scalar column as text ('' otherwise).
      */
-    private static function text(mixed $value): string
+    private function text(mixed $value): string
     {
         return is_scalar($value) ? (string) $value : '';
     }

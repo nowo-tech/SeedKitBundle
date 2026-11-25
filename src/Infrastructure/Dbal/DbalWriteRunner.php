@@ -33,6 +33,7 @@ final readonly class DbalWriteRunner implements WriteRunnerInterface
     {
         $attempt = 0;
 
+        // @igor-ignore - the write unit runs the closure once per attempt and keeps nothing.
         return $this->writeUnit->run(function () use (&$attempt, $work): mixed {
             $current = ++$attempt;
 

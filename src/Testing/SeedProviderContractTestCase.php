@@ -231,7 +231,7 @@ abstract class SeedProviderContractTestCase extends TestCase
     public function restrictedActorSeesOnlyItsRows(): void
     {
         $actor = $this->restrictedActor();
-        if ($actor === null) {
+        if (!$actor instanceof ActorRef) {
             self::markTestSkipped('The provider has no row-level visibility (restrictedActor() is null).');
         }
         $this->apply($this->documentSet($this->sampleItems()));

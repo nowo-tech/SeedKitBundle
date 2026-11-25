@@ -111,10 +111,10 @@ final class TagProvider extends AbstractSeedProvider
             }
             $item = $batch->item($change);
             $row  = $this->store->rows['demo.tags'][$key] ?? ['createdAt' => '2026-01-01'];
-            foreach ($item !== null ? $item->data : [] as $property => $value) {
+            foreach ($item instanceof SeedItem ? $item->data : [] as $property => $value) {
                 $row[$property] = $value;
             }
-            if ($item !== null && !$item->has('color')) {
+            if ($item instanceof SeedItem && !$item->has('color')) {
                 unset($row['color']);
             }
             $this->store->rows['demo.tags'][$key] = $row;

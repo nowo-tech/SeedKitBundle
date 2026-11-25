@@ -56,7 +56,7 @@ final class DocumentWriterTest extends TestCase
     #[Test]
     public function writesTheCommentedYamlTemplateWithExampleItems(): void
     {
-        [$count, $output] = $this->write(ExportMode::Empty, DocumentFormat::Yaml, self::examples());
+        [$count, $output] = $this->write(ExportMode::Empty, DocumentFormat::Yaml, $this->examples());
 
         self::assertSame(0, $count);
         self::assertSame(self::RICH_COMMENTS . <<<'YAML'
@@ -75,7 +75,7 @@ final class DocumentWriterTest extends TestCase
     #[Test]
     public function writesTheCurrentYamlExport(): void
     {
-        [$count, $output] = $this->write(ExportMode::Current, DocumentFormat::Yaml, self::examples());
+        [$count, $output] = $this->write(ExportMode::Current, DocumentFormat::Yaml, $this->examples());
 
         self::assertSame(2, $count);
         self::assertSame(self::RICH_COMMENTS . <<<'YAML'
@@ -106,7 +106,7 @@ final class DocumentWriterTest extends TestCase
             YAML;
 
         foreach ([ExportMode::Empty, ExportMode::Current] as $mode) {
-            [$count, $output] = $this->write($mode, DocumentFormat::Yaml, [], self::bareHeader(), self::bareSchema());
+            [$count, $output] = $this->write($mode, DocumentFormat::Yaml, [], $this->bareHeader(), $this->bareSchema());
 
             self::assertSame(0, $count);
             self::assertSame($expected, $output, $mode->value);
@@ -116,7 +116,7 @@ final class DocumentWriterTest extends TestCase
     #[Test]
     public function writesJson(): void
     {
-        [$count, $output] = $this->write(ExportMode::Current, DocumentFormat::Json, self::examples());
+        [$count, $output] = $this->write(ExportMode::Current, DocumentFormat::Json, $this->examples());
 
         self::assertSame(2, $count);
         self::assertSame(<<<'JSON'
@@ -161,10 +161,10 @@ final class DocumentWriterTest extends TestCase
 
             JSON;
 
-        [$count, $output] = $this->write(ExportMode::Empty, DocumentFormat::Json, [['slug' => 'never-written']], self::bareHeader(), self::bareSchema());
+        [$count, $output] = $this->write(ExportMode::Empty, DocumentFormat::Json, [['slug' => 'never-written']], $this->bareHeader(), $this->bareSchema());
         self::assertSame(0, $count);
         self::assertSame($expected, $output);
-        [$count, $output] = $this->write(ExportMode::Current, DocumentFormat::Json, [], self::bareHeader(), self::bareSchema());
+        [$count, $output] = $this->write(ExportMode::Current, DocumentFormat::Json, [], $this->bareHeader(), $this->bareSchema());
         self::assertSame(0, $count);
         self::assertSame($expected, $output);
     }
@@ -172,11 +172,11 @@ final class DocumentWriterTest extends TestCase
     #[Test]
     public function writesJsonLines(): void
     {
-        [$count, $output] = $this->write(ExportMode::Current, DocumentFormat::JsonLines, [['slug' => 'a/ñ'], ['slug' => 'b']], self::bareHeader(), self::bareSchema());
+        [$count, $output] = $this->write(ExportMode::Current, DocumentFormat::JsonLines, [['slug' => 'a/ñ'], ['slug' => 'b']], $this->bareHeader(), $this->bareSchema());
 
         self::assertSame(2, $count);
         self::assertSame("{\"provider\":\"demo.tags\",\"version\":3,\"scope\":\"platform\"}\n{\"slug\":\"a/ñ\"}\n{\"slug\":\"b\"}\n", $output);
-        [$count, $output] = $this->write(ExportMode::Empty, DocumentFormat::JsonLines, [['slug' => 'never-written']], self::bareHeader(), self::bareSchema());
+        [$count, $output] = $this->write(ExportMode::Empty, DocumentFormat::JsonLines, [['slug' => 'never-written']], $this->bareHeader(), $this->bareSchema());
         self::assertSame(0, $count);
         self::assertSame("{\"provider\":\"demo.tags\",\"version\":3,\"scope\":\"platform\"}\n", $output);
     }
@@ -190,7 +190,7 @@ final class DocumentWriterTest extends TestCase
             'properties' => ['slug' => ['type' => 'string', 'description' => "line one\nprovider: evil\u{2028}x"]],
         ]);
 
-        [, $output] = $this->write(ExportMode::Empty, DocumentFormat::Yaml, [], self::bareHeader(), $schema);
+        [, $output] = $this->write(ExportMode::Empty, DocumentFormat::Yaml, [], $this->bareHeader(), $schema);
 
         self::assertStringContainsString("# SeedKit document: Bad title here (provider demo.tags, version 3, scope platform)\n", $output);
         self::assertStringContainsString("#   slug (string): line one provider: evil x\n", $output);
@@ -206,7 +206,7 @@ final class DocumentWriterTest extends TestCase
             }
         })();
 
-        [$count] = $this->write(ExportMode::Current, DocumentFormat::JsonLines, $items, self::bareHeader(), self::bareSchema());
+        [$count] = $this->write(ExportMode::Current, DocumentFormat::JsonLines, $items, $this->bareHeader(), $this->bareSchema());
 
         self::assertSame(3, $count);
         self::assertFalse($items->valid(), 'The generator is consumed in one pass.');
@@ -268,12 +268,12 @@ final class DocumentWriterTest extends TestCase
             ],
             ['date' => '2026-11-25', 'list' => [['k' => '*v']]],
         ];
-        $header = self::richHeader();
+        $header = $this->richHeader();
 
         [$count, $output] = $this->write(ExportMode::Current, $format, $items, $header);
 
         self::assertSame(2, $count);
-        $set = (new DocumentReader())->read(self::stream($output), DocumentReader::formatOfName('export.' . $format->extension()), new ReaderLimits());
+        $set = (new DocumentReader())->read($this->stream($output), DocumentReader::formatOfName('export.' . $format->extension()), new ReaderLimits());
         self::assertSame($format, $set->format);
         self::assertCount(1, $set->documents);
         $read = $set->documents[0];
@@ -288,8 +288,8 @@ final class DocumentWriterTest extends TestCase
     #[Test]
     public function integralFloatsKeepTheirTypeInYamlOnly(): void
     {
-        [, $yaml]  = $this->write(ExportMode::Current, DocumentFormat::Yaml, [['slug'      => 'a', 'price' => 10.0]], self::bareHeader(), self::bareSchema());
-        [, $jsonl] = $this->write(ExportMode::Current, DocumentFormat::JsonLines, [['slug' => 'a', 'price' => 10.0]], self::bareHeader(), self::bareSchema());
+        [, $yaml]  = $this->write(ExportMode::Current, DocumentFormat::Yaml, [['slug'      => 'a', 'price' => 10.0]], $this->bareHeader(), $this->bareSchema());
+        [, $jsonl] = $this->write(ExportMode::Current, DocumentFormat::JsonLines, [['slug' => 'a', 'price' => 10.0]], $this->bareHeader(), $this->bareSchema());
 
         self::assertStringEndsWith("items:\n  - slug: a\n    price: 10.0\n", $yaml);
         // JSON drops the zero fraction; the canonical comparison of the planner treats 10 and 10.0 alike.
@@ -300,11 +300,11 @@ final class DocumentWriterTest extends TestCase
     #[DataProvider('formats')]
     public function anEmptyExportReadsBackWithNoItems(DocumentFormat $format): void
     {
-        [, $output] = $this->write(ExportMode::Empty, $format, self::examples());
+        [, $output] = $this->write(ExportMode::Empty, $format, $this->examples());
 
-        $set = (new DocumentReader())->read(self::stream($output), $format, new ReaderLimits());
+        $set = (new DocumentReader())->read($this->stream($output), $format, new ReaderLimits());
 
-        self::assertEquals(self::richHeader(), $set->documents[0]->header);
+        self::assertEquals($this->richHeader(), $set->documents[0]->header);
         $back = [];
         foreach ($set->documents[0]->items() as $item) {
             $back[] = $item;
@@ -323,7 +323,7 @@ final class DocumentWriterTest extends TestCase
     {
         $stream = fopen('php://memory', 'w+');
         self::assertIsResource($stream);
-        $count = (new DocumentWriter())->write(new ExportDocument($header ?? self::richHeader(), $schema ?? self::richSchema(), $mode, $items), $format, $stream);
+        $count = (new DocumentWriter())->write(new ExportDocument($header ?? $this->richHeader(), $schema ?? $this->richSchema(), $mode, $items), $format, $stream);
         rewind($stream);
 
         return [$count, (string) stream_get_contents($stream)];
@@ -332,12 +332,12 @@ final class DocumentWriterTest extends TestCase
     /**
      * @return list<array<string, mixed>>
      */
-    private static function examples(): array
+    private function examples(): array
     {
         return [['email' => 'ana@example.com', 'name' => 'Ana', 'tags' => ['customer']], ['email' => 'luis@example.com', 'tags' => []]];
     }
 
-    private static function richHeader(): SeedDocumentHeader
+    private function richHeader(): SeedDocumentHeader
     {
         return new SeedDocumentHeader(
             new ProviderName('crm.contacts'),
@@ -348,7 +348,7 @@ final class DocumentWriterTest extends TestCase
         );
     }
 
-    private static function richSchema(): SeedSchema
+    private function richSchema(): SeedSchema
     {
         return new SeedSchema([
             'title'                => "CRM\ncontacts\u{2028}list",
@@ -369,12 +369,12 @@ final class DocumentWriterTest extends TestCase
         ]);
     }
 
-    private static function bareHeader(): SeedDocumentHeader
+    private function bareHeader(): SeedDocumentHeader
     {
         return new SeedDocumentHeader(new ProviderName('demo.tags'), 3, new ScopeKind('platform'));
     }
 
-    private static function bareSchema(): SeedSchema
+    private function bareSchema(): SeedSchema
     {
         return new SeedSchema(['title' => '', 'x-seed-key' => ['slug'], 'properties' => ['slug' => ['type' => 'string']]]);
     }
@@ -382,7 +382,7 @@ final class DocumentWriterTest extends TestCase
     /**
      * @return resource
      */
-    private static function stream(string $text)
+    private function stream(string $text)
     {
         $stream = fopen('php://memory', 'w+');
         self::assertIsResource($stream);

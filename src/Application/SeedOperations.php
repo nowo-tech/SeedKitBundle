@@ -153,12 +153,23 @@ final readonly class SeedOperations
      */
     public function apply(DocumentSet $set, SeedScope $requested, ActorRef $actor, Channel $channel, PruneOptions $prune, ?PlanHash $expected = null): ApplyResult
     {
-        [$documents, $context] = $this->prepare($set, $requested, $actor, $channel, $prune);
-        $providers             = [];
+        $action = $prune->prune ? SeedAuditRecord::PRUNE : SeedAuditRecord::APPLY;
+        try {
+            [$documents, $context] = $this->prepare($set, $requested, $actor, $channel, $prune);
+        } catch (SeedKitException $e) {
+            // Refused before planning (scope not found, access denied, unknown provider): audited too (every outcome).
+            $named = [];
+            foreach ($set->documents as $document) {
+                $named[] = $document->header->provider->value;
+            }
+            $this->audit->record(new SeedAuditRecord($action, $actor, $requested, $named, [], $channel, $e->errorCode(), $set->hash->value, $expected?->value));
+
+            throw $e;
+        }
+        $providers = [];
         foreach ($documents as $document) {
             $providers[] = $document->provider->name()->value;
         }
-        $action = $prune->prune ? SeedAuditRecord::PRUNE : SeedAuditRecord::APPLY;
         try {
             $result = $this->applier->apply($set, $documents, $context, $prune, $expected);
         } catch (SeedKitException $e) {

@@ -7,6 +7,7 @@ namespace Nowo\SeedKitBundle\Infrastructure\Reader;
 use Nowo\SeedKitBundle\Domain\Exception\DocumentReadException;
 
 use function count;
+use function in_array;
 use function preg_match;
 use function preg_split;
 use function str_starts_with;
@@ -145,7 +146,7 @@ final class YamlPreScanner
                     continue;
                 }
                 $next = $line[$pos + 1] ?? ' ';
-                if ($char === ':' && ($next === ' ' || $next === "\t" || ($flow > 0 && ($next === ',' || $next === ']' || $next === '}')))) {
+                if ($char === ':' && ($next === ' ' || $next === "\t" || ($flow > 0 && in_array($next, [',', ']', '}'], true)))) {
                     $start = true;
                 } elseif ($flow > 0 && $char === ',') {
                     $start = true;

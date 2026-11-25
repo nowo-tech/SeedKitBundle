@@ -26,14 +26,14 @@ final class OpisSchemaValidatorTest extends TestCase
     #[Test]
     public function acceptsAValidItem(): void
     {
-        self::assertSame([], (new OpisSchemaValidator())->validate(self::schema(), ['name' => 'abc', 'email' => 'a@b', 'tags' => ['ok']], 200));
+        self::assertSame([], (new OpisSchemaValidator())->validate($this->schema(), ['name' => 'abc', 'email' => 'a@b', 'tags' => ['ok']], 200));
     }
 
     #[Test]
     public function reportsEveryLeafErrorWithItsEscapedJsonPointer(): void
     {
         $violations = (new OpisSchemaValidator())->validate(
-            self::schema(),
+            $this->schema(),
             ['name' => 'abcd', 'a/b' => 'x', 't~x' => 'y', 'tags' => ['ok', 'BAD'], 'nested' => ['deep' => 's'], 'extra' => 1],
             200,
         );
@@ -52,7 +52,7 @@ final class OpisSchemaValidatorTest extends TestCase
     #[Test]
     public function neverReportsTheValue(): void
     {
-        $violations = (new OpisSchemaValidator())->validate(self::schema(), ['name' => 'secret-value-123'], 200);
+        $violations = (new OpisSchemaValidator())->validate($this->schema(), ['name' => 'secret-value-123'], 200);
 
         self::assertStringNotContainsString('secret-value-123', (string) json_encode($violations));
     }
@@ -72,7 +72,7 @@ final class OpisSchemaValidatorTest extends TestCase
     public function capsTheErrors(int $max, int $expected): void
     {
         $violations = (new OpisSchemaValidator())->validate(
-            self::schema(),
+            $this->schema(),
             ['name' => 'abcd', 'a/b' => 'x', 't~x' => 'y', 'tags' => ['ok', 'BAD'], 'nested' => ['deep' => 's'], 'extra' => 1],
             $max,
         );
@@ -161,19 +161,19 @@ final class OpisSchemaValidatorTest extends TestCase
     public function compilesEachSchemaOnceAndForgetsThemOnReset(): void
     {
         $validator = new OpisSchemaValidator();
-        $schema    = self::schema();
+        $schema    = $this->schema();
 
         $validator->validate($schema, ['name' => 'a'], 5);
-        $validator->validate(new SeedSchema(self::schema()->item), ['name' => 'b'], 5);
-        self::assertSame(1, self::compiledCount($validator));
+        $validator->validate(new SeedSchema($this->schema()->item), ['name' => 'b'], 5);
+        self::assertSame(1, $this->compiledCount($validator));
         $validator->validate(new SeedSchema(['type' => 'object']), [], 5);
-        self::assertSame(2, self::compiledCount($validator));
+        self::assertSame(2, $this->compiledCount($validator));
 
         $validator->reset();
 
-        self::assertSame(0, self::compiledCount($validator));
+        self::assertSame(0, $this->compiledCount($validator));
         self::assertSame([['path' => '/name', 'rule' => 'maxLength']], $validator->validate($schema, ['name' => 'abcd', 'email' => 'a@b'], 5));
-        self::assertSame(1, self::compiledCount($validator));
+        self::assertSame(1, $this->compiledCount($validator));
     }
 
     #[Test]
@@ -183,15 +183,15 @@ final class OpisSchemaValidatorTest extends TestCase
         for ($i = 0; $i < OpisSchemaValidator::MAX_SCHEMAS; ++$i) {
             $validator->validate(new SeedSchema(['type' => 'object', 'maxProperties' => $i + 1]), [], 5);
         }
-        self::assertSame(OpisSchemaValidator::MAX_SCHEMAS, self::compiledCount($validator));
+        self::assertSame(OpisSchemaValidator::MAX_SCHEMAS, $this->compiledCount($validator));
 
         $violations = $validator->validate(new SeedSchema(['type' => 'object', 'maxProperties' => 0]), ['a' => 1], 5);
 
-        self::assertSame(1, self::compiledCount($validator));
+        self::assertSame(1, $this->compiledCount($validator));
         self::assertSame([['path' => '', 'rule' => 'maxProperties']], $violations);
     }
 
-    private static function schema(): SeedSchema
+    private function schema(): SeedSchema
     {
         return new SeedSchema([
             'type'       => 'object',
@@ -208,7 +208,7 @@ final class OpisSchemaValidatorTest extends TestCase
         ]);
     }
 
-    private static function compiledCount(OpisSchemaValidator $validator): int
+    private function compiledCount(OpisSchemaValidator $validator): int
     {
         $compiled = (new ReflectionProperty(OpisSchemaValidator::class, 'compiled'))->getValue($validator);
         self::assertIsArray($compiled);

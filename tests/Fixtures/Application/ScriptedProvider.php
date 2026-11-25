@@ -110,7 +110,7 @@ final class ScriptedProvider extends AbstractSeedProvider
 
     public function exportCurrent(SeedContext $context): iterable
     {
-        if ($this->onExportCurrent !== null) {
+        if ($this->onExportCurrent instanceof Closure) {
             // a scripted provider may break the contract on purpose (non-item rows)
             yield from ($this->onExportCurrent)($context); // @phpstan-ignore generator.valueType
 
@@ -118,7 +118,7 @@ final class ScriptedProvider extends AbstractSeedProvider
         }
         $rows = $this->rows;
         ksort($rows, SORT_STRING);
-        foreach ($rows as $canonical => $row) {
+        foreach ($rows as $row) {
             yield new SeedItem(0, new NaturalKey([InMemoryStore::text($row['code'])]), $row);
         }
     }
@@ -127,19 +127,19 @@ final class ScriptedProvider extends AbstractSeedProvider
     {
         $this->log[] = 'plan:' . count($items) . ($options->lockForUpdate ? ':lock' : '');
 
-        return $this->onPlanBatch !== null ? ($this->onPlanBatch)($context, $items, $options) : parent::planBatch($context, $items, $options);
+        return $this->onPlanBatch instanceof Closure ? ($this->onPlanBatch)($context, $items, $options) : parent::planBatch($context, $items, $options);
     }
 
     public function planDeletions(SeedContext $context, NaturalKeySet $seen, PlanOptions $options): iterable
     {
-        if ($this->onPlanDeletions !== null) {
+        if ($this->onPlanDeletions instanceof Closure) {
             yield from ($this->onPlanDeletions)($context, $seen, $options);
 
             return;
         }
         $rows = $this->rows;
         ksort($rows, SORT_STRING);
-        foreach ($rows as $canonical => $row) {
+        foreach ($rows as $row) {
             $key = new NaturalKey([InMemoryStore::text($row['code'])]);
             if (!$seen->has($key)) {
                 yield RowChange::delete($key, $this->fingerprint($row));
@@ -150,7 +150,7 @@ final class ScriptedProvider extends AbstractSeedProvider
     public function applyBatch(SeedContext $context, AppliedBatch $batch): BatchResult
     {
         $this->log[] = 'apply:' . $batch->number . ':' . implode(',', array_map(static fn (RowChange $c): string => $c->op->letter() . $c->key->canonical, $batch->changes));
-        if ($this->onApplyBatch !== null) {
+        if ($this->onApplyBatch instanceof Closure) {
             return ($this->onApplyBatch)($context, $batch);
         }
         $created = $updated = $deleted = 0;
@@ -162,7 +162,7 @@ final class ScriptedProvider extends AbstractSeedProvider
                 continue;
             }
             $item                                = $batch->item($change);
-            $this->rows[$change->key->canonical] = $item !== null ? $item->data : [];
+            $this->rows[$change->key->canonical] = $item instanceof SeedItem ? $item->data : [];
             $change->op === ChangeOp::Create ? ++$created : ++$updated;
         }
 

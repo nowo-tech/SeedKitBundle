@@ -16,6 +16,7 @@ use Nowo\SeedKitBundle\Tests\Support\Stdin;
 use Nowo\SeedKitBundle\Tests\Support\TestDatabase;
 use PHPUnit\Framework\Attributes\Test;
 use RuntimeException;
+use Symfony\Component\Console\Tester\CommandTester;
 
 use function array_column;
 use function file_get_contents;
@@ -63,7 +64,7 @@ final class CommandsTest extends KernelTestCase
     /**
      * @return array<mixed>
      */
-    private static function json(string $text): array
+    private function json(string $text): array
     {
         $data = json_decode($text, true, 512, JSON_THROW_ON_ERROR);
         self::assertIsArray($data);
@@ -74,7 +75,7 @@ final class CommandsTest extends KernelTestCase
     /**
      * A nested value.
      */
-    private static function at(mixed $value, int|string ...$path): mixed
+    private function at(mixed $value, int|string ...$path): mixed
     {
         foreach ($path as $key) {
             self::assertIsArray($value);
@@ -93,7 +94,7 @@ final class CommandsTest extends KernelTestCase
         self::assertStringContainsString('host.tags', $table->getDisplay());
         self::assertStringContainsString('apiToken', $table->getDisplay());
 
-        $json = self::json($this->command('seed:list', ['--format' => 'json', '--scope-kind' => 'organization'])->getDisplay());
+        $json = $this->json($this->command('seed:list', ['--format' => 'json', '--scope-kind' => 'organization'])->getDisplay());
         self::assertCount(2, $json);
         self::assertSame(['name' => 'host.articles', 'version' => 1, 'title' => 'Host articles', 'scopes' => ['platform', 'organization'], 'dependsOn' => ['host.tags'], 'personalData' => ['owner'], 'secrets' => []], $json[1]);
 
@@ -106,7 +107,7 @@ final class CommandsTest extends KernelTestCase
         $file   = TestKernel::allowedDir() . '/host.tags.v1.schema.json';
         $tester = $this->command('nowo:seed-kit:schema', ['provider' => 'host.tags', '--output' => $file]);
         self::assertSame(0, $tester->getStatusCode());
-        $schema = self::json((string) file_get_contents($file));
+        $schema = $this->json((string) file_get_contents($file));
         self::assertSame('urn:nowo-seed:host.tags:1', $schema['$id']);
 
         self::assertSame(CommandSupport::EXIT_INVALID, $this->command('nowo:seed-kit:schema', ['provider' => 'host.tags', '--output' => $file])->getStatusCode(), 'exists, no --force');
@@ -179,7 +180,7 @@ final class CommandsTest extends KernelTestCase
 
         self::assertSame(CommandSupport::EXIT_CHANGES, $this->command('seed:diff', ['file' => $file, '--actor' => 'ops', '--exit-code' => true])->getStatusCode());
 
-        $json = self::json($this->command('nowo:seed-kit:diff', ['file' => $file, '--actor' => 'ops', '--format' => 'json', '--max-rows' => 'many'])->getDisplay());
+        $json = $this->json($this->command('nowo:seed-kit:diff', ['file' => $file, '--actor' => 'ops', '--format' => 'json', '--max-rows' => 'many'])->getDisplay());
         self::assertSame('platform', $json['scope']);
         self::assertSame(1, $json['changes']);
         self::assertIsArray($json['documents']);
@@ -206,14 +207,14 @@ final class CommandsTest extends KernelTestCase
         self::assertStringContainsString('  …', $text->getDisplay());
         self::assertStringContainsString('warning: ', $text->getDisplay());
 
-        $json = self::json($this->command('nowo:seed-kit:diff', ['file' => $file, '--actor' => 'ops', '--format' => 'json', '--max-rows' => '2'])->getDisplay());
+        $json = $this->json($this->command('nowo:seed-kit:diff', ['file' => $file, '--actor' => 'ops', '--format' => 'json', '--max-rows' => '2'])->getDisplay());
         self::assertIsArray($json['warnings']);
         self::assertCount(1, $json['warnings']);
         self::assertIsArray($json['documents']);
         self::assertIsArray($json['documents'][0]);
         self::assertIsArray($json['documents'][0]['rows']);
         self::assertCount(2, $json['documents'][0]['rows']);
-        self::assertSame(['kind' => 'hidden'], self::at($json, 'documents', 0, 'rows', 0, 'fields', 0, 'before'));
+        self::assertSame(['kind' => 'hidden'], $this->at($json, 'documents', 0, 'rows', 0, 'fields', 0, 'before'));
     }
 
     #[Test]
@@ -278,7 +279,7 @@ final class CommandsTest extends KernelTestCase
     public function applyHonoursTheReviewedHash(): void
     {
         $file = $this->file('tags.yaml', self::TAGS);
-        $plan = self::json($this->command('nowo:seed-kit:diff', ['file' => $file, '--actor' => 'ops', '--format' => 'json'])->getDisplay());
+        $plan = $this->json($this->command('nowo:seed-kit:diff', ['file' => $file, '--actor' => 'ops', '--format' => 'json'])->getDisplay());
         self::assertIsString($plan['planHash']);
 
         self::assertSame(CommandSupport::EXIT_STALE, $this->command('nowo:seed-kit:apply', ['file' => $file, '--actor' => 'ops', '--yes' => true, '--expect-hash' => 'sk1:' . str_repeat('0', 64)])->getStatusCode());
@@ -389,7 +390,7 @@ final class CommandsTest extends KernelTestCase
     public function aDashReadsTheDocumentFromStandardInput(): void
     {
         try {
-            $tester = Stdin::with(self::TAGS, fn () => $this->command('nowo:seed-kit:apply', ['file' => '-', '--actor' => 'ops', '--yes' => true]));
+            $tester = Stdin::with(self::TAGS, fn (): CommandTester => $this->command('nowo:seed-kit:apply', ['file' => '-', '--actor' => 'ops', '--yes' => true]));
         } catch (RuntimeException $e) {
             self::markTestSkipped($e->getMessage());
         }

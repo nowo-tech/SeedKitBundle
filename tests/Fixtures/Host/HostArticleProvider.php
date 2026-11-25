@@ -134,8 +134,8 @@ final class HostArticleProvider extends AbstractSeedProvider
         );
         $current = [];
         foreach ($rows as $row) {
-            if (self::visible($context, $row)) {
-                $current[(new NaturalKey([HostSql::text($row['code'])]))->canonical] = self::row($row);
+            if ($this->visible($context, $row)) {
+                $current[(new NaturalKey([HostSql::text($row['code'])]))->canonical] = $this->row($row);
             }
         }
 
@@ -151,8 +151,8 @@ final class HostArticleProvider extends AbstractSeedProvider
     {
         $rows = [];
         foreach ($this->connection->fetchAllAssociative('SELECT code, title, tag, level, owner FROM host_article WHERE scope_key = ?' . HostSql::lock($this->connection, $lock), [$context->scope->key()]) as $row) {
-            if (self::visible($context, $row)) {
-                $rows[] = self::row($row);
+            if ($this->visible($context, $row)) {
+                $rows[] = $this->row($row);
             }
         }
         usort($rows, static fn (array $a, array $b): int => strcmp(HostSql::text($a['code']), HostSql::text($b['code'])));
@@ -165,7 +165,7 @@ final class HostArticleProvider extends AbstractSeedProvider
      *
      * @param array<string, mixed> $row
      */
-    private static function visible(SeedContext $context, array $row): bool
+    private function visible(SeedContext $context, array $row): bool
     {
         return $context->actor->value !== self::RESTRICTED || $row['owner'] === self::RESTRICTED;
     }
@@ -177,7 +177,7 @@ final class HostArticleProvider extends AbstractSeedProvider
      *
      * @return array<string, mixed>
      */
-    private static function row(array $row): array
+    private function row(array $row): array
     {
         $data = ['code' => HostSql::text($row['code']), 'title' => HostSql::text($row['title'])];
         if ($row['tag'] !== null) {

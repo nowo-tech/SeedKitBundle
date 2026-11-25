@@ -19,7 +19,7 @@ final class FailingReadStream
     /**
      * Opens the stream.
      */
-    public function stream_open(string $path, string $mode, int $options, ?string &$openedPath): bool
+    public function stream_open(): bool
     {
         return true;
     }
@@ -27,7 +27,7 @@ final class FailingReadStream
     /**
      * Fails every read.
      */
-    public function stream_read(int $count): false
+    public function stream_read(): false
     {
         return false;
     }

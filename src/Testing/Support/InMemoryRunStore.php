@@ -75,7 +75,7 @@ final class InMemoryRunStore implements RunStoreInterface
         krsort($runs);
         $out = [];
         foreach ($runs as $id => $run) {
-            if (($scope === null || $run->scope->equals($scope)) && ($status === null || $run->status === $status) && ($before === null || $id < $before->value)) {
+            if ((!$scope instanceof SeedScope || $run->scope->equals($scope)) && (!$status instanceof RunStatus || $run->status === $status) && (!$before instanceof RunId || $id < $before->value)) {
                 $out[] = $run;
             }
         }

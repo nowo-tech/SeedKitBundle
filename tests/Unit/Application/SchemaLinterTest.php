@@ -41,7 +41,7 @@ final class SchemaLinterTest extends TestCase
      *
      * @return array{errors: list<string>, warnings: list<string>}
      */
-    private static function lint(array $schema, array $dependsOn = []): array
+    private function lint(array $schema, array $dependsOn = []): array
     {
         return (new SchemaLinter())->lint(new ScriptedProvider('demo.items', $schema, ['platform'], $dependsOn));
     }
@@ -52,7 +52,7 @@ final class SchemaLinterTest extends TestCase
         $store = new InMemoryStore();
         self::assertSame(['errors' => [], 'warnings' => []], (new SchemaLinter())->lint(new TagProvider($store)));
         self::assertSame(['errors' => [], 'warnings' => []], (new SchemaLinter())->lint(new ArticleProvider($store)));
-        self::assertSame(['errors' => [], 'warnings' => []], self::lint(self::schema()));
+        self::assertSame(['errors' => [], 'warnings' => []], $this->lint(self::schema()));
     }
 
     /**
@@ -95,7 +95,7 @@ final class SchemaLinterTest extends TestCase
     #[DataProvider('errors')]
     public function reportsErrors(array $schema, array $dependsOn, array $expected): void
     {
-        self::assertSame($expected, self::lint($schema, $dependsOn)['errors']);
+        self::assertSame($expected, $this->lint($schema, $dependsOn)['errors']);
     }
 
     #[Test]
@@ -117,13 +117,13 @@ final class SchemaLinterTest extends TestCase
             'examples'             => [['type' => 'object']],
             '$defs'                => ['x' => ['type' => 'string', 'const' => 'k']],
         ]);
-        self::assertSame([], self::lint($schema, ['demo.tags'])['errors']);
+        self::assertSame([], $this->lint($schema, ['demo.tags'])['errors']);
     }
 
     #[Test]
     public function warnsAboutMissingDescriptionsAndUnboundedStrings(): void
     {
-        $result = self::lint(self::schema([
+        $result = $this->lint(self::schema([
             'free' => ['type' => 'string', 'description' => ''],
             'list' => ['type' => 'array', 'items' => ['type' => ['string', 'null']], 'description' => 'd'],
             'date' => ['type' => 'string', 'format' => 'date'],

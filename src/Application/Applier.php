@@ -139,6 +139,7 @@ final readonly class Applier
         $total  = $plan->writingBatches();
         $counts = [ChangeOp::Create->value => 0, ChangeOp::Update->value => 0, ChangeOp::Delete->value => 0];
         $record = new RunRecord($runId, $context->scope, $context->actor, $context->channel, RunStatus::Running, $providers, $prune->prune, $set->hash, $plan->hash, $flat, 0, $counts, null, $this->clock->now());
+        // @igor-ignore - the write runner calls the closure inside one write unit and keeps nothing.
         $this->writer->write(function () use ($record): null {
             $this->runs->create($record);
 
@@ -204,6 +205,7 @@ final readonly class Applier
 
             throw $interrupted;
         }
+        // @igor-ignore - the write runner calls the closure inside one write unit and keeps nothing.
         $this->writer->write(function () use ($runId): null {
             $this->runs->finish($runId, RunStatus::Applied, null);
 
@@ -226,9 +228,10 @@ final readonly class Applier
      */
     private function batch(BatchStep $step, PreparedDocument $document, SeedContext $context, int $number, string $digest, callable $replan, array $items, array &$counts, int &$done): void
     {
-        $name                        = $document->provider->name();
-        $sequence                    = $done + 1;
-        $before                      = $done;
+        $name     = $document->provider->name();
+        $sequence = $done + 1;
+        $before   = $done;
+        // @igor-ignore - the write runner calls the closure inside one write unit and keeps nothing.
         [$counts, $result, $changes] = $this->writer->write(function (int $attempt) use ($step, $document, $context, $number, $digest, $replan, $items, $sequence, $name, $counts, $before): array {
             if ($attempt > 1) {
                 $document->provider->afterBatch($context);
@@ -273,6 +276,7 @@ final readonly class Applier
     private function fail(RunId $runId, ApplyInterruptedException $e): void
     {
         try {
+            // @igor-ignore - the write runner calls the closure inside one write unit and keeps nothing.
             $this->writer->write(function () use ($runId, $e): null {
                 $this->runs->finish($runId, $e->batchesCommitted > 0 ? RunStatus::PartiallyApplied : RunStatus::Failed, $e->errorCode());
 

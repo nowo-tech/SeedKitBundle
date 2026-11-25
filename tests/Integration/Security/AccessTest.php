@@ -42,12 +42,12 @@ use Symfony\Component\Security\Core\User\InMemoryUser;
  */
 final class AccessTest extends TestCase
 {
-    private static function tags(): ProviderName
+    private function tags(): ProviderName
     {
         return new ProviderName('host.tags');
     }
 
-    private static function tokens(?InMemoryUser $user): TokenStorage
+    private function tokens(?InMemoryUser $user): TokenStorage
     {
         $tokens = new TokenStorage();
         if ($user instanceof InMemoryUser) {
@@ -57,7 +57,7 @@ final class AccessTest extends TestCase
         return $tokens;
     }
 
-    private static function guard(SeedKitAccessCheckerInterface $checker, AccessListener $listener, bool $allowUnauthenticated = false, bool $trust = false, ?TokenStorage $tokens = null): SeedKitGuard
+    private function guard(SeedKitAccessCheckerInterface $checker, AccessListener $listener, bool $allowUnauthenticated = false, bool $trust = false, ?TokenStorage $tokens = null): SeedKitGuard
     {
         $dispatcher = new EventDispatcher();
         $dispatcher->addListener(SeedKitEvents::ACCESS_CHECK, $listener->onAccessCheck(...));
@@ -65,7 +65,7 @@ final class AccessTest extends TestCase
         return new SeedKitGuard($checker, $dispatcher, $allowUnauthenticated, $trust, $tokens);
     }
 
-    private static function roles(): ConfigurableSeedKitAccessChecker
+    private function roles(): ConfigurableSeedKitAccessChecker
     {
         return new ConfigurableSeedKitAccessChecker(
             ['ROLE_ADMIN', 'ROLE_SEED'],
@@ -78,7 +78,7 @@ final class AccessTest extends TestCase
     #[Test]
     public function aDenyInTheEventSticks(): void
     {
-        $event = new SeedAccessCheckEvent(SeedAction::Apply, self::tags(), SeedScope::platform(), Channel::Console, new ActorRef('alice'), null, true);
+        $event = new SeedAccessCheckEvent(SeedAction::Apply, $this->tags(), SeedScope::platform(), Channel::Console, new ActorRef('alice'), null, true);
         self::assertTrue($event->isGranted());
         self::assertFalse($event->isDenied());
 
@@ -87,7 +87,7 @@ final class AccessTest extends TestCase
         self::assertFalse($event->isGranted());
         self::assertTrue($event->isDenied());
 
-        $closed = new SeedAccessCheckEvent(SeedAction::Export, self::tags(), SeedScope::platform(), Channel::Http, new ActorRef('alice'), new stdClass(), false);
+        $closed = new SeedAccessCheckEvent(SeedAction::Export, $this->tags(), SeedScope::platform(), Channel::Http, new ActorRef('alice'), new stdClass(), false);
         self::assertFalse($closed->isGranted());
         $closed->grant();
         self::assertTrue($closed->isGranted());
@@ -104,16 +104,16 @@ final class AccessTest extends TestCase
     public function theConsoleIsGrantedByDefaultAndAListenerMayDeny(): void
     {
         $listener = new AccessListener();
-        $guard    = self::guard(self::roles(), $listener);
+        $guard    = $this->guard($this->roles(), $listener);
 
-        self::assertTrue($guard->isGranted(SeedAction::Apply, self::tags(), SeedScope::platform(), Channel::Console, new ActorRef('ops')));
+        self::assertTrue($guard->isGranted(SeedAction::Apply, $this->tags(), SeedScope::platform(), Channel::Console, new ActorRef('ops')));
         self::assertNotNull($listener->last);
         self::assertTrue($listener->last->defaultGranted);
         self::assertNull($listener->last->user);
 
         $listener->deny = ['SEED_APPLY:host.tags'];
-        self::assertFalse($guard->isGranted(SeedAction::Apply, self::tags(), SeedScope::platform(), Channel::Console, new ActorRef('ops')));
-        self::assertTrue($guard->isGranted(SeedAction::Export, self::tags(), SeedScope::platform(), Channel::Console, new ActorRef('ops')));
+        self::assertFalse($guard->isGranted(SeedAction::Apply, $this->tags(), SeedScope::platform(), Channel::Console, new ActorRef('ops')));
+        self::assertTrue($guard->isGranted(SeedAction::Export, $this->tags(), SeedScope::platform(), Channel::Console, new ActorRef('ops')));
     }
 
     #[Test]
@@ -121,34 +121,34 @@ final class AccessTest extends TestCase
     {
         $listener = new AccessListener();
 
-        self::assertFalse(self::guard(new AllowAllSeedKitAccessChecker(), $listener, false, false, self::tokens(null))->isGranted(SeedAction::Export, self::tags(), SeedScope::platform(), Channel::Http, new ActorRef('guest')));
-        self::assertTrue(self::guard(new AllowAllSeedKitAccessChecker(), $listener, true)->isGranted(SeedAction::Prune, self::tags(), SeedScope::platform(), Channel::Http, new ActorRef('guest')));
-        self::assertFalse(self::guard(self::roles(), $listener, true)->isGranted(SeedAction::Export, self::tags(), SeedScope::platform(), Channel::Http, new ActorRef('guest')));
+        self::assertFalse($this->guard(new AllowAllSeedKitAccessChecker(), $listener, false, false, $this->tokens(null))->isGranted(SeedAction::Export, $this->tags(), SeedScope::platform(), Channel::Http, new ActorRef('guest')));
+        self::assertTrue($this->guard(new AllowAllSeedKitAccessChecker(), $listener, true)->isGranted(SeedAction::Prune, $this->tags(), SeedScope::platform(), Channel::Http, new ActorRef('guest')));
+        self::assertFalse($this->guard($this->roles(), $listener, true)->isGranted(SeedAction::Export, $this->tags(), SeedScope::platform(), Channel::Http, new ActorRef('guest')));
 
         $listener->grant = ['SEED_EXPORT'];
-        self::assertTrue(self::guard(self::roles(), $listener)->isGranted(SeedAction::Export, self::tags(), SeedScope::platform(), Channel::Http, new ActorRef('guest')), 'a host listener may grant');
+        self::assertTrue($this->guard($this->roles(), $listener)->isGranted(SeedAction::Export, $this->tags(), SeedScope::platform(), Channel::Http, new ActorRef('guest')), 'a host listener may grant');
     }
 
     #[Test]
     public function aUserIsCheckedForTheAreaAndTheAction(): void
     {
         $listener = new AccessListener();
-        $admin    = self::tokens(new InMemoryUser('admin', null, ['ROLE_ADMIN']));
-        $seeder   = self::tokens(new InMemoryUser('seeder', null, ['ROLE_SEED']));
-        $super    = self::tokens(new InMemoryUser('super', null, ['ROLE_SUPER']));
-        $viewer   = self::tokens(new InMemoryUser('viewer', null, ['ROLE_VIEWER']));
+        $admin    = $this->tokens(new InMemoryUser('admin', null, ['ROLE_ADMIN']));
+        $seeder   = $this->tokens(new InMemoryUser('seeder', null, ['ROLE_SEED']));
+        $super    = $this->tokens(new InMemoryUser('super', null, ['ROLE_SUPER']));
+        $viewer   = $this->tokens(new InMemoryUser('viewer', null, ['ROLE_VIEWER']));
         $articles = new ProviderName('host.articles');
         $scope    = SeedScope::platform();
         $actor    = new ActorRef('x');
 
-        self::assertTrue(self::guard(self::roles(), $listener, false, false, $admin)->isGranted(SeedAction::Apply, self::tags(), $scope, Channel::Http, $actor));
-        self::assertTrue(self::guard(self::roles(), $listener, false, false, $super)->isGranted(SeedAction::Apply, self::tags(), $scope, Channel::Console, $actor), 'role hierarchy; a console user is checked too');
-        self::assertFalse(self::guard(self::roles(), $listener, false, false, $viewer)->isGranted(SeedAction::Export, self::tags(), $scope, Channel::Http, $actor), 'no area role');
-        self::assertFalse(self::guard(self::roles(), $listener, false, false, $seeder)->isGranted(SeedAction::Apply, self::tags(), $scope, Channel::Http, $actor), 'apply needs ROLE_ADMIN');
-        self::assertTrue(self::guard(self::roles(), $listener, false, false, $seeder)->isGranted(SeedAction::Apply, $articles, $scope, Channel::Http, $actor), 'per-provider override');
-        self::assertTrue(self::guard(self::roles(), $listener, false, false, $seeder)->isGranted(SeedAction::Export, $articles, $scope, Channel::Http, $actor), 'null override keeps the default');
-        self::assertFalse(self::guard(self::roles(), $listener, false, false, $admin)->isGranted(SeedAction::Prune, self::tags(), $scope, Channel::Http, $actor), 'prune: nobody by default');
-        self::assertTrue(self::guard(self::roles(), $listener, false, false, $admin)->isGranted(SeedAction::Prune, $articles, $scope, Channel::Http, $actor));
+        self::assertTrue($this->guard($this->roles(), $listener, false, false, $admin)->isGranted(SeedAction::Apply, $this->tags(), $scope, Channel::Http, $actor));
+        self::assertTrue($this->guard($this->roles(), $listener, false, false, $super)->isGranted(SeedAction::Apply, $this->tags(), $scope, Channel::Console, $actor), 'role hierarchy; a console user is checked too');
+        self::assertFalse($this->guard($this->roles(), $listener, false, false, $viewer)->isGranted(SeedAction::Export, $this->tags(), $scope, Channel::Http, $actor), 'no area role');
+        self::assertFalse($this->guard($this->roles(), $listener, false, false, $seeder)->isGranted(SeedAction::Apply, $this->tags(), $scope, Channel::Http, $actor), 'apply needs ROLE_ADMIN');
+        self::assertTrue($this->guard($this->roles(), $listener, false, false, $seeder)->isGranted(SeedAction::Apply, $articles, $scope, Channel::Http, $actor), 'per-provider override');
+        self::assertTrue($this->guard($this->roles(), $listener, false, false, $seeder)->isGranted(SeedAction::Export, $articles, $scope, Channel::Http, $actor), 'null override keeps the default');
+        self::assertFalse($this->guard($this->roles(), $listener, false, false, $admin)->isGranted(SeedAction::Prune, $this->tags(), $scope, Channel::Http, $actor), 'prune: nobody by default');
+        self::assertTrue($this->guard($this->roles(), $listener, false, false, $admin)->isGranted(SeedAction::Prune, $articles, $scope, Channel::Http, $actor));
     }
 
     #[Test]
@@ -158,10 +158,10 @@ final class AccessTest extends TestCase
         $checker  = new PermissionSetChecker(['messenger-bot' => ['apply:host.tags']]);
         $scope    = SeedScope::platform();
 
-        self::assertTrue(self::guard($checker, $listener)->isGranted(SeedAction::Apply, self::tags(), $scope, Channel::Messenger, new ActorRef('messenger-bot')));
-        self::assertFalse(self::guard($checker, $listener)->isGranted(SeedAction::Prune, self::tags(), $scope, Channel::Messenger, new ActorRef('messenger-bot')));
-        self::assertFalse(self::guard(self::roles(), $listener)->isGranted(SeedAction::Apply, self::tags(), $scope, Channel::Messenger, new ActorRef('messenger-bot')), 'the role checker denies stored actors');
-        self::assertTrue(self::guard(self::roles(), $listener, false, true)->isGranted(SeedAction::Apply, self::tags(), $scope, Channel::Messenger, new ActorRef('anyone')), 'trust_run_actor');
+        self::assertTrue($this->guard($checker, $listener)->isGranted(SeedAction::Apply, $this->tags(), $scope, Channel::Messenger, new ActorRef('messenger-bot')));
+        self::assertFalse($this->guard($checker, $listener)->isGranted(SeedAction::Prune, $this->tags(), $scope, Channel::Messenger, new ActorRef('messenger-bot')));
+        self::assertFalse($this->guard($this->roles(), $listener)->isGranted(SeedAction::Apply, $this->tags(), $scope, Channel::Messenger, new ActorRef('messenger-bot')), 'the role checker denies stored actors');
+        self::assertTrue($this->guard($this->roles(), $listener, false, true)->isGranted(SeedAction::Apply, $this->tags(), $scope, Channel::Messenger, new ActorRef('anyone')), 'trust_run_actor');
     }
 
     #[Test]
@@ -174,9 +174,9 @@ final class AccessTest extends TestCase
         self::assertFalse($checker->canUseArea(new stdClass(), $scope));
         self::assertTrue($checker->canUseArea(new InMemoryUser('a', null, ['ROLE_ADMIN']), $scope));
         self::assertFalse($checker->canUseArea(new InMemoryUser('s', null, ['ROLE_SUPER']), $scope), 'no hierarchy given');
-        self::assertTrue($checker->can(new InMemoryUser('a', null, ['ROLE_ADMIN']), SeedAction::Export, self::tags(), $scope));
-        self::assertFalse($checker->can(new InMemoryUser('a', null, ['ROLE_ADMIN']), SeedAction::Prune, self::tags(), $scope));
-        self::assertFalse($checker->canForActor(new ActorRef('a'), SeedAction::Export, self::tags(), $scope));
+        self::assertTrue($checker->can(new InMemoryUser('a', null, ['ROLE_ADMIN']), SeedAction::Export, $this->tags(), $scope));
+        self::assertFalse($checker->can(new InMemoryUser('a', null, ['ROLE_ADMIN']), SeedAction::Prune, $this->tags(), $scope));
+        self::assertFalse($checker->canForActor(new ActorRef('a'), SeedAction::Export, $this->tags(), $scope));
     }
 
     #[Test]
@@ -185,8 +185,8 @@ final class AccessTest extends TestCase
         $checker = new AllowAllSeedKitAccessChecker();
 
         self::assertTrue($checker->canUseArea(null, SeedScope::platform()));
-        self::assertTrue($checker->can(null, SeedAction::Prune, self::tags(), SeedScope::platform()));
-        self::assertTrue($checker->canForActor(new ActorRef('a'), SeedAction::Prune, self::tags(), SeedScope::platform()));
+        self::assertTrue($checker->can(null, SeedAction::Prune, $this->tags(), SeedScope::platform()));
+        self::assertTrue($checker->canForActor(new ActorRef('a'), SeedAction::Prune, $this->tags(), SeedScope::platform()));
     }
 
     #[Test]
@@ -204,7 +204,7 @@ final class AccessTest extends TestCase
             }
         };
         $voter   = new SeedKitVoter($gate);
-        $subject = new SeedPermissionSubject(self::tags(), new SeedScope(new ScopeKind('organization'), new ScopeId('acme')));
+        $subject = new SeedPermissionSubject($this->tags(), new SeedScope(new ScopeKind('organization'), new ScopeId('acme')));
         $alice   = new UsernamePasswordToken(new InMemoryUser('alice', null), 'main');
 
         self::assertSame(VoterInterface::ACCESS_GRANTED, $voter->vote($alice, $subject, ['SEED_EXPORT']));
@@ -236,8 +236,8 @@ final class AccessTest extends TestCase
     {
         self::assertNull((new SecurityActorResolver())->current());
         self::assertNull((new SecurityActorResolver(new TokenStorage()))->current());
-        self::assertNull((new SecurityActorResolver(self::tokens(new InMemoryUser('system', null))))->current());
-        self::assertNull((new SecurityActorResolver(self::tokens(new InMemoryUser("bad\u{200B}id", null))))->current(), 'not exact text');
-        self::assertSame('alice', (new SecurityActorResolver(self::tokens(new InMemoryUser('alice', null))))->current()?->value);
+        self::assertNull((new SecurityActorResolver($this->tokens(new InMemoryUser('system', null))))->current());
+        self::assertNull((new SecurityActorResolver($this->tokens(new InMemoryUser("bad\u{200B}id", null))))->current(), 'not exact text');
+        self::assertSame('alice', (new SecurityActorResolver($this->tokens(new InMemoryUser('alice', null))))->current()?->value);
     }
 }

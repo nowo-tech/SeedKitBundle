@@ -9,7 +9,8 @@ use Attribute;
 /**
  * Registers a seed provider (autoconfiguration): the tag `nowo_seed_kit.provider` with its name and dependencies, so the
  * container can check names, dependencies and cycles and fix the order when it is compiled. The provider's `name()` and
- * `dependsOn()` must return the same values (checked at runtime and by the lint).
+ * `dependsOn()` must return the same values: the name is checked at runtime, the dependency order comes from the
+ * attribute (keep both lists equal; the contract test kit and the lint use `dependsOn()` for references).
  */
 #[Attribute(Attribute::TARGET_CLASS)]
 final readonly class AsSeedProvider

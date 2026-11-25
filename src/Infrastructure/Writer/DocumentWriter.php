@@ -7,6 +7,7 @@ namespace Nowo\SeedKitBundle\Infrastructure\Writer;
 use Nowo\SeedKitBundle\Domain\Document\DocumentFormat;
 use Nowo\SeedKitBundle\Domain\Document\ExportDocument;
 use Nowo\SeedKitBundle\Domain\Document\ExportMode;
+use Nowo\SeedKitBundle\Domain\Model\ScopeId;
 use Nowo\SeedKitBundle\Domain\Port\DocumentWriterInterface;
 use Nowo\SeedKitBundle\Domain\Schema\SeedSchema;
 use Symfony\Component\Yaml\Yaml;
@@ -165,7 +166,7 @@ final readonly class DocumentWriter implements DocumentWriterInterface
         if ($header->meta->exportedAt !== null) {
             $meta['exportedAt'] = $header->meta->exportedAt;
         }
-        if ($header->meta->exportedFrom !== null) {
+        if ($header->meta->exportedFrom instanceof ScopeId) {
             $meta['exportedFrom'] = $header->meta->exportedFrom->value;
         }
         if ($header->meta->generator !== null) {

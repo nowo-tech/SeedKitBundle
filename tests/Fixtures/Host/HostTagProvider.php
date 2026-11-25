@@ -141,7 +141,7 @@ final class HostTagProvider extends AbstractSeedProvider
         );
         $current = [];
         foreach ($rows as $row) {
-            $current[(new NaturalKey([HostSql::text($row['slug'])]))->canonical] = self::row($row);
+            $current[(new NaturalKey([HostSql::text($row['slug'])]))->canonical] = $this->row($row);
         }
 
         return $current;
@@ -156,7 +156,7 @@ final class HostTagProvider extends AbstractSeedProvider
     {
         $rows = [];
         foreach ($this->connection->fetchAllAssociative(sprintf('SELECT slug, label, color, api_token, created_at FROM host_tag WHERE scope_key = ?%s', HostSql::lock($this->connection, $lock)), [$context->scope->key()]) as $row) {
-            $rows[] = self::row($row);
+            $rows[] = $this->row($row);
         }
         usort($rows, static fn (array $a, array $b): int => strcmp(HostSql::text($a['slug']), HostSql::text($b['slug'])));
 
@@ -170,7 +170,7 @@ final class HostTagProvider extends AbstractSeedProvider
      *
      * @return array<string, mixed>
      */
-    private static function row(array $row): array
+    private function row(array $row): array
     {
         $data = ['slug' => HostSql::text($row['slug']), 'label' => HostSql::text($row['label'])];
         if ($row['color'] !== null) {

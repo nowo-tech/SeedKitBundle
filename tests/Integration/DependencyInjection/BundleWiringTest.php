@@ -79,14 +79,14 @@ final class BundleWiringTest extends KernelTestCase
         self::assertSame(500, $this->service(SeedKitSettings::class, SeedKitSettings::class)->batchSize);
 
         $registry = $this->service(ProviderRegistry::class, ProviderRegistry::class);
-        self::assertSame(['host.tags', 'host.articles'], self::names($registry));
+        self::assertSame(['host.tags', 'host.articles'], $this->names($registry));
 
         $manager = $this->service('nowo_seed_kit.entity_manager', EntityManagerInterface::class);
         self::assertSame($this->service('doctrine.orm.default_entity_manager', EntityManagerInterface::class), $manager);
         self::assertSame($this->service('doctrine.dbal.default_connection', Connection::class), $this->connection());
         self::assertSame('nowo_seed_run', $manager->getClassMetadata(SeedRun::class)->getTableName());
         self::assertSame('nowo_seed_lease', $manager->getClassMetadata(SeedLease::class)->getTableName());
-        self::assertInstanceOf(AttributeDriver::class, self::driver($manager));
+        self::assertInstanceOf(AttributeDriver::class, $this->driver($manager));
 
         self::assertNotNull($this->kernel);
         $application = new Application($this->kernel);
@@ -103,13 +103,13 @@ final class BundleWiringTest extends KernelTestCase
         self::assertInstanceOf(HostScopeResolver::class, $this->container()->get(SeedScopeResolverInterface::class));
         self::assertInstanceOf(FixedActorResolver::class, $this->container()->get(SeedActorResolverInterface::class));
         self::assertInstanceOf(PermissionSetChecker::class, $this->container()->get(SeedKitAccessCheckerInterface::class));
-        self::assertSame(['host.tags', 'host.notes'], self::names($this->service(ProviderRegistry::class, ProviderRegistry::class)));
+        self::assertSame(['host.tags', 'host.notes'], $this->names($this->service(ProviderRegistry::class, ProviderRegistry::class)));
 
         $manager = $this->service('nowo_seed_kit.entity_manager', EntityManagerInterface::class);
         self::assertSame($this->service('doctrine.orm.seed_entity_manager', EntityManagerInterface::class), $manager);
         self::assertSame($this->service('doctrine.dbal.seed_connection', Connection::class), $this->connection());
         self::assertNotSame($this->service('doctrine.dbal.default_connection', Connection::class), $this->connection());
-        self::assertInstanceOf(SimplifiedXmlDriver::class, self::driver($manager));
+        self::assertInstanceOf(SimplifiedXmlDriver::class, $this->driver($manager));
         self::assertTrue($this->service('doctrine.orm.default_entity_manager', EntityManagerInterface::class)->getMetadataFactory()->isTransient(SeedRun::class));
     }
 
@@ -121,7 +121,7 @@ final class BundleWiringTest extends KernelTestCase
         $manager = $this->service('nowo_seed_kit.entity_manager', EntityManagerInterface::class);
         self::assertSame($this->service('doctrine.orm.main_entity_manager', EntityManagerInterface::class), $manager);
         self::assertSame('nowo_seed_run', $manager->getClassMetadata(SeedRun::class)->getTableName());
-        self::assertInstanceOf(SimplifiedXmlDriver::class, self::driver($manager));
+        self::assertInstanceOf(SimplifiedXmlDriver::class, $this->driver($manager));
     }
 
     #[Test]
@@ -212,7 +212,7 @@ final class BundleWiringTest extends KernelTestCase
         $this->boot(['secrets' => ['validator' => null]], [], 'standard', false);
 
         self::assertFalse($this->container()->has('nowo_seed_kit.secret_validator'));
-        self::assertSame(['host.tags', 'host.articles'], self::names($this->service(ProviderRegistry::class, ProviderRegistry::class)));
+        self::assertSame(['host.tags', 'host.articles'], $this->names($this->service(ProviderRegistry::class, ProviderRegistry::class)));
     }
 
     #[Test]
@@ -227,7 +227,7 @@ final class BundleWiringTest extends KernelTestCase
     /**
      * @return list<string>
      */
-    private static function names(ProviderRegistry $registry): array
+    private function names(ProviderRegistry $registry): array
     {
         $names = [];
         foreach ($registry->names() as $name) {
@@ -240,7 +240,7 @@ final class BundleWiringTest extends KernelTestCase
     /**
      * The mapping driver of the bundle's entities.
      */
-    private static function driver(EntityManagerInterface $manager): MappingDriver
+    private function driver(EntityManagerInterface $manager): MappingDriver
     {
         $driver = $manager->getConfiguration()->getMetadataDriverImpl();
         if ($driver instanceof BundleMappingDriver) {

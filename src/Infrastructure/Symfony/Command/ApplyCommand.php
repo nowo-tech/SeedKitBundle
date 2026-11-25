@@ -9,6 +9,7 @@ use Nowo\SeedKitBundle\Application\SeedOperations;
 use Nowo\SeedKitBundle\Domain\Exception\SeedKitException;
 use Nowo\SeedKitBundle\Domain\Exception\StalePlanException;
 use Nowo\SeedKitBundle\Domain\Model\PlanHash;
+use Nowo\SeedKitBundle\Domain\Model\RunId;
 use Nowo\SeedKitBundle\Domain\Plan\ChangeOp;
 use Nowo\SeedKitBundle\Domain\Run\Channel;
 use Nowo\TransactionContract\ConcurrencyConflict;
@@ -102,7 +103,7 @@ final class ApplyCommand extends Command
             $result->written[ChangeOp::Update->value] ?? 0,
             $result->written[ChangeOp::Delete->value] ?? 0,
             $result->batches,
-            $result->runId !== null ? ' (run ' . $result->runId->value . ')' : '',
+            $result->runId instanceof RunId ? ' (run ' . $result->runId->value . ')' : '',
         ));
 
         return Command::SUCCESS;

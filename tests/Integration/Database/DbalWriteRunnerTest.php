@@ -55,7 +55,7 @@ final class DbalWriteRunnerTest extends DatabaseTestCase
      *
      * @param Closure(): mixed $call
      */
-    private static function failure(Closure $call): Throwable
+    private function failure(Closure $call): Throwable
     {
         try {
             $call();
@@ -78,7 +78,7 @@ final class DbalWriteRunnerTest extends DatabaseTestCase
         self::assertSame(1, $this->notes());
         self::assertFalse($this->connection->isTransactionActive());
 
-        $failure = self::failure(fn (): mixed => $this->runner()->write(function (): void {
+        $failure = $this->failure(fn (): mixed => $this->runner()->write(function (): never {
             $this->connection->insert('host_note', ['scope_key' => 'platform', 'code' => 'b', 'body' => 'B']);
 
             throw new RuntimeException('provider failed');
@@ -107,7 +107,7 @@ final class DbalWriteRunnerTest extends DatabaseTestCase
         self::assertSame([1, 2, 3], $attempts);
         self::assertSame(['c3'], $this->connection->fetchFirstColumn('SELECT code FROM host_note'), 'the failed attempts were rolled back');
 
-        $conflict = self::failure(fn (): mixed => $this->runner(2)->write(fn (): never => throw $this->deadlock()));
+        $conflict = $this->failure(fn (): mixed => $this->runner(2)->write(fn (): never => throw $this->deadlock()));
         self::assertInstanceOf(ConcurrencyConflict::class, $conflict);
         self::assertSame(2, $conflict->attempts);
         self::assertFalse($conflict->committed);

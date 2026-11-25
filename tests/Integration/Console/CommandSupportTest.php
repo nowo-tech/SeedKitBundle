@@ -7,6 +7,7 @@ namespace Nowo\SeedKitBundle\Tests\Integration\Console;
 use Closure;
 use LogicException;
 use Nowo\SeedKitBundle\Application\RunMaintenance;
+use Nowo\SeedKitBundle\Domain\Document\DocumentSet;
 use Nowo\SeedKitBundle\Domain\Exception\AccessDeniedException;
 use Nowo\SeedKitBundle\Domain\Exception\ApplyInterruptedException;
 use Nowo\SeedKitBundle\Domain\Exception\DocumentInvalidException;
@@ -100,7 +101,7 @@ final class CommandSupportTest extends TestCase
      *
      * @param Closure(): mixed $call
      */
-    private static function quietly(Closure $call): void
+    private function quietly(Closure $call): void
     {
         set_error_handler(static fn (): bool => true); // @phpstan-ignore frankenphp.worker.noSetErrorExceptionHandler
         try {
@@ -138,7 +139,7 @@ final class CommandSupportTest extends TestCase
     {
         $document = "provider: host.tags\nversion: 1\nscope: platform\nitems:\n  - {slug: news, label: News}\n";
         try {
-            $set = Stdin::with($document, static fn () => self::support()->read(self::input(['file' => '-']), 'file'));
+            $set = Stdin::with($document, static fn (): DocumentSet => self::support()->read(self::input(['file' => '-']), 'file'));
         } catch (RuntimeException $e) {
             self::markTestSkipped($e->getMessage());
         }
@@ -155,7 +156,7 @@ final class CommandSupportTest extends TestCase
         if (!is_file($unreadable)) {
             self::markTestSkipped('No write-only sysfs attribute here.');
         }
-        self::quietly(static function () use ($unreadable): void {
+        $this->quietly(static function () use ($unreadable): void {
             try {
                 self::support()->read(self::input(['file' => $unreadable, '--allow-any-path' => true]), 'file');
                 self::fail('opened');
@@ -169,7 +170,7 @@ final class CommandSupportTest extends TestCase
     public function anOutputThatCannotBeOpenedIsRefused(): void
     {
         // sysfs is mounted read-only: the directory exists, no file can be created in it.
-        self::quietly(static function (): void {
+        $this->quietly(static function (): void {
             try {
                 self::support()->output(self::input(['--output' => '/sys/bus/platform/seed.yaml', '--allow-any-path' => true]));
                 self::fail('opened');

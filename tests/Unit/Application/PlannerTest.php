@@ -8,6 +8,7 @@ use Closure;
 use Nowo\SeedKitBundle\Application\ErrorBag;
 use Nowo\SeedKitBundle\Application\PlanHasher;
 use Nowo\SeedKitBundle\Application\Planner;
+use Nowo\SeedKitBundle\Application\PreparedDocument;
 use Nowo\SeedKitBundle\Application\PruneOptions;
 use Nowo\SeedKitBundle\Domain\Context\SeedContext;
 use Nowo\SeedKitBundle\Domain\Document\SeedItem;
@@ -22,6 +23,7 @@ use Nowo\SeedKitBundle\Domain\Model\NaturalKey;
 use Nowo\SeedKitBundle\Domain\Model\ProviderName;
 use Nowo\SeedKitBundle\Domain\Plan\BatchPlan;
 use Nowo\SeedKitBundle\Domain\Plan\ChangeOp;
+use Nowo\SeedKitBundle\Domain\Plan\DocumentPlan;
 use Nowo\SeedKitBundle\Domain\Plan\FieldChange;
 use Nowo\SeedKitBundle\Domain\Plan\FieldValueView;
 use Nowo\SeedKitBundle\Domain\Plan\NaturalKeySet;
@@ -51,7 +53,7 @@ final class PlannerTest extends TestCase
      *
      * @return array<string, string>
      */
-    private static function fields(array $fields): array
+    private function fields(array $fields): array
     {
         $out = [];
         foreach ($fields as $field) {
@@ -98,7 +100,7 @@ final class PlannerTest extends TestCase
             Harness::document($articles, [], 'organization'),
             Harness::document($tags, [], 'organization'),
         ]), Harness::org());
-        self::assertSame(['demo.tags', 'demo.articles'], array_map(static fn ($p): string => $p->provider->name()->value, $prepared));
+        self::assertSame(['demo.tags', 'demo.articles'], array_map(static fn (PreparedDocument $p): string => $p->provider->name()->value, $prepared));
         self::assertSame($tags, $prepared[0]->provider);
         self::assertSame($tags->schema()->fingerprint(), $prepared[0]->schema->fingerprint());
     }
@@ -190,8 +192,8 @@ final class PlannerTest extends TestCase
         self::assertFalse($plan->prune);
 
         self::assertSame([ChangeOp::Create, ChangeOp::Update, ChangeOp::Unchanged], array_map(static fn (RowChange $c): ChangeOp => $c->op, $document->preview));
-        self::assertSame(['/code' => 'absent:null → value:"a"', '/label' => 'absent:null → value:"A"'], self::fields($document->preview[0]->fields));
-        self::assertSame(['/label' => 'value:"Old" → value:"New"'], self::fields($document->preview[1]->fields), 'note omitted keeps the value');
+        self::assertSame(['/code' => 'absent:null → value:"a"', '/label' => 'absent:null → value:"A"'], $this->fields($document->preview[0]->fields));
+        self::assertSame(['/label' => 'value:"Old" → value:"New"'], $this->fields($document->preview[1]->fields), 'note omitted keeps the value');
         self::assertSame(hash('sha256', '{"code":"b","label":"New"}'), $document->preview[1]->desiredFingerprint);
         self::assertSame(Planner::desiredFingerprint(new SeedItem(0, new NaturalKey(['a']), ['code' => 'a', 'label' => 'A'])), $document->preview[0]->desiredFingerprint);
 
@@ -313,7 +315,7 @@ final class PlannerTest extends TestCase
         ]), Harness::org());
         $context = Harness::context(Harness::org());
         $plan    = $planner->plan($docs, $context, new PruneOptions());
-        self::assertSame(['demo.tags', 'demo.articles'], array_map(static fn ($d): string => $d->provider->value, $plan->documents));
+        self::assertSame(['demo.tags', 'demo.articles'], array_map(static fn (DocumentPlan $d): string => $d->provider->value, $plan->documents));
         self::assertSame(2, $plan->count(ChangeOp::Create));
         self::assertTrue($context->pending->has(new ProviderName('demo.tags'), new NaturalKey(['news'])));
         self::assertSame(0, $store->applyCalls, 'a dry run writes nothing');
@@ -486,14 +488,14 @@ final class PlannerTest extends TestCase
         self::assertSame([
             '/label'    => 'value:"Old" → value:"New"',
             '/apiToken' => 'hidden:null → value:"vault:ok-1"',
-        ], self::fields($plan->documents[0]->preview[0]->fields));
-        self::assertSame(['/apiToken' => 'value:"vault:ok-old" → value:"vault:ok-2"'], self::fields($plan->documents[0]->preview[1]->fields));
+        ], $this->fields($plan->documents[0]->preview[0]->fields));
+        self::assertSame(['/apiToken' => 'value:"vault:ok-old" → value:"vault:ok-2"'], $this->fields($plan->documents[0]->preview[1]->fields));
 
         $masked = $planner->plan($docs, Harness::context(canSee: false), new PruneOptions(), true);
         self::assertSame([
             '/label'    => 'hidden:null → value:"New"',
             '/apiToken' => 'hidden:null → value:"vault:ok-1"',
-        ], self::fields($masked->documents[0]->preview[0]->fields));
+        ], $this->fields($masked->documents[0]->preview[0]->fields));
         self::assertTrue($plan->hash->equals($masked->hash), 'masking changes the preview only');
     }
 
@@ -512,7 +514,7 @@ final class PlannerTest extends TestCase
         $planner = Harness::planner([$tags]);
         $docs    = $planner->prepare(Harness::set([Harness::document($tags, [['code' => 'a']])]), Harness::platform());
         $plan    = $planner->plan($docs, Harness::context(), new PruneOptions(), true);
-        self::assertSame(['/pin' => 'absent:null → hidden:null', '/code' => 'absent:null → value:"a"'], self::fields($plan->documents[0]->preview[0]->fields));
+        self::assertSame(['/pin' => 'absent:null → hidden:null', '/code' => 'absent:null → value:"a"'], $this->fields($plan->documents[0]->preview[0]->fields));
     }
 
     // ---------------------------------------------------------------- helpers

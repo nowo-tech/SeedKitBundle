@@ -24,7 +24,7 @@ use Symfony\Component\DependencyInjection\ServiceLocator;
  */
 final class ProviderRegistryTest extends TestCase
 {
-    private static function registry(): ProviderRegistry
+    private function registry(): ProviderRegistry
     {
         $store = new InMemoryStore();
 
@@ -41,7 +41,7 @@ final class ProviderRegistryTest extends TestCase
      *
      * @return list<string>
      */
-    private static function names(array $providers): array
+    private function names(array $providers): array
     {
         return array_map(static fn (SeedProviderInterface $p): string => $p->name()->value, $providers);
     }
@@ -49,7 +49,7 @@ final class ProviderRegistryTest extends TestCase
     #[Test]
     public function listsAndFindsProviders(): void
     {
-        $registry = self::registry();
+        $registry = $this->registry();
         self::assertSame(['demo.tags', 'demo.articles', 'demo.liar', 'demo.object'], array_map(static fn (ProviderName $n): string => $n->value, $registry->names()));
         self::assertTrue($registry->has(new ProviderName('demo.tags')));
         self::assertFalse($registry->has(new ProviderName('demo.nope')));
@@ -61,28 +61,28 @@ final class ProviderRegistryTest extends TestCase
     public function unknownProvider(): void
     {
         $this->expectException(UnknownProviderException::class);
-        self::registry()->get(new ProviderName('demo.nope'));
+        $this->registry()->get(new ProviderName('demo.nope'));
     }
 
     #[Test]
     public function providerNotInTheKind(): void
     {
         $this->expectException(UnknownProviderException::class);
-        self::registry()->getForKind(new ProviderName('demo.articles'), new ScopeKind('platform'));
+        $this->registry()->getForKind(new ProviderName('demo.articles'), new ScopeKind('platform'));
     }
 
     #[Test]
     public function aNameMismatchBreaksTheContract(): void
     {
         $this->expectException(ProviderContractException::class);
-        self::registry()->get(new ProviderName('demo.liar'));
+        $this->registry()->get(new ProviderName('demo.liar'));
     }
 
     #[Test]
     public function aServiceThatIsNotAProviderBreaksTheContract(): void
     {
         $this->expectException(ProviderContractException::class);
-        self::registry()->get(new ProviderName('demo.object'));
+        $this->registry()->get(new ProviderName('demo.object'));
     }
 
     #[Test]
@@ -93,10 +93,10 @@ final class ProviderRegistryTest extends TestCase
             'demo.articles' => static fn (): SeedProviderInterface => new ArticleProvider($store),
             'demo.tags'     => static fn (): SeedProviderInterface => new TagProvider($store),
         ]), ['demo.tags', 'demo.articles']);
-        self::assertSame(['demo.tags', 'demo.articles'], self::names($registry->all()));
-        self::assertSame(['demo.tags'], self::names($registry->all(new ScopeKind('platform'))));
-        self::assertSame(['demo.tags', 'demo.articles'], self::names($registry->all(new ScopeKind('organization'))));
-        self::assertSame([], self::names($registry->all(new ScopeKind('project'))));
+        self::assertSame(['demo.tags', 'demo.articles'], $this->names($registry->all()));
+        self::assertSame(['demo.tags'], $this->names($registry->all(new ScopeKind('platform'))));
+        self::assertSame(['demo.tags', 'demo.articles'], $this->names($registry->all(new ScopeKind('organization'))));
+        self::assertSame([], $this->names($registry->all(new ScopeKind('project'))));
 
         $sorted = $registry->sort([new ProviderName('demo.articles'), new ProviderName('demo.unknown'), new ProviderName('demo.tags')]);
         self::assertSame(['demo.unknown', 'demo.tags', 'demo.articles'], array_map(static fn (ProviderName $n): string => $n->value, $sorted));

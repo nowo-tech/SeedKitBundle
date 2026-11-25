@@ -95,12 +95,12 @@ final class DbalRunStoreTest extends DatabaseTestCase
         $this->runs->create($this->record(3, RunStatus::Applied, 'bob', $acme));
         $this->runs->create($this->record(4, RunStatus::Applied));
 
-        self::assertSame(['04', '03', '02', '01'], self::ids($this->runs->list(null, null, 10)));
-        self::assertSame(['04', '03'], self::ids($this->runs->list(null, null, 2)));
-        self::assertSame(['02', '01'], self::ids($this->runs->list(null, null, 2, self::runId(3))));
-        self::assertSame(['04', '01'], self::ids($this->runs->list(SeedScope::platform(), RunStatus::Applied, 10)));
-        self::assertSame(['03'], self::ids($this->runs->list($acme, null, 10)));
-        self::assertSame(['01'], self::ids($this->runs->list(SeedScope::platform(), RunStatus::Applied, 10, self::runId(4))));
+        self::assertSame(['04', '03', '02', '01'], $this->ids($this->runs->list(null, null, 10)));
+        self::assertSame(['04', '03'], $this->ids($this->runs->list(null, null, 2)));
+        self::assertSame(['02', '01'], $this->ids($this->runs->list(null, null, 2, self::runId(3))));
+        self::assertSame(['04', '01'], $this->ids($this->runs->list(SeedScope::platform(), RunStatus::Applied, 10)));
+        self::assertSame(['03'], $this->ids($this->runs->list($acme, null, 10)));
+        self::assertSame(['01'], $this->ids($this->runs->list(SeedScope::platform(), RunStatus::Applied, 10, self::runId(4))));
         self::assertNull($this->runs->list(null, RunStatus::Failed, 1)[0]->actor);
     }
 
@@ -111,7 +111,7 @@ final class DbalRunStoreTest extends DatabaseTestCase
      *
      * @return list<string>
      */
-    private static function ids(array $runs): array
+    private function ids(array $runs): array
     {
         return array_map(static fn (RunRecord $run): string => substr($run->id->value, -2), $runs);
     }

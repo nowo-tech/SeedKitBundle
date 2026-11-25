@@ -331,8 +331,8 @@ final readonly class Planner
             $secret   = $schema->isSecret($property);
             $fields[] = new FieldChange(
                 $field->path,
-                $maskCurrentValues || ($secret && !self::isReferenceView($field->before)) ? self::hideValue($field->before) : $field->before,
-                $secret && !self::isReferenceView($field->after) ? self::hideValue($field->after) : $field->after,
+                $maskCurrentValues || ($secret && !$this->isReferenceView($field->before)) ? $this->hideValue($field->before) : $field->before,
+                $secret && !$this->isReferenceView($field->after) ? $this->hideValue($field->after) : $field->after,
             );
         }
         $preview[] = $change->withFields($fields);
@@ -341,7 +341,7 @@ final readonly class Planner
     /**
      * Hidden unless absent.
      */
-    private static function hideValue(FieldValueView $view): FieldValueView
+    private function hideValue(FieldValueView $view): FieldValueView
     {
         return $view->kind === FieldValueView::ABSENT ? $view : FieldValueView::hidden();
     }
@@ -349,7 +349,7 @@ final readonly class Planner
     /**
      * Whether a view holds a secret reference (or nothing).
      */
-    private static function isReferenceView(FieldValueView $view): bool
+    private function isReferenceView(FieldValueView $view): bool
     {
         return $view->kind !== FieldValueView::VALUE || (is_string($view->value) && SecretReference::isReference($view->value));
     }

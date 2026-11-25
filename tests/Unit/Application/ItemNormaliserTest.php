@@ -26,7 +26,7 @@ use const NAN;
  */
 final class ItemNormaliserTest extends TestCase
 {
-    private static function schema(): SeedSchema
+    private function schema(): SeedSchema
     {
         return new SeedSchema([
             'type'                 => 'object',
@@ -47,7 +47,7 @@ final class ItemNormaliserTest extends TestCase
         ]);
     }
 
-    private static function normaliser(?SeedKitSettings $settings = null, bool $withSecrets = true): ItemNormaliser
+    private function normaliser(?SeedKitSettings $settings = null, bool $withSecrets = true): ItemNormaliser
     {
         return Harness::normaliser($settings ?? Harness::settings(), $withSecrets ? new PrefixSecretValidator() : null);
     }
@@ -57,7 +57,7 @@ final class ItemNormaliserTest extends TestCase
      *
      * @return list<string>
      */
-    private static function rules(array|SeedItem $result): array
+    private function rules(array|SeedItem $result): array
     {
         self::assertIsArray($result);
 
@@ -67,7 +67,7 @@ final class ItemNormaliserTest extends TestCase
     #[Test]
     public function normalisesAValidItem(): void
     {
-        $item = self::normaliser()->normalise(self::schema(), 4, [
+        $item = $this->normaliser()->normalise($this->schema(), 4, [
             'email'   => 'Bob@Example.COM',
             'n'       => 3,
             'name'    => "Jose\u{0301}",
@@ -89,7 +89,7 @@ final class ItemNormaliserTest extends TestCase
     #[Test]
     public function aNullSecretIsDropped(): void
     {
-        $item = self::normaliser()->normalise(self::schema(), 0, ['email' => 'a@b', 'n' => 1, 'token' => null], Harness::context());
+        $item = $this->normaliser()->normalise($this->schema(), 0, ['email' => 'a@b', 'n' => 1, 'token' => null], Harness::context());
         self::assertInstanceOf(SeedItem::class, $item);
         self::assertFalse($item->has('token'), 'absent secret keeps the stored value');
     }
@@ -120,8 +120,8 @@ final class ItemNormaliserTest extends TestCase
     #[DataProvider('invalidItems')]
     public function reportsRowErrors(mixed $raw, array $rules): void
     {
-        $result = self::normaliser()->normalise(self::schema(), 2, $raw, Harness::context());
-        self::assertSame($rules, self::rules($result));
+        $result = $this->normaliser()->normalise($this->schema(), 2, $raw, Harness::context());
+        self::assertSame($rules, $this->rules($result));
         self::assertIsArray($result);
         foreach ($result as $error) {
             self::assertSame(2, $error->index);
@@ -132,10 +132,10 @@ final class ItemNormaliserTest extends TestCase
     #[Test]
     public function emptyObjectIsAnObject(): void
     {
-        $result = self::normaliser()->normalise(self::schema(), 0, [], Harness::context());
+        $result = $this->normaliser()->normalise($this->schema(), 0, [], Harness::context());
         // `{}` decodes to [] and reaches the validator as an empty JSON array: refused as a type error (an item
         // always needs its required key properties anyway)
-        self::assertSame(['type@'], self::rules($result));
+        self::assertSame(['type@'], $this->rules($result));
         self::assertIsArray($result);
         self::assertSame('seed_kit.row.schema_type', $result[0]->messageKey);
     }
@@ -143,7 +143,7 @@ final class ItemNormaliserTest extends TestCase
     #[Test]
     public function schemaErrorsCarryTheKey(): void
     {
-        $result = self::normaliser()->normalise(self::schema(), 0, ['email' => 'A', 'n' => 1, 'bogus' => 1], Harness::context());
+        $result = $this->normaliser()->normalise($this->schema(), 0, ['email' => 'A', 'n' => 1, 'bogus' => 1], Harness::context());
         self::assertIsArray($result);
         self::assertSame('["a",1]', $result[0]->key?->canonical);
     }
@@ -151,8 +151,8 @@ final class ItemNormaliserTest extends TestCase
     #[Test]
     public function withoutAValidatorEveryReferenceIsRefused(): void
     {
-        $result = self::normaliser(withSecrets: false)->normalise(self::schema(), 0, ['email' => 'a', 'n' => 1, 'token' => 'vault:ok-1'], Harness::context());
-        self::assertSame(['secret_refused@/token'], self::rules($result));
+        $result = $this->normaliser(withSecrets: false)->normalise($this->schema(), 0, ['email' => 'a', 'n' => 1, 'token' => 'vault:ok-1'], Harness::context());
+        self::assertSame(['secret_refused@/token'], $this->rules($result));
     }
 
     #[Test]
@@ -189,7 +189,7 @@ final class ItemNormaliserTest extends TestCase
     {
         $settings = new SeedKitSettings(maxDepth: 4, maxNodes: 15, maxStringBytes: 32, maxProperties: 5);
         try {
-            self::normaliser($settings)->normalise(self::schema(), 0, $raw, Harness::context());
+            $this->normaliser($settings)->normalise($this->schema(), 0, $raw, Harness::context());
             self::fail('expected');
         } catch (DocumentReadException $e) {
             self::assertSame($reason, $e->reason);
@@ -201,9 +201,9 @@ final class ItemNormaliserTest extends TestCase
     public function listsMayBeLongerThanThePropertyCap(): void
     {
         $settings = new SeedKitSettings(maxProperties: 2);
-        $result   = self::normaliser($settings)->normalise(self::schema(), 0, ['email' => 'a', 'n' => 1], Harness::context());
+        $result   = $this->normaliser($settings)->normalise($this->schema(), 0, ['email' => 'a', 'n' => 1], Harness::context());
         self::assertInstanceOf(SeedItem::class, $result);
-        $result = self::normaliser($settings)->normalise(new SeedSchema(['type' => 'object', 'x-seed-key' => ['e'], 'properties' => ['e' => ['type' => 'string'], 't' => ['type' => 'array']]]), 0, ['e' => 'a', 't' => [1, 2, 3, 4]], Harness::context());
+        $result = $this->normaliser($settings)->normalise(new SeedSchema(['type' => 'object', 'x-seed-key' => ['e'], 'properties' => ['e' => ['type' => 'string'], 't' => ['type' => 'array']]]), 0, ['e' => 'a', 't' => [1, 2, 3, 4]], Harness::context());
         self::assertInstanceOf(SeedItem::class, $result);
     }
 }

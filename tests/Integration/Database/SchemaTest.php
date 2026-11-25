@@ -70,17 +70,17 @@ final class SchemaTest extends DatabaseTestCase
     #[Test]
     public function xmlAndAttributeMappingsGiveTheSameSchema(): void
     {
-        $xml       = self::schema($this->entityManager);
-        $attribute = self::schema(TestDatabase::entityManager($this->connection, 'attribute'));
+        $xml       = $this->schema($this->entityManager);
+        $attribute = $this->schema(TestDatabase::entityManager($this->connection, 'attribute'));
 
         self::assertTrue($this->connection->createSchemaManager()->createComparator()->compareSchemas($xml, $attribute)->isEmpty());
         self::assertTrue($this->connection->createSchemaManager()->createComparator()->compareSchemas($attribute, $xml)->isEmpty());
         foreach (['nowo_seed_run', 'nowo_seed_lease'] as $table) {
-            self::assertSame(self::columns($xml->getTable($table)), self::columns($attribute->getTable($table)), $table);
+            self::assertSame($this->columns($xml->getTable($table)), $this->columns($attribute->getTable($table)), $table);
         }
     }
 
-    private static function schema(EntityManagerInterface $manager): Schema
+    private function schema(EntityManagerInterface $manager): Schema
     {
         return (new SchemaTool($manager))->getSchemaFromMetadata($manager->getMetadataFactory()->getAllMetadata());
     }
@@ -90,7 +90,7 @@ final class SchemaTest extends DatabaseTestCase
      *
      * @return array<string, array<string, mixed>>
      */
-    private static function columns(Table $table): array
+    private function columns(Table $table): array
     {
         $columns = [];
         foreach ($table->getColumns() as $column) {

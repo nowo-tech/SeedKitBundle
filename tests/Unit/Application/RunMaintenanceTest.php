@@ -27,7 +27,7 @@ use function sprintf;
  */
 final class RunMaintenanceTest extends TestCase
 {
-    private static function record(int $n, string $created, RunStatus $status, ?string $actor = 'alice'): RunRecord
+    private function record(int $n, string $created, RunStatus $status, ?string $actor = 'alice'): RunRecord
     {
         return new RunRecord(
             new RunId(sprintf('00000000-0000-7000-8000-%012d', $n)),
@@ -51,9 +51,9 @@ final class RunMaintenanceTest extends TestCase
     public function maintainsTheHistory(): void
     {
         $store = new InMemoryRunStore();
-        $store->create(self::record(1, '2024-01-01', RunStatus::Applied));
-        $store->create(self::record(2, '2024-01-02', RunStatus::Running, 'bob'));
-        $store->create(self::record(3, '2026-11-01', RunStatus::Failed));
+        $store->create($this->record(1, '2024-01-01', RunStatus::Applied));
+        $store->create($this->record(2, '2024-01-02', RunStatus::Running, 'bob'));
+        $store->create($this->record(3, '2026-11-01', RunStatus::Failed));
         $maintenance = new RunMaintenance($store, new MockClock(new DateTimeImmutable('2026-11-24T00:00:00Z')), 30);
 
         self::assertSame('2026-10-25', $maintenance->defaultBefore()->format('Y-m-d'));

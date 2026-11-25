@@ -68,8 +68,8 @@ final class DocumentReaderTest extends TestCase
         self::assertSame('org-1', $header->meta->exportedFrom?->value);
         self::assertSame('seed-kit 0.1.0', $header->meta->generator);
         $expected = [['email' => 'ana@example.com', 'tags' => ['customer']], ['email' => 'luis@example.com']];
-        self::assertSame($expected, self::items($set->documents[0]));
-        self::assertSame($expected, self::items($set->documents[0]));
+        self::assertSame($expected, $this->items($set->documents[0]));
+        self::assertSame($expected, $this->items($set->documents[0]));
     }
 
     #[Test]
@@ -84,7 +84,7 @@ final class DocumentReaderTest extends TestCase
         self::assertNull($header->meta->exportedAt);
         self::assertNull($header->meta->exportedFrom);
         self::assertNull($header->meta->generator);
-        self::assertSame([['a' => 1]], self::items($set->documents[0]));
+        self::assertSame([['a' => 1]], $this->items($set->documents[0]));
     }
 
     #[Test]
@@ -97,9 +97,9 @@ final class DocumentReaderTest extends TestCase
 
         self::assertCount(2, $set->documents);
         self::assertSame('crm.contacts', $set->documents[0]->header->provider->value);
-        self::assertSame([], self::items($set->documents[0]));
+        self::assertSame([], $this->items($set->documents[0]));
         self::assertSame('crm.companies', $set->documents[1]->header->provider->value);
-        self::assertSame([['slug' => 'acme']], self::items($set->documents[1]));
+        self::assertSame([['slug' => 'acme']], $this->items($set->documents[1]));
     }
 
     #[Test]
@@ -118,7 +118,7 @@ final class DocumentReaderTest extends TestCase
         self::assertCount(2, $set->documents);
         self::assertSame('a.one', $set->documents[0]->header->provider->value);
         self::assertSame('a.two', $set->documents[1]->header->provider->value);
-        self::assertSame([1], self::items($set->documents[1]));
+        self::assertSame([1], $this->items($set->documents[1]));
     }
 
     #[Test]
@@ -269,7 +269,7 @@ final class DocumentReaderTest extends TestCase
             . "    folded: >\n      <<: folded\n"
             . "    flow: { k: '&ok', n: 1, l: [x, '*y'] }\n";
 
-        $items = self::items($this->read($text)->documents[0]);
+        $items = $this->items($this->read($text)->documents[0]);
 
         self::assertSame([[
             'name'    => '*star',
@@ -329,13 +329,13 @@ final class DocumentReaderTest extends TestCase
         $ok     = str_repeat('[', 5) . str_repeat(']', 5);
 
         $this->assertReadFails('{"provider":"a.one","version":1,"scope":"platform","items":[' . $deep . ']}', 'json_parse', null, DocumentFormat::Json, $limits);
-        self::assertSame([[[[[[]]]]]], self::items($this->read('{"provider":"a.one","version":1,"scope":"platform","items":[' . $ok . ']}', DocumentFormat::Json, $limits)->documents[0]));
+        self::assertSame([[[[[[]]]]]], $this->items($this->read('{"provider":"a.one","version":1,"scope":"platform","items":[' . $ok . ']}', DocumentFormat::Json, $limits)->documents[0]));
     }
 
     #[Test]
     public function readsDeeplyNestedYaml(): void
     {
-        $items = self::items($this->read(self::HEADER_YAML . 'items: [' . str_repeat('[', 40) . 'x' . str_repeat(']', 40) . "]\n")->documents[0]);
+        $items = $this->items($this->read(self::HEADER_YAML . 'items: [' . str_repeat('[', 40) . 'x' . str_repeat(']', 40) . "]\n")->documents[0]);
 
         $node  = $items[0];
         $depth = 0;
@@ -353,12 +353,12 @@ final class DocumentReaderTest extends TestCase
         $json = $this->read('{"provider":"a.one","version":1,"scope":"platform","items":[{"big":123456789012345678901234567890,"inf":1e999,"zero":-0}]}');
         $yaml = $this->read(self::HEADER_YAML . "items:\n  - { big: 123456789012345678901234567890, inf: .inf, ninf: -.inf }\n");
 
-        $jsonItem = self::items($json->documents[0])[0];
+        $jsonItem = $this->items($json->documents[0])[0];
         self::assertIsArray($jsonItem);
         self::assertSame('123456789012345678901234567890', $jsonItem['big']);
         self::assertTrue(is_float($jsonItem['inf']) && is_infinite($jsonItem['inf']) && $jsonItem['inf'] > 0);
         self::assertSame(0, $jsonItem['zero']);
-        $yamlItem = self::items($yaml->documents[0])[0];
+        $yamlItem = $this->items($yaml->documents[0])[0];
         self::assertIsArray($yamlItem);
         self::assertSame('123456789012345678901234567890', $yamlItem['big']);
         self::assertTrue(is_float($yamlItem['inf']) && is_infinite($yamlItem['inf']) && $yamlItem['inf'] > 0);
@@ -371,8 +371,8 @@ final class DocumentReaderTest extends TestCase
         $value = str_repeat('a', 1048576);
         $long  = str_repeat('b', 65536);
 
-        $json = self::items($this->read('{"provider":"a.one","version":1,"scope":"platform","items":[{"name":"' . $value . '"}]}')->documents[0]);
-        $yaml = self::items($this->read(self::HEADER_YAML . "items:\n  - name: " . $long . "\n")->documents[0]);
+        $json = $this->items($this->read('{"provider":"a.one","version":1,"scope":"platform","items":[{"name":"' . $value . '"}]}')->documents[0]);
+        $yaml = $this->items($this->read(self::HEADER_YAML . "items:\n  - name: " . $long . "\n")->documents[0]);
 
         self::assertSame([['name' => $value]], $json);
         self::assertSame([['name' => $long]], $yaml);
@@ -431,7 +431,7 @@ final class DocumentReaderTest extends TestCase
 
         $this->assertReadFails(self::HEADER_YAML . "items: []\n", 'too_large_for_tree', null, null, $limits);
         $this->assertReadFails('{"provider":"a.one","version":1,"scope":"platform","items":[]}', 'too_large_for_tree', null, DocumentFormat::Json, $limits);
-        self::assertSame([['a' => 1]], self::items($this->read(self::HEADER_JSON . "\n{\"a\":1}\n", null, $limits)->documents[0]));
+        self::assertSame([['a' => 1]], $this->items($this->read(self::HEADER_JSON . "\n{\"a\":1}\n", null, $limits)->documents[0]));
     }
 
     #[Test]
@@ -440,7 +440,7 @@ final class DocumentReaderTest extends TestCase
         $limits = new ReaderLimits(maxItems: 2);
 
         $this->assertReadFails(self::HEADER_YAML . "items: [1, 2, 3]\n", 'too_many_items', null, null, $limits);
-        self::assertSame([1, 2], self::items($this->read(self::HEADER_YAML . "items: [1, 2]\n", null, $limits)->documents[0]));
+        self::assertSame([1, 2], $this->items($this->read(self::HEADER_YAML . "items: [1, 2]\n", null, $limits)->documents[0]));
     }
 
     #[Test]
@@ -464,7 +464,7 @@ final class DocumentReaderTest extends TestCase
     #[Test]
     public function refusesWhenTheTempBufferCannotBeOpened(): void
     {
-        $input    = self::stream(self::HEADER_YAML . "items: []\n");
+        $input    = $this->stream(self::HEADER_YAML . "items: []\n");
         $warnings = [];
         stream_wrapper_unregister('php');
         stream_wrapper_register('php', RefusingOpenStream::class);
@@ -500,7 +500,7 @@ final class DocumentReaderTest extends TestCase
         self::assertSame('sha256:' . hash('sha256', $text), $set->hash->value);
         self::assertSame('crm.contacts', $set->documents[0]->header->provider->value);
         for ($pass = 0; $pass < 2; ++$pass) {
-            [$seen, $error] = self::itemsUntilError($set->documents[0]);
+            [$seen, $error] = $this->itemsUntilError($set->documents[0]);
 
             self::assertSame([['email' => 'a'], ['email' => 'b']], $seen);
             self::assertSame('json_parse', $error?->reason);
@@ -514,7 +514,7 @@ final class DocumentReaderTest extends TestCase
         $set = $this->read(self::HEADER_JSON, DocumentFormat::JsonLines);
 
         self::assertSame('crm.contacts', $set->documents[0]->header->provider->value);
-        self::assertSame([], self::items($set->documents[0]));
+        self::assertSame([], $this->items($set->documents[0]));
     }
 
     /**
@@ -536,7 +536,7 @@ final class DocumentReaderTest extends TestCase
         $set = $this->read($text, DocumentFormat::JsonLines, new ReaderLimits(maxLineBytes: 80));
 
         try {
-            self::items($set->documents[0]);
+            $this->items($set->documents[0]);
             self::fail('The broken line must be reported.');
         } catch (DocumentReadException $e) {
             self::assertSame($reason, $e->reason);
@@ -552,14 +552,14 @@ final class DocumentReaderTest extends TestCase
 
         $set = $this->read(self::HEADER_JSON . "\n" . $item . "\n" . $item, DocumentFormat::JsonLines, new ReaderLimits(maxLineBytes: 80));
 
-        self::assertCount(2, self::items($set->documents[0]));
+        self::assertCount(2, $this->items($set->documents[0]));
     }
 
     #[Test]
     public function capsTheJsonLinesItemsAfterYieldingTheAllowedOnes(): void
     {
         $set            = $this->read(self::HEADER_JSON . "\n1\n2\n\n3\n", DocumentFormat::JsonLines, new ReaderLimits(maxItems: 2));
-        [$seen, $error] = self::itemsUntilError($set->documents[0]);
+        [$seen, $error] = $this->itemsUntilError($set->documents[0]);
 
         self::assertSame([1, 2], $seen);
         self::assertSame('too_many_items', $error?->reason);
@@ -593,7 +593,7 @@ final class DocumentReaderTest extends TestCase
         $set = $this->read("\xEF\xBB\xBF" . self::HEADER_JSON . "\n{\"a\":1}\n");
 
         self::assertSame(DocumentFormat::JsonLines, $set->format);
-        self::assertSame([['a' => 1]], self::items($set->documents[0]));
+        self::assertSame([['a' => 1]], $this->items($set->documents[0]));
     }
 
     #[Test]
@@ -679,7 +679,7 @@ final class DocumentReaderTest extends TestCase
      */
     private function read(string $text, ?DocumentFormat $format = null, ?ReaderLimits $limits = null): DocumentSet
     {
-        return (new DocumentReader())->read(self::stream($text), $format, $limits ?? new ReaderLimits());
+        return (new DocumentReader())->read($this->stream($text), $format, $limits ?? new ReaderLimits());
     }
 
     /**
@@ -703,7 +703,7 @@ final class DocumentReaderTest extends TestCase
      *
      * @return list<mixed>
      */
-    private static function items(SeedDocument $document): array
+    private function items(SeedDocument $document): array
     {
         $items = [];
         foreach ($document->items() as $item) {
@@ -718,7 +718,7 @@ final class DocumentReaderTest extends TestCase
      *
      * @return array{list<mixed>, DocumentReadException|null}
      */
-    private static function itemsUntilError(SeedDocument $document): array
+    private function itemsUntilError(SeedDocument $document): array
     {
         $items = [];
 
@@ -738,7 +738,7 @@ final class DocumentReaderTest extends TestCase
      *
      * @return resource
      */
-    private static function stream(string $text)
+    private function stream(string $text)
     {
         $stream = fopen('php://memory', 'w+');
         self::assertIsResource($stream);

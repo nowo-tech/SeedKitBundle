@@ -135,13 +135,13 @@ final class SeedOperationsTest extends TestCase
      */
     public function resolves(SeedScope $requested): ?SeedScope
     {
-        return $this->resolve !== null ? ($this->resolve)($requested) : $requested;
+        return $this->resolve instanceof Closure ? ($this->resolve)($requested) : $requested;
     }
 
     /**
      * @return resource
      */
-    private static function stream()
+    private function stream()
     {
         $stream = fopen('php://memory', 'w+');
         self::assertIsResource($stream);
@@ -161,7 +161,7 @@ final class SeedOperationsTest extends TestCase
      *
      * @return list<string>
      */
-    private static function names(array $providers): array
+    private function names(array $providers): array
     {
         return array_map(static fn (SeedProviderInterface $p): string => $p->name()->value, $providers);
     }
@@ -170,8 +170,8 @@ final class SeedOperationsTest extends TestCase
     public function listsProvidersAndPublishesSchemas(): void
     {
         $operations = $this->operations();
-        self::assertSame(['demo.tags', 'demo.articles', 'demo.items'], self::names($operations->providers()));
-        self::assertSame(['demo.tags', 'demo.items'], self::names($operations->providers(SeedScope::platform())));
+        self::assertSame(['demo.tags', 'demo.articles', 'demo.items'], $this->names($operations->providers()));
+        self::assertSame(['demo.tags', 'demo.items'], $this->names($operations->providers(SeedScope::platform())));
         self::assertSame('urn:nowo-seed:demo.tags:1', $operations->schema(new ProviderName('demo.tags'))['$id']);
 
         $this->expectException(UnknownProviderException::class);
@@ -244,7 +244,7 @@ final class SeedOperationsTest extends TestCase
     #[Test]
     public function anEmptyExportIsLoggedNotAudited(): void
     {
-        $rows = $this->operations()->export(new ProviderName('demo.tags'), Harness::org(), ExportMode::Empty, DocumentFormat::Yaml, new ActorRef('alice'), Channel::Http, self::stream());
+        $rows = $this->operations()->export(new ProviderName('demo.tags'), Harness::org(), ExportMode::Empty, DocumentFormat::Yaml, new ActorRef('alice'), Channel::Http, $this->stream());
         self::assertSame(1, $rows);
         self::assertSame([], $this->audit->records);
         self::assertSame([['info', 'Seed export of {provider} in {scope} ({mode}, {rows} rows).', ['provider' => 'demo.tags', 'scope' => 'organization:org-1', 'mode' => 'empty', 'rows' => 1]]], $this->logger->records);
@@ -257,7 +257,7 @@ final class SeedOperationsTest extends TestCase
     public function aSensitiveCurrentExportIsAudited(): void
     {
         $this->store->rows['demo.articles']['["a"]'] = ['code' => 'a', 'title' => 'A', 'owner' => 'bob'];
-        $rows                                        = $this->operations()->export(new ProviderName('demo.articles'), Harness::org(), ExportMode::Current, DocumentFormat::Json, new ActorRef('alice'), Channel::Http, self::stream());
+        $rows                                        = $this->operations()->export(new ProviderName('demo.articles'), Harness::org(), ExportMode::Current, DocumentFormat::Json, new ActorRef('alice'), Channel::Http, $this->stream());
         self::assertSame(1, $rows);
         self::assertCount(1, $this->audit->records);
         self::assertSame(['action' => 'export', 'actor' => 'alice', 'scope' => 'organization:org-1', 'providers' => ['demo.articles'], 'counts' => ['rows' => 1], 'channel' => 'http', 'outcome' => 'success', 'document_hash' => null, 'plan_hash' => null, 'run_id' => null], $this->audit->records[0]->toArray());
@@ -268,7 +268,7 @@ final class SeedOperationsTest extends TestCase
     public function aNonSensitiveCurrentExportIsLogged(): void
     {
         $operations = $this->operations(false);
-        self::assertSame(1, $operations->export(new ProviderName('demo.items'), Harness::org(), ExportMode::Current, DocumentFormat::Json, new ActorRef('alice'), Channel::Http, self::stream()));
+        self::assertSame(1, $operations->export(new ProviderName('demo.items'), Harness::org(), ExportMode::Current, DocumentFormat::Json, new ActorRef('alice'), Channel::Http, $this->stream()));
         self::assertSame([], $this->audit->records);
         self::assertSame([], $this->events->events, 'no dispatcher');
     }
@@ -278,14 +278,14 @@ final class SeedOperationsTest extends TestCase
     {
         $this->denied = ['SEED_EXPORT'];
         $this->expectException(AccessDeniedException::class);
-        $this->operations()->export(new ProviderName('demo.tags'), Harness::org(), ExportMode::Empty, DocumentFormat::Yaml, new ActorRef('alice'), Channel::Http, self::stream());
+        $this->operations()->export(new ProviderName('demo.tags'), Harness::org(), ExportMode::Empty, DocumentFormat::Yaml, new ActorRef('alice'), Channel::Http, $this->stream());
     }
 
     #[Test]
     public function exportNeedsTheProviderInTheKind(): void
     {
         $this->expectException(UnknownProviderException::class);
-        $this->operations()->export(new ProviderName('demo.articles'), SeedScope::platform(), ExportMode::Empty, DocumentFormat::Yaml, new ActorRef('alice'), Channel::Http, self::stream());
+        $this->operations()->export(new ProviderName('demo.articles'), SeedScope::platform(), ExportMode::Empty, DocumentFormat::Yaml, new ActorRef('alice'), Channel::Http, $this->stream());
     }
 
     // ---------------------------------------------------------------- diff
@@ -337,8 +337,14 @@ final class SeedOperationsTest extends TestCase
             self::fail('expected');
         } catch (AccessDeniedException) {
         }
-        $this->expectException(AccessDeniedException::class);
-        $this->operations()->apply($this->tagsSet(), Harness::org(), new ActorRef('alice'), Channel::Http, new PruneOptions($prune));
+        try {
+            $this->operations()->apply($this->tagsSet(), Harness::org(), new ActorRef('alice'), Channel::Http, new PruneOptions($prune));
+            self::fail('expected');
+        } catch (AccessDeniedException) {
+        }
+        self::assertCount(1, $this->audit->records, 'a refused apply is audited');
+        self::assertSame('ACCESS_002', $this->audit->records[0]->outcome);
+        self::assertSame(['demo.tags'], $this->audit->records[0]->providers);
     }
 
     #[Test]

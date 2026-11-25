@@ -46,7 +46,7 @@ final class ExporterTest extends TestCase
     /**
      * @return resource
      */
-    private static function stream()
+    private function stream()
     {
         $stream = fopen('php://memory', 'w+');
         self::assertIsResource($stream);
@@ -58,7 +58,7 @@ final class ExporterTest extends TestCase
     public function exportsTheEmptyTemplate(): void
     {
         $tags = new TagProvider(new InMemoryStore());
-        $rows = $this->exporter()->export($tags, Harness::context(Harness::org()), ExportMode::Empty, DocumentFormat::Yaml, self::stream());
+        $rows = $this->exporter()->export($tags, Harness::context(Harness::org()), ExportMode::Empty, DocumentFormat::Yaml, $this->stream());
         self::assertSame(1, $rows);
         $document = $this->writer->document;
         self::assertNotNull($document);
@@ -80,7 +80,7 @@ final class ExporterTest extends TestCase
         $store->rows['demo.tags']['["b"]'] = ['createdAt' => '2026-01-01', 'apiToken' => 'vault:ok-2', 'label' => 'B', 'slug' => 'b'];
         $store->rows['demo.tags']['["a"]'] = ['slug' => 'a', 'label' => 'A', 'apiToken' => 'vault:foreign', 'color' => 'red'];
         $store->rows['demo.tags']['["c"]'] = ['slug' => 'c', 'label' => 'C', 'apiToken' => null];
-        $rows                              = $this->exporter()->export(new TagProvider($store), Harness::context(Harness::org('org-9')), ExportMode::Current, DocumentFormat::Json, self::stream());
+        $rows                              = $this->exporter()->export(new TagProvider($store), Harness::context(Harness::org('org-9')), ExportMode::Current, DocumentFormat::Json, $this->stream());
         self::assertSame(3, $rows);
         self::assertSame([
             ['slug' => 'a', 'label' => 'A', 'color' => 'red'],
@@ -99,14 +99,14 @@ final class ExporterTest extends TestCase
     {
         $store                             = new InMemoryStore();
         $store->rows['demo.tags']['["a"]'] = ['slug' => 'a', 'label' => 'A', 'apiToken' => 'vault:ok-1'];
-        $this->exporter(null)->export(new TagProvider($store), Harness::context(), ExportMode::Current, DocumentFormat::Json, self::stream());
+        $this->exporter(null)->export(new TagProvider($store), Harness::context(), ExportMode::Current, DocumentFormat::Json, $this->stream());
         self::assertSame([['slug' => 'a', 'label' => 'A']], $this->writer->items);
     }
 
     #[Test]
     public function anEmptyCurrentExportHasNoItem(): void
     {
-        self::assertSame(0, $this->exporter()->export(new TagProvider(new InMemoryStore()), Harness::context(), ExportMode::Current, DocumentFormat::Json, self::stream()));
+        self::assertSame(0, $this->exporter()->export(new TagProvider(new InMemoryStore()), Harness::context(), ExportMode::Current, DocumentFormat::Json, $this->stream()));
         self::assertSame([], $this->writer->items);
     }
 
@@ -147,7 +147,7 @@ final class ExporterTest extends TestCase
         ]);
         $provider->onExportCurrent = static fn (): iterable => $rows();
         $this->expectException(ProviderContractException::class);
-        $this->exporter()->export($provider, Harness::context(), ExportMode::Current, DocumentFormat::JsonLines, self::stream());
+        $this->exporter()->export($provider, Harness::context(), ExportMode::Current, DocumentFormat::JsonLines, $this->stream());
     }
 
     #[Test]
@@ -162,7 +162,7 @@ final class ExporterTest extends TestCase
             new SeedItem(0, new NaturalKey(['a']), ['code' => 'a', 'pin' => new SecretReference('vault:elsewhere')]),
             new SeedItem(0, new NaturalKey(['b']), ['code' => 'b', 'pin' => new SecretReference('vault:ok-b')]),
         ];
-        $this->exporter()->export($provider, Harness::context(), ExportMode::Current, DocumentFormat::Json, self::stream());
+        $this->exporter()->export($provider, Harness::context(), ExportMode::Current, DocumentFormat::Json, $this->stream());
         self::assertSame([['code' => 'a'], ['code' => 'b', 'pin' => 'vault:ok-b']], $this->writer->items);
     }
 }

@@ -68,10 +68,12 @@ final class OpisSchemaValidator implements SchemaValidatorInterface, ResetInterf
         }
         $this->validator->setMaxErrors($maxErrors);
         $limit = ini_get('pcre.backtrack_limit');
+        // @igor-ignore - pcre.backtrack_limit is lowered for this call only and restored in finally.
         ini_set('pcre.backtrack_limit', (string) self::BACKTRACK_LIMIT);
         try {
             $result = $this->validator->validate(Helper::toJSON($item), $this->compiled[$fingerprint]);
         } finally {
+            // @igor-ignore - pcre.backtrack_limit is lowered for this call only and restored in finally.
             ini_set('pcre.backtrack_limit', $limit === false ? '1000000' : $limit);
         }
         $error = $result->error();

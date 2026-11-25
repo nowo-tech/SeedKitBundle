@@ -94,7 +94,7 @@ final class ArticleProvider extends AbstractSeedProvider
         foreach ($batch->changes as $change) {
             $item = $batch->item($change);
             $row  = $this->store->rows['demo.articles'][$change->key->canonical] ?? [];
-            foreach ($item !== null ? $item->data : [] as $property => $value) {
+            foreach ($item instanceof SeedItem ? $item->data : [] as $property => $value) {
                 $row[$property] = $value;
             }
             $this->store->rows['demo.articles'][$change->key->canonical] = $row;

@@ -30,7 +30,7 @@ final class PrependExtensionTest extends TestCase
      *
      * @return array<string, mixed>|null the prepended Doctrine configuration, or null when nothing was prepended
      */
-    private static function prepend(array $seedKit, array $doctrine, bool $withDoctrine = true): ?array
+    private function prepend(array $seedKit, array $doctrine, bool $withDoctrine = true): ?array
     {
         $builder = new ContainerBuilder();
         $builder->setParameter('kernel.environment', 'test');
@@ -66,7 +66,7 @@ final class PrependExtensionTest extends TestCase
      *
      * @return array{string, array<string, mixed>}
      */
-    private static function mapping(?array $prepended): array
+    private function mapping(?array $prepended): array
     {
         self::assertIsArray($prepended);
         $orm = $prepended['orm'] ?? null;
@@ -91,13 +91,13 @@ final class PrependExtensionTest extends TestCase
     #[Test]
     public function withoutDoctrineNothingIsPrepended(): void
     {
-        self::assertNull(self::prepend([[]], [], false));
+        self::assertNull($this->prepend([[]], [], false));
     }
 
     #[Test]
     public function xmlMappingOnTheDefaultManagerByDefault(): void
     {
-        [$manager, $mapping] = self::mapping(self::prepend([[]], [['dbal' => ['url' => 'sqlite:///:memory:']]]));
+        [$manager, $mapping] = $this->mapping($this->prepend([[]], [['dbal' => ['url' => 'sqlite:///:memory:']]]));
 
         self::assertSame('default', $manager);
         self::assertSame('xml', $mapping['type']);
@@ -109,7 +109,7 @@ final class PrependExtensionTest extends TestCase
     #[Test]
     public function attributeMappingOnRequest(): void
     {
-        [, $mapping] = self::mapping(self::prepend([['doctrine' => ['mapping' => 'xml']], ['doctrine' => ['mapping' => 'attribute']]], []));
+        [, $mapping] = $this->mapping($this->prepend([['doctrine' => ['mapping' => 'xml']], ['doctrine' => ['mapping' => 'attribute']]], []));
 
         self::assertSame('attribute', $mapping['type']);
         self::assertSame(dirname(__DIR__, 3) . '/src/Infrastructure/Doctrine/Entity', $mapping['dir']);
@@ -135,7 +135,7 @@ final class PrependExtensionTest extends TestCase
     #[DataProvider('managers')]
     public function theManagerIsDetected(array $seedKit, array $doctrine, string $expected): void
     {
-        [$manager] = self::mapping(self::prepend($seedKit, $doctrine));
+        [$manager] = $this->mapping($this->prepend($seedKit, $doctrine));
 
         self::assertSame($expected, $manager);
     }

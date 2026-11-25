@@ -23,7 +23,7 @@ final class SeedProviderPassTest extends TestCase
     /**
      * @param array<string, list<array<string, mixed>>> $providers service id => tags
      */
-    private static function container(array $providers): ContainerBuilder
+    private function container(array $providers): ContainerBuilder
     {
         $container = new ContainerBuilder();
         $container->setDefinition(ProviderRegistry::class, new Definition(ProviderRegistry::class, [new ServiceLocatorArgument([]), []]));
@@ -52,7 +52,7 @@ final class SeedProviderPassTest extends TestCase
     #[Test]
     public function theRegistryGetsALocatorAndTheDependencyOrder(): void
     {
-        $container = self::container([
+        $container = $this->container([
             'app.contacts'  => [['name' => 'crm.contacts', 'depends_on' => ['crm.companies', 'crm.tags', 42]]],
             'app.companies' => [['name' => 'crm.companies', 'depends_on' => 'crm.tags']],
             'app.tags'      => [['name' => 'crm.tags']],
@@ -81,7 +81,7 @@ final class SeedProviderPassTest extends TestCase
         $this->expectException(InvalidArgumentException::class);
         $this->expectExceptionMessage('Seed provider "app.nameless": the tag "nowo_seed_kit.provider" needs a "name" attribute');
 
-        (new SeedProviderPass())->process(self::container(['app.nameless' => [[]]]));
+        (new SeedProviderPass())->process($this->container(['app.nameless' => [[]]]));
     }
 
     #[Test]
@@ -90,7 +90,7 @@ final class SeedProviderPassTest extends TestCase
         $this->expectException(InvalidArgumentException::class);
         $this->expectExceptionMessage('Seed provider "app.bad": "Bad Name" is not a valid provider name.');
 
-        (new SeedProviderPass())->process(self::container(['app.bad' => [['name' => 'Bad Name']]]));
+        (new SeedProviderPass())->process($this->container(['app.bad' => [['name' => 'Bad Name']]]));
     }
 
     #[Test]
@@ -99,7 +99,7 @@ final class SeedProviderPassTest extends TestCase
         $this->expectException(InvalidArgumentException::class);
         $this->expectExceptionMessage('Seed provider name "crm.tags" is registered twice.');
 
-        (new SeedProviderPass())->process(self::container(['app.one' => [['name' => 'crm.tags']], 'app.two' => [['name' => 'crm.tags']]]));
+        (new SeedProviderPass())->process($this->container(['app.one' => [['name' => 'crm.tags']], 'app.two' => [['name' => 'crm.tags']]]));
     }
 
     #[Test]
@@ -108,7 +108,7 @@ final class SeedProviderPassTest extends TestCase
         $this->expectException(InvalidArgumentException::class);
         $this->expectExceptionMessage('Seed provider "crm.contacts" depends on "crm.companies", which is not registered.');
 
-        (new SeedProviderPass())->process(self::container(['app.contacts' => [['name' => 'crm.contacts', 'depends_on' => ['crm.companies']]]]));
+        (new SeedProviderPass())->process($this->container(['app.contacts' => [['name' => 'crm.contacts', 'depends_on' => ['crm.companies']]]]));
     }
 
     #[Test]

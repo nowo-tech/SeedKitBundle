@@ -21,6 +21,7 @@ final class PendingKeys
      */
     public function add(ProviderName $provider, NaturalKey $key): void
     {
+        // @igor-ignore - per-run key set created per call, never a shared service.
         ($this->byProvider[$provider->value] ??= new NaturalKeySet())->add($key);
     }
 

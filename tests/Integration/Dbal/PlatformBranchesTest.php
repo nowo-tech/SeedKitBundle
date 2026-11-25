@@ -75,7 +75,7 @@ final class PlatformBranchesTest extends TestCase
      *
      * @return ClassMetadata<object>
      */
-    private static function metadata(string $class): ClassMetadata
+    private function metadata(string $class): ClassMetadata
     {
         $metadata = new ClassMetadata($class);
         $metadata->initializeReflection(new RuntimeReflectionService());
@@ -97,7 +97,7 @@ final class PlatformBranchesTest extends TestCase
     #[Test]
     public function mariadbAndMysqlGetBinaryNoPadIdentifiers(): void
     {
-        $run = self::metadata(SeedRun::class);
+        $run = $this->metadata(SeedRun::class);
         $this->load($run, new MariaDBPlatform(), 'acme_');
         self::assertSame('acme_seed_run', $run->getTableName());
         self::assertSame(['acme_seed_run_scope_idx', 'acme_seed_run_status_idx', 'acme_seed_run_actor_idx'], array_keys($run->table['indexes'] ?? []));
@@ -105,7 +105,7 @@ final class PlatformBranchesTest extends TestCase
         self::assertSame(['charset' => 'utf8mb4', 'collation' => 'utf8mb4_nopad_bin', 'default' => ''], $run->fieldMappings['scopeId']->options);
         self::assertNull($run->fieldMappings['counts']->options, 'not an identifier');
 
-        $lease = self::metadata(SeedLease::class);
+        $lease = $this->metadata(SeedLease::class);
         $this->load($lease, new MySQL84Platform());
         self::assertSame('nowo_seed_lease', $lease->getTableName());
         self::assertSame(['charset' => 'utf8mb4', 'collation' => 'utf8mb4_0900_bin'], $lease->fieldMappings['provider']->options);
@@ -115,7 +115,7 @@ final class PlatformBranchesTest extends TestCase
     #[Test]
     public function postgresqlKeepsItsExactCollationAndOtherEntitiesAreLeftAlone(): void
     {
-        $run = self::metadata(SeedRun::class);
+        $run = $this->metadata(SeedRun::class);
         $this->load($run, new PostgreSQLPlatform(), '');
         self::assertSame('seed_run', $run->getTableName());
         self::assertNull($run->fieldMappings['actorRef']->options);

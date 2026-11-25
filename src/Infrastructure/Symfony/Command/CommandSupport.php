@@ -193,7 +193,7 @@ final readonly class CommandSupport
      */
     public function trans(string $key, string $fallback, array $parameters = []): string
     {
-        if ($this->translator === null) {
+        if (!$this->translator instanceof TranslatorInterface) {
             return $fallback;
         }
         $message = $this->translator->trans($key, $parameters, self::DOMAIN);
