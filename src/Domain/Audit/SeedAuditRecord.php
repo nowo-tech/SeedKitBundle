@@ -26,11 +26,14 @@ final readonly class SeedAuditRecord
     /** Success. */
     public const OUTCOME_SUCCESS = 'success';
 
+    /** A failure outside the SeedKit error codes (a host or driver exception); its class and message are not kept. */
+    public const OUTCOME_ERROR = 'error';
+
     /**
      * @param string $action one of the action constants
      * @param list<string> $providers provider names
      * @param array<string, int> $counts ChangeOp value → rows (export: `rows`)
-     * @param string $outcome {@see OUTCOME_SUCCESS} or an error code
+     * @param string $outcome {@see OUTCOME_SUCCESS}, an error code or {@see OUTCOME_ERROR}
      */
     public function __construct(
         public string $action,

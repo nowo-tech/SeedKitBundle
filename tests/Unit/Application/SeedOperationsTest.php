@@ -43,9 +43,13 @@ use Nowo\SeedKitBundle\Tests\Fixtures\Provider\TagProvider;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
+use RuntimeException;
 use Symfony\Component\Clock\MockClock;
 
 use function in_array;
+use function json_encode;
+
+use const JSON_THROW_ON_ERROR;
 
 /**
  * The application facade (contract 12): scope resolution, access per action, masking, events and audit.
@@ -59,6 +63,8 @@ final class SeedOperationsTest extends TestCase
     private RecordingAuditSink $audit;
 
     private RecordingLogger $logger;
+
+    private ScriptedProvider $items;
 
     /** @var list<string> attributes refused, as `SEED_X:provider` or `SEED_X` */
     private array $denied = [];
@@ -82,11 +88,12 @@ final class SeedOperationsTest extends TestCase
         $articles = new ArticleProvider($this->store);
         $items    = new ScriptedProvider();
         $items->seed('a', ['label' => 'A']);
-        $providers = [$tags, $articles, $items];
-        $settings  = Harness::settings();
-        $planner   = Harness::planner($providers, $settings);
-        $test      = $this;
-        $gate      = new class($test) implements SeedAccessGateInterface {
+        $this->items = $items;
+        $providers   = [$tags, $articles, $items];
+        $settings    = Harness::settings();
+        $planner     = Harness::planner($providers, $settings);
+        $test        = $this;
+        $gate        = new class($test) implements SeedAccessGateInterface {
             public function __construct(private readonly SeedOperationsTest $test)
             {
             }
@@ -402,5 +409,40 @@ final class SeedOperationsTest extends TestCase
         self::assertSame(['apply', 'SEED_005', [], $expected->value, null], [$record['action'], $record['outcome'], $record['counts'], $record['plan_hash'], $record['run_id']]);
         self::assertSame($this->tagsSet()->hash->value, $record['document_hash']);
         self::assertSame(0, $this->store->applyCalls);
+    }
+
+    #[Test]
+    public function aHostFailureBeforeTheRunIsAuditedWithoutItsMessage(): void
+    {
+        $operations               = $this->operations();
+        $this->items->onPlanBatch = static function (): never {
+            throw new RuntimeException('Duplicate entry ana@example.com');
+        };
+        $set = Harness::set([Harness::document($this->items, [['code' => 'b', 'label' => 'B']])]);
+        try {
+            $operations->apply($set, Harness::platform(), new ActorRef('alice'), Channel::Console, new PruneOptions());
+            self::fail('expected');
+        } catch (RuntimeException $e) {
+            self::assertSame('Duplicate entry ana@example.com', $e->getMessage(), 'rethrown unchanged');
+        }
+        self::assertCount(1, $this->audit->records, 'fail closed: audited (ZBK L4)');
+        $record = $this->audit->records[0]->toArray();
+        self::assertSame(['apply', 'error', ['demo.items'], [], null], [$record['action'], $record['outcome'], $record['providers'], $record['counts'], $record['run_id']]);
+        self::assertStringNotContainsString('ana@example.com', json_encode($record, JSON_THROW_ON_ERROR));
+    }
+
+    #[Test]
+    public function aHostFailureWhileResolvingTheScopeIsAudited(): void
+    {
+        $this->resolve = static function (): never {
+            throw new RuntimeException('resolver down');
+        };
+        try {
+            $this->operations()->apply($this->tagsSet(), Harness::org(), new ActorRef('alice'), Channel::Http, new PruneOptions(prune: true));
+            self::fail('expected');
+        } catch (RuntimeException) {
+        }
+        self::assertCount(1, $this->audit->records);
+        self::assertSame(['prune', 'error', ['demo.tags']], [$this->audit->records[0]->action, $this->audit->records[0]->outcome, $this->audit->records[0]->providers]);
     }
 }

@@ -31,6 +31,7 @@ use Nowo\SeedKitBundle\Domain\Run\Channel;
 use Nowo\SeedKitBundle\Domain\Run\SeedAction;
 use Psr\EventDispatcher\EventDispatcherInterface;
 use Psr\Log\LoggerInterface;
+use Throwable;
 
 /**
  * The application entry points (console in 0.1, UI and Messenger in 0.2): every call resolves the scope through the
@@ -156,13 +157,14 @@ final readonly class SeedOperations
         $action = $prune->prune ? SeedAuditRecord::PRUNE : SeedAuditRecord::APPLY;
         try {
             [$documents, $context] = $this->prepare($set, $requested, $actor, $channel, $prune);
-        } catch (SeedKitException $e) {
-            // Refused before planning (scope not found, access denied, unknown provider): audited too (every outcome).
+        } catch (Throwable $e) {
+            // Refused before planning (scope not found, access denied, unknown provider, a host failure): audited too
+            // (every outcome, fail closed; the outcome is a code, never the exception's message).
             $named = [];
             foreach ($set->documents as $document) {
                 $named[] = $document->header->provider->value;
             }
-            $this->audit->record(new SeedAuditRecord($action, $actor, $requested, $named, [], $channel, $e->errorCode(), $set->hash->value, $expected?->value));
+            $this->audit->record(new SeedAuditRecord($action, $actor, $requested, $named, [], $channel, $this->outcome($e), $set->hash->value, $expected?->value));
 
             throw $e;
         }
@@ -172,8 +174,9 @@ final readonly class SeedOperations
         }
         try {
             $result = $this->applier->apply($set, $documents, $context, $prune, $expected);
-        } catch (SeedKitException $e) {
-            $this->audit->record(new SeedAuditRecord($action, $actor, $context->scope, $providers, [], $channel, $e->errorCode(), $set->hash->value, $expected?->value));
+        } catch (Throwable $e) {
+            // Includes a provider or driver failure in the re-plan before the run row exists (ZBK L4).
+            $this->audit->record(new SeedAuditRecord($action, $actor, $context->scope, $providers, [], $channel, $this->outcome($e), $set->hash->value, $expected?->value));
 
             throw $e;
         }
@@ -195,6 +198,14 @@ final readonly class SeedOperations
         ));
 
         return $result;
+    }
+
+    /**
+     * The audit outcome of a failed apply: the SeedKit error code, or {@see SeedAuditRecord::OUTCOME_ERROR}.
+     */
+    private function outcome(Throwable $e): string
+    {
+        return $e instanceof SeedKitException ? $e->errorCode() : SeedAuditRecord::OUTCOME_ERROR;
     }
 
     /**
