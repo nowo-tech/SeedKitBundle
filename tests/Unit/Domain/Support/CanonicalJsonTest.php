@@ -11,6 +11,9 @@ use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use stdClass;
 
+use function ini_get;
+use function ini_set;
+
 use const INF;
 use const NAN;
 
@@ -38,6 +41,18 @@ final class CanonicalJsonTest extends TestCase
         yield 'float 0.1' => [0.1, '0.1'];
         yield 'float -2.5' => [-2.5, '-2.5'];
         yield 'float 100.0' => [100.0, '100'];
+        // ECMAScript Number::toString (RFC 8785), audit ZBK I1.
+        yield 'float 1e-6 fixed' => [1e-6, '0.000001'];
+        yield 'float -1.5e-6 fixed' => [-1.5e-6, '-0.0000015'];
+        yield 'float 1.5e-7 exponent' => [1.5e-7, '1.5e-7'];
+        yield 'float 1e20 fixed' => [1e20, '100000000000000000000'];
+        yield 'float 1e21 exponent' => [1e21, '1e+21'];
+        yield 'float 123.456' => [123.456, '123.456'];
+        yield 'float 12345e10' => [12345e10, '123450000000000'];
+        yield 'float smallest subnormal' => [5e-324, '5e-324'];
+        yield 'float max' => [1.7976931348623157e308, '1.7976931348623157e+308'];
+        yield 'float -1.25e30' => [-1.25e30, '-1.25e+30'];
+        yield 'float 2^-1017 (nearest digits fail, next up is shortest)' => [2.0 ** -1017, '7.120236347223045e-307'];
         yield 'string' => ['a"b\\c', '"a\\"b\\\\c"'];
         yield 'slash unescaped' => ['a/b', '"a/b"'];
         yield 'unicode unescaped' => ["\u{20AC}", "\"\u{20AC}\""];
@@ -97,5 +112,20 @@ final class CanonicalJsonTest extends TestCase
         $this->expectException(InvalidValueException::class);
         $this->expectExceptionMessage('A value is not JSON-compatible.');
         CanonicalJson::encode(['a' => new stdClass()]);
+    }
+
+    #[Test]
+    public function floatsDoNotDependOnSerializePrecision(): void
+    {
+        $serialize = ini_get('serialize_precision');
+        $precision = ini_get('precision');
+        ini_set('serialize_precision', '17'); // @phpstan-ignore frankenphp.worker.noPersistentIniSet (test only, restored)
+        ini_set('precision', '5'); // @phpstan-ignore frankenphp.worker.noPersistentIniSet (test only, restored)
+        try {
+            self::assertSame('[0.1,0.3,1e-7,123.456789]', CanonicalJson::encode([0.1, 0.3, 1e-7, 123.456789]));
+        } finally {
+            ini_set('serialize_precision', $serialize === false ? '-1' : $serialize); // @phpstan-ignore frankenphp.worker.noPersistentIniSet (test only, restored)
+            ini_set('precision', $precision === false ? '14' : $precision); // @phpstan-ignore frankenphp.worker.noPersistentIniSet (test only, restored)
+        }
     }
 }

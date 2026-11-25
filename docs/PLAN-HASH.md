@@ -33,8 +33,10 @@ RFC 8785 rules:
 
 - object keys sorted by their **UTF-16 code units** (not by UTF-8 bytes), no whitespace;
 - strings with minimal escaping (`/` and non-ASCII characters not escaped, U+2028 / U+2029 not escaped);
-- integers as they are; floats in the shortest round-trip form (`1`, `0.5`, `1e+25`, `-0` written `0`; NaN and
-  infinities refused);
+- integers as they are; floats as ECMAScript `Number::toString` writes them: shortest round-trip digits, fixed
+  notation for 1e-7 < |x| < 1e21 and exponent notation otherwise (`1`, `0.5`, `0.000001`, `100000000000000000000`,
+  `1e+21`, `1e-7`, `-0` written `0`; NaN and infinities refused); the digits come from `sprintf`, never from the
+  `precision` / `serialize_precision` ini, so CLI and FPM hash alike whatever their php.ini;
 - `null`, `true`, `false` kept;
 - a PHP list is a JSON array, any other array a JSON object; an empty array is `[]`.
 

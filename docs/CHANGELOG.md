@@ -65,3 +65,5 @@ Hardening from the pre-release security audit (ZBK); nothing was released before
 - Applies that fail with a host or driver exception before the run starts are audited (outcome `error`, no message).
 - Console outputs without `--force` are created exclusively (`x`), closing the window between the path check and the
   open.
+- Canonical JSON writes floats exactly as ECMAScript / RFC 8785 (`0.000001`, `100000000000000000000`, `1e+21`) from
+  `sprintf` digits, so the plan hash no longer depends on `serialize_precision` (CLI and FPM hash alike).
