@@ -25,7 +25,8 @@ use Symfony\Contracts\EventDispatcher\EventDispatcherInterface;
  * - HTTP / console with a user: area (`canUseArea`) and action (`can`) of the checker;
  * - no user elsewhere: denied unless `allow_unauthenticated` (demos).
  *
- * The user is read from the token storage on every call; nothing is kept.
+ * {@see isGranted()} reads the user from the token storage on every call, {@see isGrantedForUser()} takes it from the
+ * caller (the voter's token); nothing is kept.
  */
 final readonly class SeedKitGuard implements SeedAccessGateInterface
 {
@@ -46,7 +47,15 @@ final readonly class SeedKitGuard implements SeedAccessGateInterface
      */
     public function isGranted(SeedAction $action, ProviderName $provider, SeedScope $scope, Channel $channel, ActorRef $actor): bool
     {
-        $user  = $this->tokens?->getToken()?->getUser();
+        return $this->isGrantedForUser($action, $provider, $scope, $channel, $actor, $this->tokens?->getToken()?->getUser());
+    }
+
+    /**
+     * The same decision for a given security user instead of the token storage's one: the voter passes the user of
+     * the token being voted on, which may be another user than the session's (or none).
+     */
+    public function isGrantedForUser(SeedAction $action, ProviderName $provider, SeedScope $scope, Channel $channel, ActorRef $actor, ?object $user): bool
+    {
         $event = new SeedAccessCheckEvent($action, $provider, $scope, $channel, $actor, $user, $this->defaultDecision($action, $provider, $scope, $channel, $actor, $user));
         $this->dispatcher->dispatch($event, SeedKitEvents::ACCESS_CHECK);
 

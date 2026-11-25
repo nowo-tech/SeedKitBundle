@@ -221,6 +221,31 @@ final class AccessTest extends TestCase
     }
 
     #[Test]
+    public function theVoterDecidesForTheVotedTokenNotTheSessionUser(): void
+    {
+        $listener = new AccessListener();
+        $admin    = new InMemoryUser('admin', null, ['ROLE_ADMIN']);
+        $bob      = new InMemoryUser('bob', null, ['ROLE_USER']);
+        $subject  = new SeedPermissionSubject($this->tags(), SeedScope::platform());
+
+        // The session is the admin; the host asks about bob (ZBK L3).
+        $voter = new SeedKitVoter($this->guard($this->roles(), $listener, tokens: $this->tokens($admin)));
+        self::assertSame(VoterInterface::ACCESS_DENIED, $voter->vote(new UsernamePasswordToken($bob, 'main', $bob->getRoles()), $subject, ['SEED_APPLY']));
+        self::assertNotNull($listener->last);
+        self::assertSame($bob, $listener->last->user);
+        self::assertSame('bob', $listener->last->actor->value);
+        self::assertSame(VoterInterface::ACCESS_GRANTED, $voter->vote(new UsernamePasswordToken($admin, 'main', $admin->getRoles()), $subject, ['SEED_APPLY']));
+
+        // The session is bob (or nobody); the host asks about the admin.
+        foreach ([$this->tokens($bob), new TokenStorage()] as $tokens) {
+            $voter = new SeedKitVoter($this->guard($this->roles(), $listener, tokens: $tokens));
+            self::assertSame(VoterInterface::ACCESS_GRANTED, $voter->vote(new UsernamePasswordToken($admin, 'main', $admin->getRoles()), $subject, ['SEED_APPLY']));
+            self::assertNotNull($listener->last);
+            self::assertSame($admin, $listener->last->user);
+        }
+    }
+
+    #[Test]
     public function thePlatformResolverKnowsOnlyThePlatform(): void
     {
         $resolver = new PlatformScopeResolver();
