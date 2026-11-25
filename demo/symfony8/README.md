@@ -21,7 +21,8 @@ Bundle 0.1.0 is console + provider API, so the demo shows both:
   export) or `viewer` (the bundle's guard answers 403); password `demo` for both.
 
 FrankenPHP **worker mode** is the default (`FRANKENPHP_MODE=worker` in `.env`; `classic` + `docker compose up -d` to
-switch). Dev stack: WebProfiler, DebugBundle, Twig Inspector, Hot Reload (dev/test only).
+switch). Dev stack: WebProfiler, DebugBundle, Twig Inspector, Hot Reload (dev/test only). See
+[docs/DEMO-FRANKENPHP.md](../../docs/DEMO-FRANKENPHP.md).
 
 ```bash
 make test             # lint:container, lint:twig, seed:lint

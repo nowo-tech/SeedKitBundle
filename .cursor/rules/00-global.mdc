@@ -4,16 +4,20 @@ alwaysApply: true
 ---
 
 Assume this repository is a reusable Symfony bundle: **SeedKitBundle** (`nowo-tech/seed-kit-bundle`).
-Short links for Symfony: per-tenant short codes with a public stateless redirect, a target guard (OutboundUrlGuard, denylist), privacy-preserving click log with daily rollups and retention, a PHP API for generated links and a UiKit + FormKit management UI.
+Seed data for Symfony: one provider per kind of data; export an empty template or the current rows (YAML, JSON, JSON Lines) validated by a JSON Schema, dry-run a file as a diff with a plan hash, and apply it in idempotent batches through the host's own handlers, with leases, access checks (SEED_EXPORT / SEED_APPLY / SEED_PRUNE) and audit. 0.1 = core + console + contract test kit; UI and Messenger in 0.2.
 
 Key rules of this repository:
-- `docs/CONTRACT.md` (contract v1.0, spec 230 Block A) is the design source of truth; `docs/ROADMAP.md` says which slice builds what.
+- `docs/CONTRACT.md` (contract v1.0 with its answers and the 0.1.0 deviations) is the design source of truth; `docs/ROADMAP.md` says which slice builds what.
 - Standard Symfony host by default, DDD / hexagonal host opt-in: public ports are interfaces + value objects, no
-  Doctrine / Symfony / HTTP types in them; bundle-owned tables referenced by id; the bundle never flushes the host's
-  EntityManager; events after commit, carrying ids.
+  Doctrine / Symfony / HTTP / Console types in them (Deptrac: Domain, Application, Infrastructure, UI,
+  DependencyInjection, Bridge, Testing); the bundle writes its two tables through DBAL and never persists, flushes,
+  clears or resets any EntityManager; host data is written only by providers; events after commit, carrying ids.
+- Every check that can fail runs before the first write; messages and logs are static (never a value, natural key,
+  path or secret); secrets only as `vault:` references.
 - FrankenPHP worker mode with the kernel kept alive and NOT reset: no request / user / tenant data in service
-  properties or statics; every memo implements `ResetInterface` and is cleared at the request boundary.
-- Identifier and short-code columns (ids, tenant keys, codes, actors) compare exactly: `utf8mb4_bin` on MySQL, PHP `===` re-check.
+  properties or statics; the only memo (compiled schemas in `OpisSchemaValidator`) holds immutable data, is bounded and
+  implements `ResetInterface`.
+- Identifier columns (run ids, providers, scope kinds and ids, actors, hashes) compare exactly: binary NO PAD on MySQL / MariaDB, PHP `===` re-check of natural keys.
 - Never commit anything that looks like a credential (GitGuardian), not even in tests or demos.
 - Keep `specs/001-baseline/code-inventory.md` and the docs in sync with `src/`; 100% coverage (`make test-coverage-100`).
 

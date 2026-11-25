@@ -8,18 +8,18 @@ globs:
 alwaysApply: false
 ---
 
-Target this bundle compatibility by default: PHP >=8.2 (<8.6); mandatory Symfony minors 7.4, 8.0, and 8.1 (Symfony 8.x requires PHP 8.4+). Constraints in composer.json are `^7.4 || ^8.0`.
+Target this bundle compatibility by default: PHP >=8.2 (<8.6); Symfony 7.4, 8.0 and 8.1 (CI matrix 7.4 and 8.1; Symfony 8.x requires PHP 8.4+). Constraints in composer.json are `^7.4 || ^8.0`.
 
 Prefer:
 - modern PHP with strict typing and explicit return types
-- PSR-12 coding style
+- PER Coding Style (`@PER-CS` + `@Symfony` in `.php-cs-fixer.dist.php`)
 - final classes by default
 - readonly where appropriate
 - constructor injection
 - small focused services
 - framework conventions over custom abstractions
 - preserving public extension points
-- keeping DI extension, compiler pass wiring, and form type options backward compatible
+- keeping the configuration tree, the provider tag / attribute, the console command names and the compiler pass backward compatible
 - PHPDoc in English for non-trivial classes, methods, and complex behavior
 
 Do not introduce BC breaks unless explicitly requested.

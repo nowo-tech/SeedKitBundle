@@ -48,8 +48,8 @@ reviews:
   path_instructions:
     - path: "src/**/*.php"
       instructions: |
-        nowo-tech/seed-kit-bundle (contract v1.0, spec 230 Block A in docs/CONTRACT.md). Review against the contract and BUNDLES_FIX_RULES: public ports are interfaces + value objects with no Doctrine / Symfony / HTTP types, the bundle never flushes the host EntityManager, events are dispatched after commit and carry ids, identifier and code columns compare exactly (utf8mb4_bin, PHP === re-check), worker mode without kernel reset (no request state in services), the public redirect never reaches a refused target and answers an identical 404, no raw IPs or full target URLs in events / logs / exceptions.
-        Follow PSR-12 and `.php-cs-fixer.dist.php`. Prefer PHP 8 attributes over annotations.
+        nowo-tech/seed-kit-bundle (contract v1.0 in docs/CONTRACT.md, answers and 0.1.0 deviations in sections 23-24). Review against the contract and BUNDLES_FIX_RULES: public ports are interfaces + value objects with no Doctrine / Symfony / HTTP / Console types (Deptrac layers Domain, Application, Infrastructure, UI, DependencyInjection, Bridge, Testing), the bundle writes its two tables through DBAL write units and never persists / flushes / clears / resets an EntityManager, host data is written only by providers, every check that can fail runs before the first write, events are dispatched after commit and carry ids, identifiers compare exactly (binary NO PAD, PHP === re-check of natural keys), worker mode without kernel reset (no request state in services), secrets only as vault: references, deny by default (prune: nobody), and no seed value, natural key, path or secret in exceptions / logs / audit.
+        Follow PER-CS and `.php-cs-fixer.dist.php`. Prefer PHP 8 attributes over annotations.
         Respect PHP and Symfony ranges in `composer.json` when present. Preserve backward compatibility unless the PR explicitly breaks it.
         Use strict comparison (`===`) where appropriate. Keep changes minimal and consistent with existing patterns.
         Align with `composer cs-check`, `composer phpstan`, and `composer test` when those scripts exist.

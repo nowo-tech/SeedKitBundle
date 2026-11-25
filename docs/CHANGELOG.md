@@ -1,0 +1,49 @@
+# Changelog
+
+All notable changes to this project are documented in this file.
+
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to
+[Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## [Unreleased]
+
+First release (0.1.0): core, console and provider contract test kit. The import / export pages and the Messenger apply
+follow in 0.2.0.
+
+### Added
+
+- Provider SPI `SeedProviderInterface` (tag `nowo_seed_kit.provider` or `#[AsSeedProvider]`), optional
+  `AbstractSeedProvider` base for standard hosts, `RowDiffer`; compiler pass with unique names, known dependencies,
+  cycle detection and a compile-time dependency order (Kahn, ties by name).
+- Documents in YAML (multi-document), JSON (one object or `{"documents": [...]}`) and JSON Lines (streamed); hardened
+  reader: byte, tree, document, item, depth, string, property, line and node caps; UTF-8 only; YAML tags, anchors,
+  aliases, merge keys and directives refused; duplicate keys refused.
+- Item JSON Schema per provider (draft 2020-12 through `opis/json-schema`, no remote references) with the `x-seed-key`,
+  `x-seed-key-normalise`, `x-seed-ref`, `x-seed-secret`, `x-seed-personal-data`, `x-seed-readonly`, `x-seed-float`
+  and `x-seed-omit-means` keywords; published document schema; schema lint (command, cache warmer, test kit).
+- Exports: empty commented template or current rows, round-trip stable, in YAML, JSON or JSON Lines; secrets only as
+  `vault:` references of the scope, else omitted.
+- Dry run with a per-row plan, a plan hash (`sk1:`) and batch digests over canonical JSON (RFC 8785 rules); golden
+  vectors in `docs/PLAN-HASH.md`.
+- Apply: leases per (provider, scope), stale-plan check (`--expect-hash`), batches in transaction-doctrine write units
+  on the configured entity manager's connection, per-batch re-plan with the write lock and digest check, progress in
+  the same transaction, `afterBatch()` hook, deletes in reverse dependency order, idempotent re-apply; run history in
+  `<prefix>seed_run`.
+- Prune with its own permission (`SEED_PRUNE`, nobody by default) and mass / empty prune guards.
+- Access: `SeedKitGuard`, `SeedKitVoter` (`SEED_EXPORT`, `SEED_APPLY`, `SEED_PRUNE` on `SeedPermissionSubject`), role
+  based checker with per-provider overrides, `allow_all` demo checker, `nowo_seed_kit.access_check` event (a deny
+  sticks), scope and actor resolver ports; `--actor=system` on the console only.
+- Audit through `SeedAuditSinkInterface` (PSR-3 sink; AuditKit bridge when its recorder service exists): applies and
+  prunes with every outcome after the access check, exports of providers with personal-data or secret fields.
+- Domain events after commit: `SeedExportedEvent`, `SeedRunPlannedEvent`, `SeedBatchCommittedEvent`,
+  `SeedRunAppliedEvent`, `SeedRunFailedEvent`.
+- Optional VaultBundle bridge validating `vault:<item-uuid>` against the target scope and the actor.
+- Console commands `nowo:seed-kit:{list,schema,export,diff,apply,runs:list,runs:purge,actor:forget,lint}` with
+  `seed:*` aliases, confined file paths and documented exit codes.
+- Contract test kit `Nowo\SeedKitBundle\Testing\SeedProviderContractTestCase` (lint, idempotency and round trip,
+  stable exports without secrets, no escalation, row visibility) with in-memory support doubles.
+- Strict configuration tree `nowo_seed_kit`; read-only XML (default) or attribute mapping of the two tables with a
+  table prefix and binary NO PAD identifier collations on MySQL / MariaDB.
+- Translations in 10 locales (en, es, it, fr, pt, de, nl, ca, eu, gl), domain `NowoSeedKitBundle`.
+- Demo `demo/symfony8` (FrankenPHP worker, MySQL 8.4, UiKit) with two catalog providers, seed files, downloads and
+  Playwright e2e.

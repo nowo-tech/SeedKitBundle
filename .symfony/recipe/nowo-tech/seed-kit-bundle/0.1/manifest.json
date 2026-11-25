@@ -1,0 +1,8 @@
+{
+    "bundles": {
+        "Nowo\\SeedKitBundle\\NowoSeedKitBundle": ["all"]
+    },
+    "copy-from-recipe": {
+        "config/": "%CONFIG_DIR%/"
+    }
+}

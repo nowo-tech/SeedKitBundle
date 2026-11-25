@@ -7,6 +7,10 @@ globs:
 alwaysApply: false
 ---
 
+SeedKitBundle 0.1 ships no Twig templates and no public assets (no `src/Resources/views`, no `src/Resources/public`).
+The import / export pages arrive in 0.2 with the Twig namespace `NowoSeedKitBundle`, UiKit scaffolds and FormKit
+forms (never raw `<form>` / `<input>` tags). Demo templates live in `demo/symfony8/templates`.
+
 Prefer:
 - small, backward-compatible template and public asset changes
 - preserving current block structure
