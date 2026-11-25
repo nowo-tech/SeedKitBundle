@@ -54,8 +54,11 @@ Hardening from the pre-release security audit (ZBK); nothing was released before
 
 - The YAML pre-scanner also checks the node after a `:` that follows a quoted flow key without a space (`{"k":*a}`,
   `{'k':!!binary …}`), after any `:` inside a flow collection and after a run of `:`, so anchors, aliases and tags can
-  no longer reach the parser that way; on Symfony Yaml 8.1+ the parser also refuses aliases
-  (`PARSE_EXCEPTION_ON_ALIAS`). Strings the YAML or JSON parser builds must be UTF-8 without NUL bytes (`encoding`).
+  no longer reach the parser that way. A `:` or `?` glued to the next character (`:|p`, `:"p`) starts a plain key,
+  `#` after a tab is text, and explicit keys (`? k` / `: v`, unsupported by Symfony Yaml) are refused
+  (`yaml_explicit_key`); a differential test against Symfony Yaml guards the scanner. The parser also refuses aliases
+  (`PARSE_EXCEPTION_ON_ALIAS`; `symfony/yaml` floor raised to `^7.4.12 || ^8.0.12`, the first patches with it).
+  Strings the YAML or JSON parser builds must be UTF-8 without NUL bytes (`encoding`).
 - YAML nesting is bounded before parsing (`reader.max_depth + 4`, `too_deep`), like the JSON decoder.
 - A provider failure during an apply is logged with the exception class and code only, never its message (driver
   messages quote row values).

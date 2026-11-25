@@ -24,6 +24,7 @@ seed_kit:
     yaml_alias: Los alias YAML no están permitidos.
     yaml_merge_key: Las claves de fusión YAML no están permitidas.
     yaml_directive: Las directivas YAML no están permitidas.
+    yaml_explicit_key: 'Las claves explícitas YAML (? y : al inicio de una entrada) no están permitidas.'
     yaml_parse: No se puede analizar el texto YAML.
     json_parse: No se puede analizar el texto JSON.
     duplicate_key: Una clave aparece dos veces en el mismo objeto.

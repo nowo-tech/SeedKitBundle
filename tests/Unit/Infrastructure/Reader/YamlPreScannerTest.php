@@ -34,7 +34,6 @@ final class YamlPreScannerTest extends TestCase
         yield 'folded block scalar with a keep indicator' => ["- >+\n    !x\n- y\n"];
         yield 'block scalar at the end' => ["a: |-\n  *x"];
         yield 'sequence entries' => ["- a\n-\n  - b\n-\tc\n"];
-        yield 'complex key' => ["? a\n: b\n"];
         yield 'document markers' => ["---\na: 1\n...\n--- \nb: 2\n---\tc\n"];
         yield 'not a document marker' => ["----x: 1\n"];
         yield 'flow collections over lines' => ["a: [\n  x,\n  { k: v },\n  ]\nb: {\n  c: d\n}\n"];
@@ -47,6 +46,8 @@ final class YamlPreScannerTest extends TestCase
         yield 'percent inside a flow at column 0' => ["a: [\n%x]\n"];
         yield 'percent after indentation' => ["a:\n  %x\n"];
         yield 'carriage returns' => ["a: 1\rb: 2\r\nc: 3\n"];
+        yield 'plain keys starting with a colon or a question mark' => [":|p: x\n:\"p: y\n?x: 1\n:>q: 2\n"];
+        yield 'plain flow entry starting with a colon' => ["a: [:b, c]\n"];
         yield 'json-style flow mapping' => ["a: [{\"k\":\"v\",\"n\":1,'s':[1,2]}]\n"];
         yield 'quoted key with spaces before the colon' => ["a: {\"k\" : v}\n"];
         yield 'url in a flow mapping' => ["a: {u: http://x/a&b*c}\n"];
@@ -92,6 +93,20 @@ final class YamlPreScannerTest extends TestCase
         yield 'after a closed quote on a continuation line' => ["a: 'x\ny' \n- *z\n", 'yaml_alias', 3];
         yield 'continued plain scalar' => ["a: b\n  !c\n", 'yaml_tag', 2];
         yield 'after a closing bracket at a line start' => ["a: [\n] \n*b: 1\n", 'yaml_alias', 3];
+        // ZBK-v M1-b: a `:` / `?` glued to `|`, `>` or a quote is a plain key to Symfony, not an indicator.
+        yield 'tag after a plain key starting with :|' => ["a:\n  :|p: !!binary aGVsbG8=\n", 'yaml_tag', 2];
+        yield 'tag after a plain key starting with :>' => ["- :>p: !!int 1\n", 'yaml_tag', 1];
+        yield 'alias after a plain key starting with :"' => [":\"p: *a\n", 'yaml_alias', 1];
+        yield 'alias after a plain key starting with ?"' => ["?\"a\\\"x: *a\n", 'yaml_alias', 1];
+        yield 'explicit key' => ["? a\n: b\n", 'yaml_explicit_key', 1];
+        yield 'explicit key with a quote' => ["? \"a\\\"x: *a\n", 'yaml_explicit_key', 1];
+        yield 'explicit key with a block indicator' => ["? |  \\: *a\n", 'yaml_explicit_key', 1];
+        yield 'explicit value line' => ["a: 1\n: *a\n", 'yaml_explicit_key', 2];
+        yield 'explicit key in a flow mapping' => ["a: {? b: c}\n", 'yaml_explicit_key', 1];
+        yield 'alias after a colon and a quote in a flow sequence' => ["a: [:\"p, *x\"]\n", 'yaml_alias', 1];
+        yield 'alias after a quoted key, two colons and a quote' => ["a: {\"t\"::\"p, *x\"}\n", 'yaml_alias', 1];
+        yield 'tag after a colon run in block' => ["\"k\"::!!str 1\n", 'yaml_tag', 1];
+        yield 'hash after a tab is text, not a comment' => ["a\t# x: *zz\n", 'yaml_alias', 1];
         yield 'anchor after a quoted flow key and a bare colon' => ["a: [{\"k\":&x [1]}, {\"k\":*x}]\n", 'yaml_anchor', 1];
         yield 'alias after a quoted flow key and a bare colon' => ["a: {\"k\":*x}\n", 'yaml_alias', 1];
         yield 'tag after a quoted flow key and a bare colon' => ["a: {\"k\":!!binary YQ==}\n", 'yaml_tag', 1];
@@ -129,7 +144,6 @@ final class YamlPreScannerTest extends TestCase
         yield 'nested flow without spaces' => ["a: [b[c[d]]]\n", 3, 1];
         yield 'flow over lines' => ["a: [\n  [\n    [\n      [x]]]]\n", 3, 3];
         yield 'compact sequence entries' => ["- - - - x\n", 3, 1];
-        yield 'compact complex keys' => ["? ? ? ? x\n", 3, 1];
         yield 'block indentation' => ["a:\n  b:\n    c:\n      d: 1\n", 3, 4];
         yield 'block indentation then flow' => ["a:\n  b: [[x]]\n", 3, 2];
     }

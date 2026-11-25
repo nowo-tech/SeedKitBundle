@@ -24,6 +24,7 @@ seed_kit:
     yaml_alias: YAML aliasak ez daude baimenduta.
     yaml_merge_key: YAML bateratze-gakoak ez daude baimenduta.
     yaml_directive: YAML direktibak ez daude baimenduta.
+    yaml_explicit_key: 'YAML gako esplizituak (? eta : sarrera baten hasieran) ez daude baimenduta.'
     yaml_parse: Ezin da YAML testua aztertu.
     json_parse: Ezin da JSON testua aztertu.
     duplicate_key: Gako bat bi aldiz agertzen da objektu berean.

@@ -241,7 +241,7 @@ final class DocumentReaderTest extends TestCase
         yield 'merge key with spaces' => [$h . "  - name: x\n    << : { a: 1 }\n", 'yaml_merge_key', 6];
         yield 'yaml directive' => ["%YAML 1.2\n---\n" . self::HEADER_YAML, 'yaml_directive', 1];
         yield 'tag after a document marker' => ["--- !custom\n" . self::HEADER_YAML, 'yaml_tag', 1];
-        yield 'anchor on a complex key' => [$h . "  - ? &k key\n    : value\n", 'yaml_anchor', 5];
+        yield 'explicit key with an anchor' => [$h . "  - ? &k key\n    : value\n", 'yaml_explicit_key', 5];
         yield 'plain scalar continued with an alias' => [$h . "  - name: foo\n    *bar\n", 'yaml_alias', 6];
         // ZBK M1: a quoted flow key followed directly by `:` (JSON style), as Symfony Yaml accepts it.
         $i = self::HEADER_YAML . 'items: ';
@@ -256,6 +256,11 @@ final class DocumentReaderTest extends TestCase
         yield 'alias after a quoted key with the colon on the next line' => [$i . "[{\"t\"\n  :*a}]\n", 'yaml_alias', 5];
         yield 'alias after a quoted block key and a bare colon' => [$h . "  - \"t\":*a\n", 'yaml_alias', 5];
         yield 'tag after a colon inside a flow plain scalar' => [$i . "[{t: a:!!binary x}]\n", 'yaml_tag', 4];
+        // ZBK-v M1-b: Symfony reads `:|p`, `:"p` and `? "a\"x` as plain keys.
+        yield 'binary tag after a plain key starting with :|' => [$h . "  - email: a\n    :|p: !!binary aGVsbG8=\n", 'yaml_tag', 6];
+        yield 'str tag after a plain key starting with :|' => [$h . "  - email: a\n    :|p: !!str 1\n", 'yaml_tag', 6];
+        yield 'alias after a plain key starting with :"' => [$h . "  - email: a\n    :\"p: *a\n", 'yaml_alias', 6];
+        yield 'explicit key with an escaped quote' => [$h . "  - ? \"a\\\"x: *a\n", 'yaml_explicit_key', 5];
     }
 
     #[Test]

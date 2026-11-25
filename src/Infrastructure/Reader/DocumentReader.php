@@ -21,9 +21,7 @@ use Symfony\Component\Yaml\Yaml;
 
 use function array_is_list;
 use function array_key_exists;
-use function constant;
 use function count;
-use function defined;
 use function fclose;
 use function feof;
 use function fgets;
@@ -205,7 +203,6 @@ final readonly class DocumentReader
     private function yaml(string $text, ReaderLimits $limits): array
     {
         YamlPreScanner::assertSafe($text, $limits->maxDepth + 4);
-        $flags = Yaml::PARSE_EXCEPTION_ON_INVALID_TYPE | (defined(Yaml::class . '::PARSE_EXCEPTION_ON_ALIAS') ? constant(Yaml::class . '::PARSE_EXCEPTION_ON_ALIAS') : 0);
         $parts = preg_split('/^(?:---|\.\.\.)[ \t]*(?:#.*)?$/m', $text);
         $trees = [];
         foreach ($parts === false ? [] : $parts as $part) {
@@ -216,7 +213,7 @@ final readonly class DocumentReader
                 throw new DocumentReadException('too_many_documents');
             }
             try {
-                $tree = Yaml::parse($part, $flags);
+                $tree = Yaml::parse($part, Yaml::PARSE_EXCEPTION_ON_INVALID_TYPE | Yaml::PARSE_EXCEPTION_ON_ALIAS);
             } catch (ParseException $e) {
                 throw new DocumentReadException('yaml_parse', $e->getParsedLine() > 0 ? $e->getParsedLine() : null);
             }
