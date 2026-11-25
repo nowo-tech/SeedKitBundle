@@ -662,8 +662,10 @@ The event carries `action`, `provider`, `scope`, `channel`, `actor`, `user` (nul
 ### Voter attributes
 
 `SeedKitVoter` (registered with `symfony/security-bundle`) supports `SEED_EXPORT`, `SEED_APPLY` and `SEED_PRUNE` on a
-`SeedPermissionSubject(provider, scope)` and asks the same guard for the token's user (HTTP channel; a token whose
-identifier is empty or `system` is denied):
+`SeedPermissionSubject(provider, scope)` and asks the same guard for the user of the token being voted on, not the
+session's (HTTP channel; a token whose identifier is empty or `system` is denied), so
+`AccessDecisionManagerInterface::decide($otherUsersToken, ...)` decides for that user. A replacement
+`SeedAccessGateInterface` only receives the token's user identifier as actor:
 
 ```php
 $this->denyAccessUnlessGranted('SEED_EXPORT', new SeedPermissionSubject(new ProviderName('crm.contacts'), $scope));
@@ -679,7 +681,7 @@ outcome, document hash, plan hash, run id; never a natural key, a value or a fil
 
 | Action | When |
 | --- | --- |
-| `apply` | Every apply without prune that passed the access check: success (counts, hashes, run id) or the error code |
+| `apply` | Every apply without prune: success (counts, hashes, run id), the error code, or `error` for a host or driver exception without a SeedKit code (its class and message are not recorded) |
 | `prune` | The same with `--prune` |
 | `export` | Every `export current` of a provider with `x-seed-personal-data` or `x-seed-secret` properties |
 

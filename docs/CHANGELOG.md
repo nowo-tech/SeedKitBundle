@@ -47,3 +47,21 @@ follow in 0.2.0.
 - Translations in 10 locales (en, es, it, fr, pt, de, nl, ca, eu, gl), domain `NowoSeedKitBundle`.
 - Demo `demo/symfony8` (FrankenPHP worker, MySQL 8.4, UiKit) with two catalog providers, seed files, downloads and
   Playwright e2e.
+
+### Security
+
+Hardening from the pre-release security audit (ZBK); nothing was released before, so no advisory.
+
+- The YAML pre-scanner also checks the node after a `:` that follows a quoted flow key without a space (`{"k":*a}`,
+  `{'k':!!binary …}`), after any `:` inside a flow collection and after a run of `:`, so anchors, aliases and tags can
+  no longer reach the parser that way; on Symfony Yaml 8.1+ the parser also refuses aliases
+  (`PARSE_EXCEPTION_ON_ALIAS`). Strings the YAML or JSON parser builds must be UTF-8 without NUL bytes (`encoding`).
+- YAML nesting is bounded before parsing (`reader.max_depth + 4`, `too_deep`), like the JSON decoder.
+- A provider failure during an apply is logged with the exception class and code only, never its message (driver
+  messages quote row values).
+- A batch whose run progress was already recorded (`markBatch()` compare-and-set false: a replayed or skipped batch)
+  rolls its write unit back as a conflict (`CONFLICT_001` / `CONFLICT_002`).
+- `SeedKitVoter` decides for the user of the token being voted on, not the session's user.
+- Applies that fail with a host or driver exception before the run starts are audited (outcome `error`, no message).
+- Console outputs without `--force` are created exclusively (`x`), closing the window between the path check and the
+  open.
