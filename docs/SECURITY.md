@@ -123,7 +123,10 @@ check: they handle no host data (a schema is not data) or only the bundle's own 
 - Console file arguments and `--output` must resolve (`realpath`, symlinks resolved) inside `console.allowed_dirs`
   (default `config/seeds`, `var/seeds`) unless `--allow-any-path`; inputs must be regular files (no directory, FIFO or
   device); stream wrappers and URL-like arguments (`phar:`, `php:`, `data:`, `glob:`, any `scheme:`) are refused;
-  outputs never go through a symlink and never overwrite an existing file without `--force`. `-` is stdin / stdout.
+  outputs never go through a symlink and never overwrite an existing file without `--force`; without `--force` the file
+  is created exclusively (`fopen` mode `x`), so a file or link planted between the check and the open makes the
+  command fail. With `--force` a link planted in that window is followed: give `console.allowed_dirs` to directories
+  only trusted users can write. `-` is stdin / stdout.
 - Documents have no include or import directive; `$schema` is informational and never fetched.
 
 ### Exact identifiers

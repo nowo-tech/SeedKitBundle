@@ -49,6 +49,7 @@ use Symfony\Component\Translation\Loader\ArrayLoader;
 use Symfony\Component\Translation\Translator;
 use Throwable;
 
+use function fclose;
 use function file_put_contents;
 use function fopen;
 use function is_file;
@@ -56,6 +57,7 @@ use function restore_error_handler;
 use function rewind;
 use function set_error_handler;
 use function stream_get_contents;
+use function stream_get_meta_data;
 use function sys_get_temp_dir;
 use function unlink;
 
@@ -183,6 +185,20 @@ final class CommandSupportTest extends TestCase
         $stream = self::support()->output(self::input(['--output' => $file, '--force' => true]));
         file_put_contents($file, 'x');
         self::assertIsResource($stream);
+        unlink($file);
+    }
+
+    #[Test]
+    public function withoutForceTheOutputIsCreatedExclusively(): void
+    {
+        $file = sys_get_temp_dir() . '/seed-support-exclusive.yaml';
+        if (is_file($file)) {
+            unlink($file);
+        }
+        $stream = self::support()->output(self::input(['--output' => $file, '--allow-any-path' => true]));
+        self::assertIsResource($stream);
+        self::assertSame('x', stream_get_meta_data($stream)['mode'], 'exclusive create: a link planted after the check is not followed (I4)');
+        fclose($stream);
         unlink($file);
     }
 

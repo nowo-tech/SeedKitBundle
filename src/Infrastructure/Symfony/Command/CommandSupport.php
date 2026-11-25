@@ -167,10 +167,13 @@ final readonly class CommandSupport
      */
     public function output(InputInterface $input)
     {
-        $path   = $input->getOption('output');
-        $path   = is_string($path) && $path !== '' ? $path : '-';
-        $real   = $path === '-' ? 'php://stdout' : $this->paths->output($path, (bool) $input->getOption('allow-any-path'), (bool) $input->getOption('force'));
-        $stream = fopen($real, 'w');
+        $path  = $input->getOption('output');
+        $path  = is_string($path) && $path !== '' ? $path : '-';
+        $force = (bool) $input->getOption('force');
+        $real  = $path === '-' ? 'php://stdout' : $this->paths->output($path, (bool) $input->getOption('allow-any-path'), $force);
+        // Without --force the file is created exclusively (`x`): a file or link planted after the path check makes the
+        // open fail instead of being followed or overwritten.
+        $stream = fopen($real, $path === '-' || $force ? 'w' : 'x');
         if (!is_resource($stream)) {
             throw new InvalidValueException('The output cannot be opened.');
         }
