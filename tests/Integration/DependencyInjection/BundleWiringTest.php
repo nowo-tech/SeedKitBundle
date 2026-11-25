@@ -110,7 +110,7 @@ final class BundleWiringTest extends KernelTestCase
         self::assertSame($this->service('doctrine.dbal.seed_connection', Connection::class), $this->connection());
         self::assertNotSame($this->service('doctrine.dbal.default_connection', Connection::class), $this->connection());
         self::assertInstanceOf(SimplifiedXmlDriver::class, $this->driver($manager));
-        self::assertTrue($this->service('doctrine.orm.default_entity_manager', EntityManagerInterface::class)->getMetadataFactory()->isTransient(SeedRun::class));
+        self::assertNotContains(SeedRun::class, $this->mappedClasses($this->service('doctrine.orm.default_entity_manager', EntityManagerInterface::class)));
     }
 
     #[Test]
@@ -130,7 +130,7 @@ final class BundleWiringTest extends KernelTestCase
         $this->boot([], [], 'first');
 
         self::assertSame($this->service('doctrine.orm.primary_entity_manager', EntityManagerInterface::class), $this->service('nowo_seed_kit.entity_manager', EntityManagerInterface::class));
-        self::assertTrue($this->service('doctrine.orm.secondary_entity_manager', EntityManagerInterface::class)->getMetadataFactory()->isTransient(SeedRun::class));
+        self::assertNotContains(SeedRun::class, $this->mappedClasses($this->service('doctrine.orm.secondary_entity_manager', EntityManagerInterface::class)));
     }
 
     #[Test]
@@ -253,5 +253,17 @@ final class BundleWiringTest extends KernelTestCase
             }
         }
         self::fail('The bundle mapping is not registered.');
+    }
+
+    /**
+     * The classes the manager's mapping drivers know (an entity manager without the bundle's mapping lists none of them).
+     *
+     * @return list<string>
+     */
+    private function mappedClasses(EntityManagerInterface $manager): array
+    {
+        $driver = $manager->getConfiguration()->getMetadataDriverImpl();
+
+        return $driver === null ? [] : array_values($driver->getAllClassNames());
     }
 }
