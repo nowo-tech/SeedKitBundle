@@ -261,6 +261,11 @@ final class DocumentReaderTest extends TestCase
         yield 'str tag after a plain key starting with :|' => [$h . "  - email: a\n    :|p: !!str 1\n", 'yaml_tag', 6];
         yield 'alias after a plain key starting with :"' => [$h . "  - email: a\n    :\"p: *a\n", 'yaml_alias', 6];
         yield 'explicit key with an escaped quote' => [$h . "  - ? \"a\\\"x: *a\n", 'yaml_explicit_key', 5];
+        // ZBK-v2 probes: scanner / Symfony desyncs are refused, never guessed.
+        yield 'tab comment hiding a quote' => [$h . "  - email: a\n    n: x\t# y: '\n    m: !!binary aGVsbG8=\n    # '\n", 'yaml_ambiguous', 6];
+        yield 'tab comment line hiding a quote' => [$h . "\t# x: '\n  - m: !!binary aGVsbG8=\n# '\n", 'yaml_ambiguous', 5];
+        yield 'quote opening a plain continuation line' => [$h . "  - c: x\n      \"y\n    d: !!binary aGVsbG8=\n    e: '\"'\n", 'yaml_ambiguous', 6];
+        yield 'dash inside a flow hiding a quote' => [$h . "  - [- -   ',!x ]\n", 'yaml_tag', 5];
     }
 
     #[Test]
@@ -347,6 +352,40 @@ final class DocumentReaderTest extends TestCase
 
         $this->assertReadFails('{"provider":"a.one","version":1,"scope":"platform","items":[' . $deep . ']}', 'json_parse', null, DocumentFormat::Json, $limits);
         self::assertSame([[[[[[]]]]]], $this->items($this->read('{"provider":"a.one","version":1,"scope":"platform","items":[' . $ok . ']}', DocumentFormat::Json, $limits)->documents[0]));
+    }
+
+    #[Test]
+    public function acceptsEverydayYamlThatOnlyLooksLikeTheRefusedFeatures(): void
+    {
+        // ZBK-v2: the fail-closed scanner still reads ordinary seed files (URLs, times, JSON style, `'it''s: fine'`,
+        // multi-line plain and quoted scalars, block scalars, comments).
+        $text = self::HEADER_YAML . "meta: { generator: \"seed-kit 0.1\" } # comment\nitems:\n"
+            . "  - email: ana@example.com\n"
+            . "    url: https://example.com/a?b=1#frag\n"
+            . "    times: [10:30, \"11:00\", {at: 12:15}]\n"
+            . "    json: {\"k\":\"v\",\"n\":[1,2]}\n"
+            . "    note: 'it''s: fine'\n"
+            . "    text: Hello! How are you?\n"
+            . "    multi: a long\n      plain value\n"
+            . "    quoted: \"first\n      second\"\n"
+            . "    literal: |\n      *not an alias* !not a tag\n"
+            . "    list:\n      - a-b\n      - 'e # f'\n"
+            . "  - email: bob@example.com # trailing\n";
+
+        $items = $this->items($this->read($text)->documents[0]);
+
+        self::assertCount(2, $items);
+        $item = $items[0];
+        self::assertIsArray($item);
+        self::assertSame('https://example.com/a?b=1#frag', $item['url']);
+        self::assertSame(['10:30', '11:00', ['at' => '12:15']], $item['times']);
+        self::assertSame(['k' => 'v', 'n' => [1, 2]], $item['json']);
+        self::assertSame("it's: fine", $item['note']);
+        self::assertSame('Hello! How are you?', $item['text']);
+        self::assertSame('a long plain value', $item['multi']);
+        self::assertSame('first second', $item['quoted']);
+        self::assertSame("*not an alias* !not a tag\n", $item['literal']);
+        self::assertSame(['a-b', 'e # f'], $item['list']);
     }
 
     #[Test]

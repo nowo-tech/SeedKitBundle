@@ -25,6 +25,7 @@ seed_kit:
     yaml_merge_key: Les claus de fusió YAML no estan permeses.
     yaml_directive: Les directives YAML no estan permeses.
     yaml_explicit_key: 'Les claus explícites YAML (? i : a l''inici d''una entrada) no estan permeses.'
+    yaml_ambiguous: 'Aquesta construcció YAML és ambigua; posa el valor entre cometes (o un espai, no un tabulador, abans de #).'
     yaml_parse: No es pot analitzar el text YAML.
     json_parse: No es pot analitzar el text JSON.
     duplicate_key: Una clau apareix dues vegades al mateix objecte.

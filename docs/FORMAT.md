@@ -216,13 +216,27 @@ Tokens are checked where a node starts; quoted scalars, block scalars, comments 
 skipped, so `a&b`, `"*"` or `'!important'` are fine. A node starts after any `:` inside a flow collection and after a
 `:` that follows a quoted key even without a space (JSON style `{"k":v}` or `'k':v`), so `{"k":*a}` is refused
 too; inside a flow collection a plain scalar such as `a:*b` is refused as well (fail closed: quote it). A `:` or `?`
-glued to the next character starts a plain scalar (`:|p`, `:"p` are keys), and `#` opens a comment only at column 0
-or after a space (after a tab it is text, as for Symfony). A plain scalar
-continued on a new line that starts with one of these characters is refused too. The parser itself runs without
-object, constant, custom-tag or date support and fails on invalid types and on aliases (`PARSE_EXCEPTION_ON_ALIAS`,
-hence the `symfony/yaml` floor `^7.4.12 || ^8.0.12`).
+glued to the next character starts a plain scalar (`:|p`, `:"p` are keys). A plain scalar continued on a new line
+that starts with one of these characters is refused too, and a `!` after a space or `[ { , : ? -` is refused even
+inside plain text (`Hello!` is fine, `a !b` is not).
 
-The nesting is bounded before the parser recurses: flow brackets, block indentation levels and compact `- ` / `? `
+Where Symfony could read the text differently from the pre-scanner, the reader refuses it (`yaml_ambiguous`)
+instead of guessing. Write seed files with spaces and keep these out:
+
+| Refused | Write instead |
+| --- | --- |
+| A tab outside a quoted or block scalar (indentation, separator, before `#`) | spaces |
+| A quoted, flow or block scalar opening on a line deeper than the key or first `-` whose value ended above (`k: x` then a deeper `"y`; `- - a` then `  - "b"`) | quote the whole value, or put it on its own item |
+| Text right after a closed `[ ]` / `{ }` other than `,`, `]`, `}` or `:` (`[[]*a]`, `k: [a] b`) | add the separator |
+| Text after the closing quote of a quoted scalar that spans lines | end the line after the quote |
+| A quoted scalar over several lines inside `[ ]` / `{ }` | keep it on one line, or use block style |
+| `[` / `{` inside a plain scalar of a flow collection (`[a[b]]`), or a quote right after `a:` in one (`[a:'b']`) | quote the value |
+| A block scalar header other than `\|` / `>` with an optional `+` / `-` and a comment (`\|2`, `>- text`) | the plain header |
+
+The parser itself runs without object, constant, custom-tag or date support and fails on invalid types and on
+aliases (`PARSE_EXCEPTION_ON_ALIAS`, hence the `symfony/yaml` floor `^7.4.12 || ^8.0.12`).
+
+The nesting is bounded before the parser recurses: flow brackets, block indentation levels and compact `- `
 indicators are counted (an upper estimate) and a text deeper than `reader.max_depth + 4` is refused (`too_deep`), as
 for JSON. Strings the parser builds from escapes (`"\0"`) must still be UTF-8 without NUL bytes (`encoding`); the same
 holds for JSON `"\u0000"`.

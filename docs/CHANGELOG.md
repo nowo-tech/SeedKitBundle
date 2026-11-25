@@ -55,8 +55,13 @@ Hardening from the pre-release security audit (ZBK); nothing was released before
 - The YAML pre-scanner also checks the node after a `:` that follows a quoted flow key without a space (`{"k":*a}`,
   `{'k':!!binary …}`), after any `:` inside a flow collection and after a run of `:`, so anchors, aliases and tags can
   no longer reach the parser that way. A `:` or `?` glued to the next character (`:|p`, `:"p`) starts a plain key,
-  `#` after a tab is text, and explicit keys (`? k` / `: v`, unsupported by Symfony Yaml) are refused
-  (`yaml_explicit_key`); a differential test against Symfony Yaml guards the scanner. The parser also refuses aliases
+  and explicit keys (`? k` / `: v`, unsupported by Symfony Yaml) are refused (`yaml_explicit_key`). Wherever Symfony
+  could read the text differently from the scanner, the reader refuses (`yaml_ambiguous`) instead of guessing: tabs
+  outside quoted and block scalars, a quoted / flow / block scalar opening on a line that may continue a value,
+  text right after a closed flow collection without a separator, text after a quoted scalar that spanned lines, quoted scalars over several lines of a flow collection, a bracket
+  inside a flow plain scalar, block-scalar headers other than `|` / `>` with an optional `+` / `-`. A `!` after a
+  space or a flow indicator is refused even inside plain text. A deterministic differential test against Symfony
+  Yaml guards the scanner. The parser also refuses aliases
   (`PARSE_EXCEPTION_ON_ALIAS`; `symfony/yaml` floor raised to `^7.4.12 || ^8.0.12`, the first patches with it).
   Strings the YAML or JSON parser builds must be UTF-8 without NUL bytes (`encoding`).
 - YAML nesting is bounded before parsing (`reader.max_depth + 4`, `too_deep`), like the JSON decoder.

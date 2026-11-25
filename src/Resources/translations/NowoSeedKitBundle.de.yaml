@@ -25,6 +25,7 @@ seed_kit:
     yaml_merge_key: YAML-Merge-Schlüssel sind nicht erlaubt.
     yaml_directive: YAML-Direktiven sind nicht erlaubt.
     yaml_explicit_key: 'Explizite YAML-Schlüssel (? und : am Anfang eines Eintrags) sind nicht erlaubt.'
+    yaml_ambiguous: 'Dieses YAML-Konstrukt ist mehrdeutig; setzen Sie den Wert in Anführungszeichen (oder ein Leerzeichen statt Tab vor #).'
     yaml_parse: Der YAML-Text kann nicht geparst werden.
     json_parse: Der JSON-Text kann nicht geparst werden.
     duplicate_key: Ein Schlüssel kommt im selben Objekt zweimal vor.

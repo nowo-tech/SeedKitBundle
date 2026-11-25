@@ -25,6 +25,7 @@ seed_kit:
     yaml_merge_key: As chaves de fusão YAML não são permitidas.
     yaml_directive: As diretivas YAML não são permitidas.
     yaml_explicit_key: 'As chaves explícitas YAML (? e : no início de uma entrada) não são permitidas.'
+    yaml_ambiguous: 'Esta construção YAML é ambígua; coloque o valor entre aspas (ou use um espaço, não uma tabulação, antes de #).'
     yaml_parse: Não é possível analisar o texto YAML.
     json_parse: Não é possível analisar o texto JSON.
     duplicate_key: Uma chave aparece duas vezes no mesmo objeto.
