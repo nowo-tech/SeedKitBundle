@@ -13,21 +13,23 @@ Fixes # (issue number)
 
 ## Checklist
 
-- [ ] My code follows the project's coding standards (PSR-12)
+- [ ] My code follows the project's coding standards (PER-CS, `composer cs-check`)
 - [ ] I have performed a self-review of my code
 - [ ] I have added tests that prove my fix is effective or that my feature works
 - [ ] New and existing unit/integration tests pass locally with my changes
 - [ ] I have updated the documentation accordingly
 - [ ] I have updated `docs/CHANGELOG.md` if applicable
+- [ ] I have updated `specs/001-baseline/code-inventory.md` if files under `src/` were added, moved or removed
 
 ## Testing
 
 Please describe the tests you ran to verify your changes:
 
 ```bash
-make test
-make cs-check
-make phpstan
+composer test
+composer cs-check
+composer phpstan
+make test-with-db   # when database behaviour changed
 ```
 
 ## Screenshots (if applicable)

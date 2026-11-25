@@ -1,0 +1,146 @@
+# REQ-ARCH-002: layer dependencies of src/ checked by Deptrac (strict ruleset, no skipped violations).
+# Run: composer deptrac / make deptrac. Layers follow REQ-ARCH-001; docs/ARCHITECTURE.md explains them.
+deptrac:
+  paths:
+    - ./src
+  exclude_files:
+    - '#.*/src/Resources/.*#'
+  layers:
+    # --- Bundle layers -------------------------------------------------------------------------------------------
+    # Domain: value objects, plan model, ports (SPI), events, exceptions, the optional provider base (plain PHP).
+    - name: Domain
+      collectors:
+        - type: classLike
+          value: '^Nowo\\SeedKitBundle\\Domain\\'
+    - name: Application
+      collectors:
+        - type: classLike
+          value: '^Nowo\\SeedKitBundle\\Application\\'
+    # UI: the console edge and the security edge (guard, voter, checkers, access event) plus the provider attribute and
+    # the lint warmer, inside Infrastructure\Symfony (not re-laid out).
+    - name: UI
+      collectors:
+        - type: classLike
+          value: '^Nowo\\SeedKitBundle\\Infrastructure\\Symfony\\(Command|Security|Event|CacheWarmer|Attribute)\\'
+    # DependencyInjection: the composition root (bundle class, configuration tree, service definitions, pass).
+    - name: DependencyInjection
+      collectors:
+        - type: classLike
+          value: '^Nowo\\SeedKitBundle\\(Infrastructure\\Symfony\\DependencyInjection\\|NowoSeedKitBundle$)'
+    # Infrastructure: readers, writers, opis adapter, DBAL stores, Doctrine mapping, support adapters.
+    - name: Infrastructure
+      collectors:
+        - type: bool
+          must:
+            - type: classLike
+              value: '^Nowo\\SeedKitBundle\\Infrastructure\\'
+          must_not:
+            - type: classLike
+              value: '^Nowo\\SeedKitBundle\\Infrastructure\\Symfony\\'
+    - name: Bridge
+      collectors:
+        - type: classLike
+          value: '^Nowo\\SeedKitBundle\\Bridge\\'
+    # Testing: the provider contract test kit shipped for hosts (nothing in src/ depends on it).
+    - name: Testing
+      collectors:
+        - type: classLike
+          value: '^Nowo\\SeedKitBundle\\Testing\\'
+    # --- Vendor layers -------------------------------------------------------------------------------------------
+    # Framework-free contract packages, listed by name (Domain and Application may use them).
+    - name: Psr
+      collectors:
+        - type: classLike
+          value: '^Psr\\(Clock|Log|EventDispatcher|Container)\\'
+    - name: TransactionContract
+      collectors:
+        - type: classLike
+          value: '^Nowo\\TransactionContract\\'
+    # Framework and library code: Infrastructure, UI, Bridge, DependencyInjection and Testing only.
+    - name: SymfonyContracts
+      collectors:
+        - type: classLike
+          value: '^Symfony\\Contracts\\'
+    - name: Symfony
+      collectors:
+        - type: classLike
+          value: '^Symfony\\(Component|Bundle|Bridge)\\'
+    - name: Doctrine
+      collectors:
+        - type: classLike
+          value: '^Doctrine\\'
+    - name: TransactionDoctrine
+      collectors:
+        - type: classLike
+          value: '^Nowo\\TransactionDoctrine\\'
+    - name: Opis
+      collectors:
+        - type: classLike
+          value: '^Opis\\'
+    - name: Composer
+      collectors:
+        - type: classLike
+          value: '^Composer\\'
+    - name: PHPUnit
+      collectors:
+        - type: classLike
+          value: '^PHPUnit\\'
+    # Bridged packages (optional, suggested).
+    - name: BridgedPackages
+      collectors:
+        - type: classLike
+          value: '^Nowo\\(AuditKitBundle|VaultBundle)\\'
+  ruleset:
+    Domain:
+      - Psr
+    Application:
+      - Domain
+      - Psr
+      - TransactionContract
+    Infrastructure:
+      - Domain
+      - Application
+      - Psr
+      - TransactionContract
+      - SymfonyContracts
+      - Symfony
+      - Doctrine
+      - TransactionDoctrine
+      - Opis
+    UI:
+      - Domain
+      - Application
+      - Infrastructure
+      - Psr
+      - TransactionContract
+      - SymfonyContracts
+      - Symfony
+    Bridge:
+      - Domain
+      - Application
+      - Infrastructure
+      - Psr
+      - BridgedPackages
+    Testing:
+      - Domain
+      - Application
+      - Infrastructure
+      - Psr
+      - Symfony
+      - PHPUnit
+    DependencyInjection:
+      - Domain
+      - Application
+      - Infrastructure
+      - UI
+      - Bridge
+      - Psr
+      - TransactionContract
+      - SymfonyContracts
+      - Symfony
+      - Doctrine
+      - TransactionDoctrine
+      - Composer
+      - BridgedPackages
+  # Legacy public API that cannot change before 1.0.0 (REQ-ARCH-002 rule 3). Empty from the first release.
+  skip_violations: {}

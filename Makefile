@@ -9,7 +9,7 @@ COMPOSE_BIN := $(shell $(DOCKER_BIN) compose version >/dev/null 2>&1 && echo "$(
 COMPOSE     := $(COMPOSE_BIN) -f $(COMPOSE_FILE)
 SERVICE_PHP := php
 
-.PHONY: help up down down-dev build shell install ensure-up test-e2e demo-screenshots test test-coverage test-coverage-100 coverage-check validate-phpdoc coverage-php-percent cs-check cs-fix qa clean release-check release-check-demos demo-smoke composer-sync rector rector-dry phpstan igor update validate assets setup-hooks check-no-cursor-coauthor check-open-prs check-no-raw-html-form check-twig-extra validate-translations db-up test-with-db test-coverage-with-db update-deps strip-cursor-coauthor-from-history
+.PHONY: deptrac help up down down-dev build shell install ensure-up test-e2e demo-screenshots test test-coverage test-coverage-100 coverage-check validate-phpdoc coverage-php-percent cs-check cs-fix qa clean release-check release-check-demos demo-smoke composer-sync rector rector-dry phpstan igor update validate assets setup-hooks check-no-cursor-coauthor check-open-prs check-no-raw-html-form validate-translations db-up test-with-db test-coverage-with-db update-deps strip-cursor-coauthor-from-history
 
 help:
 	@echo "Seed Kit Bundle - Development Commands"
@@ -34,10 +34,11 @@ help:
 	@echo "  rector        Apply Rector refactoring"
 	@echo "  rector-dry    Run Rector in dry-run mode"
 	@echo "  phpstan       Run PHPStan static analysis"
+	@echo "  deptrac       Check the layer dependencies of src/ (REQ-ARCH-002)"
 	@echo "  igor          Run Igor worker-state audit (REQ-CS-008)"
 	@echo "  qa            Run all QA checks (cs-check + test)"
 	@echo "Release:"
-	@echo "  release-check Pre-release: ensure-up, co-author/open-PR/raw-form checks, composer-sync, cs-fix, cs-check, rector-dry, phpstan, validate-phpdoc, igor, validate-translations, test-coverage + 100% gate, demos"
+	@echo "  release-check Pre-release: ensure-up, co-author/open-PR/raw-form checks, composer-sync, cs-fix, cs-check, rector-dry, phpstan, deptrac, validate-phpdoc, igor, validate-translations, test-coverage + 100% gate, demos"
 	@echo "  composer-sync Validate composer.json and align composer.lock (no install)"
 	@echo "Cleanup:"
 	@echo "  clean         Remove vendor and cache"
@@ -50,12 +51,12 @@ help:
 	@echo "  down-dev               Stop containers (keep volumes; REQ-MAKE-007)"
 	@echo "  test-coverage-100      Run tests with coverage and fail below 100% (REQ-TEST-003 / REQ-TEST-006)"
 	@echo "  coverage-check         Fail when the last coverage.xml is below 100% statements/elements"
-	@echo "  test-with-db           Database suite on the MySQL 8.4 service of docker-compose.yml (REQ-TEST-005)"
+	@echo "  test-with-db           Database suite on MySQL 8.4, MariaDB 11.4 and PostgreSQL 17 (REQ-TEST-005 / REQ-RUNTIME-003)"
 	@echo "  test-coverage-with-db  Database suite on MySQL with text coverage (REQ-TEST-005)"
 	@echo "  validate-phpdoc        Fail when a class or public method in src/ has no PHPDoc (REQ-CS-001)"
-	@echo "  validate-translations  YAML syntax + key parity of the 7 locales (REQ-MAKE-004 / REQ-I18N-002)"
+	@echo "  validate-translations  YAML syntax + key parity of the 10 locales (REQ-MAKE-004 / REQ-I18N-002)"
 	@echo "  check-no-raw-html-form No raw form tags in bundle or demo Twig (REQ-TWIG-005)"
-	@echo "  check-twig-extra       twig/extra-bundle in the package and every Twig demo (REQ-TWIG-004)"
+	@echo "        twig/extra-bundle in the package and every Twig demo (REQ-TWIG-004)"
 	@echo "  check-open-prs         Fail if unresolved open GitHub PRs remain (REQ-REL-003)"
 	@echo "  setup-hooks            Install git hooks (REQ-GIT-001)"
 	@echo ""
@@ -130,6 +131,10 @@ rector-dry: ensure-up
 phpstan: ensure-up
 	$(COMPOSE) exec -T $(SERVICE_PHP) composer phpstan
 
+# REQ-ARCH-002: Deptrac strict (violations, uncovered and unassigned fail).
+deptrac: ensure-up
+	$(COMPOSE) exec -T $(SERVICE_PHP) composer deptrac
+
 qa: ensure-up
 	$(COMPOSE) exec $(SERVICE_PHP) composer qa
 
@@ -149,12 +154,12 @@ release-check:
 	@$(MAKE) check-no-cursor-coauthor
 	@$(MAKE) check-open-prs
 	@$(MAKE) check-no-raw-html-form
-	@$(MAKE) check-twig-extra
 	@$(MAKE) composer-sync
 	@$(MAKE) cs-fix
 	@$(MAKE) cs-check
 	@$(MAKE) rector-dry
 	@$(MAKE) phpstan
+	@$(MAKE) deptrac
 	@$(MAKE) validate-phpdoc
 	@$(MAKE) igor
 	@$(MAKE) validate-translations
@@ -162,26 +167,31 @@ release-check:
 	@$(MAKE) coverage-check
 	@$(MAKE) release-check-demos
 
-# REQ-TWIG-004: twig/extra-bundle in the package and in every demo that renders Twig.
-check-twig-extra:
-	@chmod +x .scripts/check-twig-extra.sh
-	@./.scripts/check-twig-extra.sh
-
-# REQ-MAKE-004 / REQ-I18N-002: YAML syntax + key parity (en, es, it, fr, pt, de, nl).
+# REQ-MAKE-004 / REQ-I18N-002: YAML syntax + key parity (en, es, it, fr, pt, de, nl, ca, eu, gl).
 validate-translations: ensure-up
 	$(COMPOSE) exec -T $(SERVICE_PHP) php .scripts/validate-translations.php
 
-# REQ-TEST-005: the Database suite (tests/Integration/Database, standard + DDD hosts) against the MySQL 8.4 service
-# of the root docker-compose.yml (profile "db"); `make test` runs the same suite on SQLite; PostgreSQL 17 runs in CI.
-TEST_DB_URL := mysql://root@database:3306/app?serverVersion=8.4.0&charset=utf8mb4
+# REQ-TEST-005 / REQ-RUNTIME-003: the Database suite (tests/Integration/Database, standard + DDD hosts, two-connection
+# races) against the services of the root docker-compose.yml (profile "db"): MySQL 8.4, MariaDB 11.4, PostgreSQL 17;
+# `make test` runs the same suite on SQLite (the race tests skip there).
+TEST_DB_URL_MYSQL    := mysql://root@database:3306/app?serverVersion=8.4.0&charset=utf8mb4
+TEST_DB_URL_MARIADB  := mysql://root@mariadb:3306/app?serverVersion=11.4.0-MariaDB&charset=utf8mb4
+TEST_DB_URL_POSTGRES := pgsql://postgres@postgres:5432/app?serverVersion=17
+TEST_DB_URL          := $(TEST_DB_URL_MYSQL)
 
 db-up: ensure-up
-	$(COMPOSE) --profile db up -d database
+	$(COMPOSE) --profile db up -d database mariadb postgres
 	@i=0; until $(COMPOSE) --profile db exec -T database mysqladmin ping -h 127.0.0.1 -uroot --silent >/dev/null 2>&1; do \
 		i=$$((i+1)); if [ $$i -gt 60 ]; then echo "MySQL not ready"; exit 1; fi; sleep 2; done
+	@i=0; until $(COMPOSE) --profile db exec -T mariadb healthcheck.sh --connect --innodb_initialized >/dev/null 2>&1; do \
+		i=$$((i+1)); if [ $$i -gt 60 ]; then echo "MariaDB not ready"; exit 1; fi; sleep 2; done
+	@i=0; until $(COMPOSE) --profile db exec -T postgres pg_isready -U postgres >/dev/null 2>&1; do \
+		i=$$((i+1)); if [ $$i -gt 60 ]; then echo "PostgreSQL not ready"; exit 1; fi; sleep 2; done
 
 test-with-db: db-up
-	$(COMPOSE) exec -T -e NOWO_TEST_DATABASE_URL='$(TEST_DB_URL)' $(SERVICE_PHP) vendor/bin/phpunit --testsuite Database
+	$(COMPOSE) exec -T -e NOWO_TEST_DATABASE_URL='$(TEST_DB_URL_MYSQL)' $(SERVICE_PHP) vendor/bin/phpunit --no-coverage --testsuite Database
+	$(COMPOSE) exec -T -e NOWO_TEST_DATABASE_URL='$(TEST_DB_URL_MARIADB)' $(SERVICE_PHP) vendor/bin/phpunit --no-coverage --testsuite Database
+	$(COMPOSE) exec -T -e NOWO_TEST_DATABASE_URL='$(TEST_DB_URL_POSTGRES)' $(SERVICE_PHP) vendor/bin/phpunit --no-coverage --testsuite Database
 
 test-coverage-with-db: db-up
 	$(COMPOSE) exec -T -e NOWO_TEST_DATABASE_URL='$(TEST_DB_URL)' $(SERVICE_PHP) vendor/bin/phpunit --testsuite Database --coverage-text
@@ -213,7 +223,7 @@ clean: ensure-up
 	$(COMPOSE) exec -T $(SERVICE_PHP) sh -c "rm -rf vendor .phpunit.cache coverage coverage.xml .php-cs-fixer.cache"
 
 assets:
-	@echo "No frontend assets in this bundle (pages use UiKit assets)."
+	@echo "No frontend assets in this bundle (0.1 has no UI; the 0.2 pages will use UiKit assets)."
 
 
 

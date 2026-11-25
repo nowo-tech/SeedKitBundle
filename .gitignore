@@ -53,3 +53,6 @@ playwright-report/
 
 # Local tool output
 /var/
+
+# Deptrac cache
+/.deptrac.cache

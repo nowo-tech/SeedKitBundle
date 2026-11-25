@@ -1,5 +1,5 @@
-# REQ-DEMO-013 — Playwright e2e of the management UI against the running demo/symfony8 (FrankenPHP worker, MySQL):
-# create a link → open /s/{code} → the statistics show the click → CSV export; disable / delete; field errors.
+# REQ-DEMO-013 — Playwright e2e against the running demo/symfony8 (FrankenPHP worker, MySQL): the home page lists the
+# seed providers, row counts and runs; downloads of the template, current export and schema; access denied for viewer.
 name: Demo e2e
 
 on:

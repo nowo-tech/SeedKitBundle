@@ -4,11 +4,12 @@
 
 | Version | Supported          |
 | ------- | ------------------ |
-| 0.1.x   | :white_check_mark: (first tag, after the REQ-SEC-004 audit of S1) |
-| unreleased (`main`, newer slices) | :x: |
+| 0.1.x   | :white_check_mark: (tagged only after its immediate REQ-SEC-004 security audit) |
+| < 0.1.0 (unreleased `main` before the first tag) | :x: |
 
-SeedKitBundle is tagged 0.x per slice (0.1.0 … 0.5.0, owner decision Q-O2), each after its immediate REQ-SEC-004
-audit; only the latest 0.x minor receives fixes until 1.0.0. See [docs/ROADMAP.md](../docs/ROADMAP.md).
+SeedKitBundle is tagged 0.x per slice (0.1.0 core + console, 0.2.0 UI + Messenger), each after its immediate
+REQ-SEC-004 audit (an import is a write path); only the latest 0.x minor receives fixes until 1.0.0. See
+[docs/ROADMAP.md](../docs/ROADMAP.md).
 
 ## Reporting a Vulnerability
 
@@ -19,7 +20,7 @@ We take the security of SeedKitBundle seriously. If you believe you have found a
 
 Please include:
 
-- Type of issue (e.g., injection, XSS, auth bypass, deserialization risk, etc.)
+- Type of issue (e.g., injection, path traversal, access bypass, deserialization risk, secret leak, etc.)
 - Affected file(s) and version/tag/commit
 - Steps to reproduce
 - Impact assessment

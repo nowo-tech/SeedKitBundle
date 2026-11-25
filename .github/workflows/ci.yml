@@ -24,48 +24,11 @@ jobs:
     outputs:
       mode: ${{ steps.classify.outputs.mode }}
     steps:
-      - name: Checkout code (PR merge commit and its base parent)
-        if: github.event_name == 'pull_request'
-        uses: actions/checkout@v7
-        with:
-          fetch-depth: 2
-
       - name: Classify the change
         id: classify
-        env:
-          EVENT: ${{ github.event_name }}
-          SWITCH: ${{ vars.NOWO_CI_PR_MODE }}
-          LIGHT: '^((demo/([^/]+/)?)?composer\.(json|lock)|docs/.*|specs/.*|\.cursor/.*|\.github/ISSUE_TEMPLATE/.*|.*\.md)$'
-        run: |
-          mode=full; paths=""
-          if [ "$EVENT" != pull_request ]; then
-            reason="event '$EVENT' always runs full"
-          else
-            case "$SWITCH" in
-              light) mode=light; reason="NOWO_CI_PR_MODE=light: every PR is light" ;;
-              full) reason="NOWO_CI_PR_MODE=full: every PR is full" ;;
-              ''|auto)
-                if files=$(git diff --name-only --no-renames HEAD^1 HEAD); then
-                  mode=light; reason="NOWO_CI_PR_MODE=${SWITCH:-unset} (auto): only deps/docs paths changed"
-                  while IFS= read -r f; do
-                    [ -n "$f" ] || continue
-                    if ! printf '%s\n' "$f" | grep -Eq "$LIGHT"; then mode=full; paths="$paths $f"; fi
-                  done <<< "$files"
-                  [ "$mode" = light ] || reason="NOWO_CI_PR_MODE=${SWITCH:-unset} (auto): non deps/docs paths changed:$paths"
-                else
-                  reason="NOWO_CI_PR_MODE=${SWITCH:-unset} (auto): git diff failed, fail-closed"
-                fi ;;
-              *) reason="NOWO_CI_PR_MODE='$SWITCH' is not light/auto/full, fail-closed" ;;
-            esac
-          fi
-          echo "mode=$mode ($reason)"
-          echo "mode=$mode" >> "$GITHUB_OUTPUT"
-          {
-            echo "### CI mode: \`$mode\`"
-            echo ""
-            echo "$reason"
-            if [ "$EVENT" = pull_request ] && [ -n "${files:-}" ]; then echo ""; echo "Changed paths:"; echo '```'; echo "$files" | head -200; echo '```'; fi
-          } >> "$GITHUB_STEP_SUMMARY"
+        uses: nowo-tech/ci-actions/changes@v1
+        with:
+          mode-variable: ${{ vars.NOWO_CI_PR_MODE }}
 
   git-hygiene:
     name: Git history (no agent co-author)
@@ -253,6 +216,12 @@ jobs:
       - name: Run PHPStan (REQ-CS-006)
         run: composer phpstan
 
+      - name: Deptrac layer check (REQ-ARCH-002)
+        run: composer deptrac
+
+      - name: Translations (10 locales, key parity; REQ-I18N-002)
+        run: php .scripts/validate-translations.php
+
       - name: PHPDoc on every class and public method of src/ (REQ-CS-001)
         run: composer validate-phpdoc
 
@@ -289,7 +258,7 @@ jobs:
           --health-cmd="healthcheck.sh --connect --innodb_initialized"
           --health-interval=5s --health-timeout=5s --health-retries=20
       postgres:
-        image: postgres:16-alpine
+        image: postgres:17-alpine
         env:
           POSTGRES_HOST_AUTH_METHOD: trust
           POSTGRES_DB: app
@@ -312,8 +281,8 @@ jobs:
       - name: Install dependencies
         run: composer install --prefer-dist --no-progress --no-interaction
 
-      # REQ-RUNTIME-003: the suite holds the two-connection race tests (tenant lock, row lock, 409 CONFLICT_001 /
-      # CONFLICT_002 answers, ten parallel creates against a plan limit); every step is bounded so a hang fails fast.
+      # REQ-RUNTIME-003: the suite holds the two-connection race tests (lease per provider and scope, batch digest
+      # changed mid-run, row lock → CONFLICT_001 / CONFLICT_002); every step is bounded so a hang fails fast.
       - name: Database suite on SQLite (identifier columns compare exactly, audit LQ)
         timeout-minutes: 15
         run: vendor/bin/phpunit --no-coverage --testsuite Database
@@ -330,9 +299,9 @@ jobs:
         timeout-minutes: 15
         run: vendor/bin/phpunit --no-coverage --testsuite Database
 
-      - name: Database suite on PostgreSQL 16
+      - name: Database suite on PostgreSQL 17
         env:
-          NOWO_TEST_DATABASE_URL: pgsql://postgres@127.0.0.1:5432/app?serverVersion=16
+          NOWO_TEST_DATABASE_URL: pgsql://postgres@127.0.0.1:5432/app?serverVersion=17
         timeout-minutes: 15
         run: vendor/bin/phpunit --no-coverage --testsuite Database
 
@@ -418,7 +387,7 @@ jobs:
 
   # REQ-TEST-011: boot the FrankenPHP demo (MySQL) and expect HTTP 200 on every push / PR.
   demo-smoke:
-    name: Demo smoke (symfony7 + symfony8, HTTP 200)
+    name: Demo smoke (symfony8, HTTP 200)
     runs-on: ubuntu-latest
     # Light mode: skipped (a skipped non-matrix job reports its own name with success for branch protection).
     needs: changes
