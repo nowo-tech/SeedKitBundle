@@ -21,7 +21,9 @@ use Symfony\Component\Yaml\Yaml;
 
 use function array_is_list;
 use function array_key_exists;
+use function constant;
 use function count;
+use function defined;
 use function fclose;
 use function feof;
 use function fgets;
@@ -202,7 +204,8 @@ final readonly class DocumentReader
      */
     private function yaml(string $text, ReaderLimits $limits): array
     {
-        YamlPreScanner::assertSafe($text);
+        YamlPreScanner::assertSafe($text, $limits->maxDepth + 4);
+        $flags = Yaml::PARSE_EXCEPTION_ON_INVALID_TYPE | (defined(Yaml::class . '::PARSE_EXCEPTION_ON_ALIAS') ? constant(Yaml::class . '::PARSE_EXCEPTION_ON_ALIAS') : 0);
         $parts = preg_split('/^(?:---|\.\.\.)[ \t]*(?:#.*)?$/m', $text);
         $trees = [];
         foreach ($parts === false ? [] : $parts as $part) {
@@ -213,14 +216,39 @@ final readonly class DocumentReader
                 throw new DocumentReadException('too_many_documents');
             }
             try {
-                $tree = Yaml::parse($part, Yaml::PARSE_EXCEPTION_ON_INVALID_TYPE);
+                $tree = Yaml::parse($part, $flags);
             } catch (ParseException $e) {
                 throw new DocumentReadException('yaml_parse', $e->getParsedLine() > 0 ? $e->getParsedLine() : null);
             }
+            self::assertText($tree);
             $trees[] = $this->map($tree);
         }
 
         return $trees;
+    }
+
+    /**
+     * Every parsed key and string is UTF-8 without NUL bytes, so a scalar the parser built from escapes or a tag (YAML
+     * `"\0"` or `!!binary`, JSON `"\u0000"`) cannot carry bytes the raw text could not (second line of defence behind
+     * {@see YamlPreScanner} and the raw encoding check).
+     *
+     * @throws DocumentReadException
+     */
+    private static function assertText(mixed $value): void
+    {
+        if (is_string($value)) {
+            if (str_contains($value, "\0") || preg_match('//u', $value) !== 1) {
+                throw new DocumentReadException('encoding');
+            }
+
+            return;
+        }
+        if (is_array($value)) {
+            foreach ($value as $key => $entry) {
+                self::assertText($key);
+                self::assertText($entry);
+            }
+        }
     }
 
     /**
@@ -261,6 +289,7 @@ final readonly class DocumentReader
             throw new DocumentReadException('json_parse');
         }
         JsonDuplicateKeyScanner::assertUnique($text);
+        self::assertText($value);
 
         return $value;
     }

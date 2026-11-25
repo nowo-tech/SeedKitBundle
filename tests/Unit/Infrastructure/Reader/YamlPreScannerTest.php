@@ -16,7 +16,7 @@ use PHPUnit\Framework\TestCase;
 final class YamlPreScannerTest extends TestCase
 {
     /**
-     * @return iterable<string, array{string}>
+     * @return iterable<string, array{0: string, 1?: int}>
      */
     public static function safeTexts(): iterable
     {
@@ -47,15 +47,23 @@ final class YamlPreScannerTest extends TestCase
         yield 'percent inside a flow at column 0' => ["a: [\n%x]\n"];
         yield 'percent after indentation' => ["a:\n  %x\n"];
         yield 'carriage returns' => ["a: 1\rb: 2\r\nc: 3\n"];
+        yield 'json-style flow mapping' => ["a: [{\"k\":\"v\",\"n\":1,'s':[1,2]}]\n"];
+        yield 'quoted key with spaces before the colon' => ["a: {\"k\" : v}\n"];
+        yield 'url in a flow mapping' => ["a: {u: http://x/a&b*c}\n"];
+        yield 'quoted block value followed by a colon' => ["a: \"x\":y\n"];
+        yield 'nesting at the depth limit' => ["a:\n  - [[x]]\n", 5];
+        yield 'compact entries within the estimate' => ["- - - x\n", 4];
+        yield 'deeper lines after a shallower one' => ["a:\n  b:\n    c: 1\nd:\n  e: 1\n", 3];
+        yield 'comment lines do not nest' => ["a:\n  b: 1\n      # deep comment\n", 2];
     }
 
     #[Test]
     #[DataProvider('safeTexts')]
-    public function acceptsSafeTexts(string $text): void
+    public function acceptsSafeTexts(string $text, ?int $maxDepth = null): void
     {
         $this->expectNotToPerformAssertions();
 
-        YamlPreScanner::assertSafe($text);
+        YamlPreScanner::assertSafe($text, $maxDepth);
     }
 
     /**
@@ -84,6 +92,18 @@ final class YamlPreScannerTest extends TestCase
         yield 'after a closed quote on a continuation line' => ["a: 'x\ny' \n- *z\n", 'yaml_alias', 3];
         yield 'continued plain scalar' => ["a: b\n  !c\n", 'yaml_tag', 2];
         yield 'after a closing bracket at a line start' => ["a: [\n] \n*b: 1\n", 'yaml_alias', 3];
+        yield 'anchor after a quoted flow key and a bare colon' => ["a: [{\"k\":&x [1]}, {\"k\":*x}]\n", 'yaml_anchor', 1];
+        yield 'alias after a quoted flow key and a bare colon' => ["a: {\"k\":*x}\n", 'yaml_alias', 1];
+        yield 'tag after a quoted flow key and a bare colon' => ["a: {\"k\":!!binary YQ==}\n", 'yaml_tag', 1];
+        yield 'tag after a single-quoted flow key' => ["a: {'k':!!str 1}\n", 'yaml_tag', 1];
+        yield 'alias after a doubled quote in a single-quoted key' => ["a: {'it''s':*x}\n", 'yaml_alias', 1];
+        yield 'alias after an escaped quote in a double-quoted key' => ["a: {\"a\\\"b\":*x}\n", 'yaml_alias', 1];
+        yield 'alias after a quoted key and a tab' => ["a: {\"k\"\t:*x}\n", 'yaml_alias', 1];
+        yield 'alias after a quoted key over two lines' => ["a: {\"k\n  l\":*x}\n", 'yaml_alias', 2];
+        yield 'alias after a run of colons' => ["a: {k: :*x}\n", 'yaml_alias', 1];
+        yield 'anchor after a colon inside a flow plain scalar' => ["a: [b:&x c]\n", 'yaml_anchor', 1];
+        yield 'alias after a quoted block key and a bare colon' => ["\"k\":*x\n", 'yaml_alias', 1];
+        yield 'alias after a quoted block key, a space and a colon' => ["- 'k' :*x\n", 'yaml_alias', 1];
     }
 
     #[Test]
@@ -97,5 +117,41 @@ final class YamlPreScannerTest extends TestCase
             self::assertSame($reason, $e->reason);
             self::assertSame($line, $e->lineNumber);
         }
+    }
+
+    /**
+     * @return iterable<string, array{string, int, int}>
+     */
+    public static function tooDeepTexts(): iterable
+    {
+        yield 'flow brackets' => ["a: [[[x]]]\n", 3, 1];
+        yield 'flow mappings' => ["a: {b: {c: {d: 1}}}\n", 3, 1];
+        yield 'nested flow without spaces' => ["a: [b[c[d]]]\n", 3, 1];
+        yield 'flow over lines' => ["a: [\n  [\n    [\n      [x]]]]\n", 3, 3];
+        yield 'compact sequence entries' => ["- - - - x\n", 3, 1];
+        yield 'compact complex keys' => ["? ? ? ? x\n", 3, 1];
+        yield 'block indentation' => ["a:\n  b:\n    c:\n      d: 1\n", 3, 4];
+        yield 'block indentation then flow' => ["a:\n  b: [[x]]\n", 3, 2];
+    }
+
+    #[Test]
+    #[DataProvider('tooDeepTexts')]
+    public function refusesNestingDeeperThanTheLimit(string $text, int $maxDepth, int $line): void
+    {
+        try {
+            YamlPreScanner::assertSafe($text, $maxDepth);
+            self::fail('Expected too_deep.');
+        } catch (DocumentReadException $e) {
+            self::assertSame('too_deep', $e->reason);
+            self::assertSame($line, $e->lineNumber);
+        }
+    }
+
+    #[Test]
+    public function aDocumentMarkerResetsTheIndentation(): void
+    {
+        $this->expectNotToPerformAssertions();
+
+        YamlPreScanner::assertSafe("a:\n  b:\n    c: 1\n--- [[x]]\n", 3);
     }
 }

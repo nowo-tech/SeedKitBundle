@@ -212,9 +212,16 @@ Before the parser runs, a pre-scanner refuses what a seed document never needs:
 | Directives | `%YAML 1.2` | `yaml_directive` |
 
 Tokens are checked where a node starts; quoted scalars, block scalars, comments and the inside of plain scalars are
-skipped, so `a&b`, `"*"` or `'!important'` are fine. A plain scalar continued on a new line that starts with one of
-these characters is refused too (fail closed). The parser itself runs without object, constant, custom-tag or date
-support and fails on invalid types.
+skipped, so `a&b`, `"*"` or `'!important'` are fine. A node starts after any `:` inside a flow collection and after a
+`:` that follows a quoted key even without a space (JSON style `{"k":v}` or `'k':v`), so `{"k":*a}` is refused
+too; inside a flow collection a plain scalar such as `a:*b` is refused as well (fail closed: quote it). A plain scalar
+continued on a new line that starts with one of these characters is refused too. The parser itself runs without
+object, constant, custom-tag or date support, fails on invalid types and, on Symfony Yaml 8.1+, on aliases.
+
+The nesting is bounded before the parser recurses: flow brackets, block indentation levels and compact `- ` / `? `
+indicators are counted (an upper estimate) and a text deeper than `reader.max_depth + 4` is refused (`too_deep`), as
+for JSON. Strings the parser builds from escapes (`"\0"`) must still be UTF-8 without NUL bytes (`encoding`); the same
+holds for JSON `"\u0000"`.
 
 ## Quote dates and look-alike scalars
 

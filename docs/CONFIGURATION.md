@@ -105,7 +105,7 @@ The reader counts bytes while it reads (never trusting headers) and refuses with
 | `reader.max_tree_bytes` | 4194304 (4 MiB) | `too_large_for_tree`: YAML and JSON are parsed whole only up to this size; bigger files must be JSON Lines |
 | `reader.max_items` | 1000000 | `too_many_items` (per document) |
 | `reader.max_documents` | 20 | `too_many_documents` |
-| `reader.max_depth` | 16 | JSON decoder depth and item nesting (`too_deep`) |
+| `reader.max_depth` | 16 | JSON decoder depth, YAML nesting estimated before parsing (both `max_depth + 4`) and item nesting (`too_deep`) |
 | `reader.max_string_bytes` | 65536 | `string_too_long` (values and keys) |
 | `reader.max_properties` | 256 | `too_many_properties` (one object) |
 | `reader.max_line_bytes` | 1048576 | `line_too_long` (JSON Lines) |

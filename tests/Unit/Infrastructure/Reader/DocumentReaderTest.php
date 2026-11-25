@@ -21,7 +21,6 @@ use function fopen;
 use function fwrite;
 use function gc_collect_cycles;
 use function hash;
-use function is_array;
 use function is_float;
 use function is_infinite;
 use function json_encode;
@@ -244,6 +243,19 @@ final class DocumentReaderTest extends TestCase
         yield 'tag after a document marker' => ["--- !custom\n" . self::HEADER_YAML, 'yaml_tag', 1];
         yield 'anchor on a complex key' => [$h . "  - ? &k key\n    : value\n", 'yaml_anchor', 5];
         yield 'plain scalar continued with an alias' => [$h . "  - name: foo\n    *bar\n", 'yaml_alias', 6];
+        // ZBK M1: a quoted flow key followed directly by `:` (JSON style), as Symfony Yaml accepts it.
+        $i = self::HEADER_YAML . 'items: ';
+        yield 'anchor after a quoted key and a bare colon' => [$i . "[{\"email\":\"a\",\"t\":&a [1,2,3]}, {\"email\":\"b\",\"t\":*a}]\n", 'yaml_anchor', 4];
+        yield 'alias after a quoted key and a bare colon' => [$i . "[{\"email\":\"b\",\"t\":*a}]\n", 'yaml_alias', 4];
+        yield 'binary tag after a quoted key and a bare colon' => [$i . "[{\"email\":!!binary YQBi/w==}]\n", 'yaml_tag', 4];
+        yield 'str tag after a single-quoted key' => [$i . "[{'email':!!str 1}]\n", 'yaml_tag', 4];
+        yield 'anchor after a single-quoted key' => [$i . "[{'email':'a','t':&a [1]}, {'email':'b','t':*a}]\n", 'yaml_anchor', 4];
+        yield 'alias after a quoted key, spaces and a colon' => [$i . "[{\"t\"  :*a}]\n", 'yaml_alias', 4];
+        yield 'alias after a run of colons' => [$i . "[{t: :*a}]\n", 'yaml_alias', 4];
+        yield 'alias after a quoted key and a run of colons' => [$i . "[{\"t\"::*a}]\n", 'yaml_alias', 4];
+        yield 'alias after a quoted key with the colon on the next line' => [$i . "[{\"t\"\n  :*a}]\n", 'yaml_alias', 5];
+        yield 'alias after a quoted block key and a bare colon' => [$h . "  - \"t\":*a\n", 'yaml_alias', 5];
+        yield 'tag after a colon inside a flow plain scalar' => [$i . "[{t: a:!!binary x}]\n", 'yaml_tag', 4];
     }
 
     #[Test]
@@ -333,18 +345,39 @@ final class DocumentReaderTest extends TestCase
     }
 
     #[Test]
-    public function readsDeeplyNestedYaml(): void
+    public function capsTheYamlDepthBeforeParsing(): void
     {
-        $items = $this->items($this->read(self::HEADER_YAML . 'items: [' . str_repeat('[', 40) . 'x' . str_repeat(']', 40) . "]\n")->documents[0]);
+        $limits = new ReaderLimits(maxDepth: 4);
+        $flow   = static fn (int $n): string => self::HEADER_YAML . 'items: [' . str_repeat('[', $n) . 'x' . str_repeat(']', $n) . "]\n";
+        $block  = static fn (int $n): string => self::HEADER_YAML . "items:\n  - " . str_repeat('- ', $n) . "x\n";
 
-        $node  = $items[0];
-        $depth = 0;
-        while (is_array($node)) {
-            $node = $node[0];
-            ++$depth;
+        // Bounded like JSON (max_depth + 4) before Symfony's recursive parser runs (ZBK I5).
+        $this->assertReadFails($flow(40), 'too_deep', 4);
+        $this->assertReadFails($flow(7), 'too_deep', 4, null, $limits);
+        $this->assertReadFails($block(7), 'too_deep', 5, null, $limits);
+        self::assertSame([[[[[['x']]]]]], $this->items($this->read($flow(5), null, $limits)->documents[0]));
+        self::assertSame([[[[['x']]]]], $this->items($this->read($block(4), null, $limits)->documents[0]));
+    }
+
+    #[Test]
+    public function acceptsAnItemAtTheMaximumDepthInBlockStyle(): void
+    {
+        // Item depth 16 (the default max_depth): the pre-scanner's estimate must not refuse it.
+        $item = "  - k0:\n";
+        for ($level = 1; $level < 15; ++$level) {
+            $item .= str_repeat(' ', 4 + 2 * $level) . 'k' . $level . ":\n";
         }
-        self::assertSame(40, $depth);
-        self::assertSame('x', $node);
+        $item .= str_repeat(' ', 34) . "- x\n";
+
+        self::assertCount(1, $this->items($this->read(self::HEADER_YAML . "items:\n" . $item)->documents[0]));
+    }
+
+    #[Test]
+    public function refusesNulAndInvalidUtf8BuiltByTheParser(): void
+    {
+        $this->assertReadFails(self::HEADER_YAML . "items:\n  - { email: \"a\\0b\" }\n", 'encoding');
+        $this->assertReadFails(self::HEADER_YAML . "items:\n  - { \"e\\0\": a }\n", 'encoding');
+        $this->assertReadFails('{"provider":"a.one","version":1,"scope":"platform","items":[{"email":"a\\u0000b"}]}', 'encoding', null, DocumentFormat::Json);
     }
 
     #[Test]
