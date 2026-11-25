@@ -1,0 +1,26 @@
+name: Sync releases
+
+# Idempotent backfill of GitHub Releases from v* tags (shared workflow nowo-tech/ci-actions). release.yml handles the
+# tag push itself; this one never runs on tags.
+on:
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Only report what would change'
+        type: boolean
+        default: false
+  schedule:
+    - cron: '0 7 * * 1'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: sync-releases-${{ github.repository }}
+  cancel-in-progress: false
+
+jobs:
+  sync-releases:
+    uses: nowo-tech/ci-actions/.github/workflows/sync-releases.yml@v1
+    with:
+      dry-run: ${{ inputs.dry_run || false }}

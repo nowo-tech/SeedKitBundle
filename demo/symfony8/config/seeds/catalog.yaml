@@ -1,0 +1,40 @@
+# Demo seed file (multi-document YAML): categories first, then the products that reference them.
+#   bin/console seed:diff  config/seeds/catalog.yaml --actor=admin
+#   bin/console seed:apply config/seeds/catalog.yaml --yes --actor=admin
+provider: catalog.categories
+version: 1
+scope: platform
+items:
+  - slug: books
+    label: Books
+    description: Printed and digital books
+  - slug: games
+    label: Board games
+  - slug: stationery
+    label: Stationery
+    description: Notebooks, pens and paper
+---
+provider: catalog.products
+version: 1
+scope: platform
+items:
+  - sku: BK-0001
+    name: Symfony in practice
+    category: books
+    price: 29.9
+    active: true
+  - sku: BK-0002
+    name: Domain-driven design distilled
+    category: books
+    price: 34.5
+    active: true
+  - sku: GM-0001
+    name: Cooperative city builder
+    category: games
+    price: 42
+    active: true
+  - sku: ST-0001
+    name: Dotted notebook A5
+    category: stationery
+    price: 7.25
+    active: false

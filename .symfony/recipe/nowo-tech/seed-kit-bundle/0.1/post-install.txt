@@ -1,0 +1,3 @@
+  * Create the tables nowo_seed_run and nowo_seed_lease: <info>php bin/console doctrine:migrations:diff</> (or doctrine:schema:update)
+  * Write a provider (#[AsSeedProvider]) and check it: <info>php bin/console nowo:seed-kit:lint</> and <info>nowo:seed-kit:list</>
+  * Keep seed files in <comment>config/seeds</> (see console.allowed_dirs) and dry-run them with <info>nowo:seed-kit:diff</>

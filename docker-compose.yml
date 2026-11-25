@@ -1,0 +1,65 @@
+name: seed-kit-bundle
+services:
+  php:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: seed-kit-bundle-php
+    working_dir: /app
+    volumes:
+      - .:/app
+      - composer-cache:/root/.composer/cache
+      - coverage-data:/app/coverage
+    environment:
+      - COMPOSER_ALLOW_SUPERUSER=1
+    command: ["tail", "-f", "/dev/null"]
+    networks:
+      - seed-kit-bundle-network
+
+  # REQ-TEST-005 / REQ-RUNTIME-003: MySQL 8.4, MariaDB 11.4 and PostgreSQL 17 for `make test-with-db` (profile "db":
+  # not started by `make up`). Passwordless on the private network only, no port published.
+  database:
+    image: mysql:8.4
+    profiles: ["db"]
+    container_name: seed-kit-bundle-db
+    environment:
+      MYSQL_ALLOW_EMPTY_PASSWORD: 'yes'
+      MYSQL_DATABASE: app
+    tmpfs:
+      - /var/lib/mysql
+    networks:
+      - seed-kit-bundle-network
+
+  mariadb:
+    image: mariadb:11.4
+    profiles: ["db"]
+    container_name: seed-kit-bundle-mariadb
+    environment:
+      MARIADB_ALLOW_EMPTY_ROOT_PASSWORD: 'yes'
+      MARIADB_DATABASE: app
+    tmpfs:
+      - /var/lib/mysql
+    networks:
+      - seed-kit-bundle-network
+
+  postgres:
+    image: postgres:17-alpine
+    profiles: ["db"]
+    container_name: seed-kit-bundle-postgres
+    environment:
+      POSTGRES_HOST_AUTH_METHOD: trust
+      POSTGRES_DB: app
+    tmpfs:
+      - /var/lib/postgresql/data
+    networks:
+      - seed-kit-bundle-network
+
+volumes:
+  composer-cache:
+    driver: local
+  coverage-data:
+    driver: local
+
+networks:
+  seed-kit-bundle-network:
+    driver: bridge

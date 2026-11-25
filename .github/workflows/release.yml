@@ -1,0 +1,16 @@
+name: Create Release
+
+# GitHub Release from the annotated tag message and docs/CHANGELOG.md (shared workflow nowo-tech/ci-actions, REQ-REL-001).
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    uses: nowo-tech/ci-actions/.github/workflows/release.yml@v1
+    with:
+      changelog-path: docs/CHANGELOG.md
+      upgrading-path: docs/UPGRADING.md

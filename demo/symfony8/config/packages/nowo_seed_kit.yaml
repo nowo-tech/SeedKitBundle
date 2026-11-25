@@ -1,0 +1,10 @@
+# Demo configuration: the defaults of the bundle (platform scope only, role-based access, run history in the default
+# entity manager's connection). Only two things are demo-specific: the console may read the seed files of this demo
+# (config/seeds), and ROLE_ADMIN may prune (the bundle default is "nobody", Q-SK-13).
+nowo_seed_kit:
+    console:
+        allowed_dirs:
+            - '%kernel.project_dir%/config/seeds'
+            - '%kernel.project_dir%/var/seeds'
+    security:
+        prune_roles: ['ROLE_ADMIN']

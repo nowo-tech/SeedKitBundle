@@ -1,0 +1,67 @@
+# NowoSeedKitBundle translations (en): error codes, reader reasons and row rules (keys are flat dot paths).
+seed_kit:
+  error:
+    SEED_001: The seed provider is not registered or not available for this scope kind.
+    SEED_002: The seed document cannot be read.
+    SEED_003: The seed document is invalid; nothing was written.
+    SEED_004: A secret field holds a plain value or a reference that cannot be used here; only vault references are accepted.
+    SEED_005: The data changed since the reviewed plan; review the new diff and apply again.
+    SEED_006: A row changed while the plan was applied; the batches already applied stay. Apply the document again.
+    SEED_007: The document scope kind does not match the target scope.
+    SEED_010: The provider failed to apply a batch; the batches already applied stay.
+    SEED_011: A seed provider broke its contract; nothing was written by the bundle.
+    SEED_012: A prune guard refused the plan; confirm it explicitly.
+    ACCESS_001: The scope does not exist or is not visible.
+    ACCESS_002: Access denied.
+    CONFLICT_001: The database kept refusing the write because of a lock conflict; nothing was written. Retry later.
+    CONFLICT_002: The database kept refusing the write because of a lock conflict; part of the run was applied. Apply the document again.
+  read:
+    too_large: The file is larger than allowed.
+    too_large_for_tree: The file is too large for YAML or JSON; use JSON Lines.
+    encoding: The file must be UTF-8 text without NUL bytes.
+    yaml_tag: YAML tags are not allowed.
+    yaml_anchor: YAML anchors are not allowed.
+    yaml_alias: YAML aliases are not allowed.
+    yaml_merge_key: YAML merge keys are not allowed.
+    yaml_directive: YAML directives are not allowed.
+    yaml_explicit_key: 'YAML explicit keys (? and : at the start of an entry) are not allowed.'
+    yaml_ambiguous: 'This YAML construct is ambiguous; quote the value (or use a space, not a tab, before #).'
+    yaml_parse: The YAML text cannot be parsed.
+    json_parse: The JSON text cannot be parsed.
+    duplicate_key: A key appears twice in the same object.
+    unknown_key: Unknown top-level key.
+    header_invalid: The document header is invalid.
+    items_not_a_list: items must be a list.
+    too_many_items: Too many items in one document.
+    too_many_documents: Too many documents in one file.
+    line_too_long: A JSON Lines line is too long.
+    not_a_document: The document is not an object.
+    no_document: The file holds no document.
+    duplicate_provider: A provider appears twice in the file.
+    too_many_nodes: An item is too large.
+    string_too_long: A string is too long.
+    too_deep: An item is nested too deeply.
+    too_many_properties: An object has too many properties.
+    unsupported_value: A value type is not supported.
+    unreadable: The file cannot be read.
+  row:
+    not_an_object: The item must be an object.
+    float_not_allowed: Decimal numbers are not allowed in this field.
+    key_invalid: The natural key is missing or invalid.
+    duplicate_key: The natural key appears twice in the document.
+    secret_plaintext: 'A secret field must hold a vault: reference, never the secret itself.'
+    secret_refused: The vault reference does not exist, is not of this scope or may not be used.
+    schema_type: Wrong value type.
+    schema_required: A required field is missing.
+    schema_enum: The value is not one of the allowed values.
+    schema_const: The value must be the fixed value.
+    schema_maxLength: The text is too long.
+    schema_minLength: The text is too short.
+    schema_pattern: The text does not match the expected pattern.
+    schema_format: The value does not have the expected format.
+    schema_additionalProperties: Unknown field.
+    schema_minimum: The number is too small.
+    schema_maximum: The number is too large.
+    schema_maxItems: The list has too many entries.
+    schema_minItems: The list has too few entries.
+    schema_uniqueItems: The list has repeated entries.

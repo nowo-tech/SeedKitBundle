@@ -1,0 +1,67 @@
+# NowoSeedKitBundle translations (nl): error codes, reader reasons and row rules (keys are flat dot paths).
+seed_kit:
+  error:
+    SEED_001: De seed-provider is niet geregistreerd of niet beschikbaar voor dit soort scope.
+    SEED_002: Het seed-document kan niet worden gelezen.
+    SEED_003: Het seed-document is ongeldig; er is niets geschreven.
+    SEED_004: Een geheim veld bevat een waarde in platte tekst of een referentie die hier niet bruikbaar is; alleen vault-referenties worden geaccepteerd.
+    SEED_005: De gegevens zijn gewijzigd sinds het beoordeelde plan; bekijk de nieuwe diff en pas opnieuw toe.
+    SEED_006: Een rij is gewijzigd tijdens het toepassen; reeds toegepaste batches blijven. Pas het document opnieuw toe.
+    SEED_007: Het soort scope van het document komt niet overeen met de doelscope.
+    SEED_010: De provider kon een batch niet toepassen; reeds toegepaste batches blijven.
+    SEED_011: Een seed-provider heeft zijn contract geschonden; de bundle heeft niets geschreven.
+    SEED_012: Een verwijderbeveiliging heeft het plan geweigerd; bevestig het expliciet.
+    ACCESS_001: De scope bestaat niet of is niet zichtbaar.
+    ACCESS_002: Toegang geweigerd.
+    CONFLICT_001: De database bleef het schrijven weigeren door een lock-conflict; er is niets geschreven. Probeer het later opnieuw.
+    CONFLICT_002: De database bleef het schrijven weigeren door een lock-conflict; een deel van de run is toegepast. Pas het document opnieuw toe.
+  read:
+    too_large: Het bestand is groter dan toegestaan.
+    too_large_for_tree: Het bestand is te groot voor YAML of JSON; gebruik JSON Lines.
+    encoding: Het bestand moet UTF-8-tekst zijn zonder NUL-bytes.
+    yaml_tag: YAML-tags zijn niet toegestaan.
+    yaml_anchor: YAML-ankers zijn niet toegestaan.
+    yaml_alias: YAML-aliassen zijn niet toegestaan.
+    yaml_merge_key: YAML-merge-sleutels zijn niet toegestaan.
+    yaml_directive: YAML-directieven zijn niet toegestaan.
+    yaml_explicit_key: 'Expliciete YAML-sleutels (? en : aan het begin van een item) zijn niet toegestaan.'
+    yaml_ambiguous: 'Deze YAML-constructie is dubbelzinnig; zet de waarde tussen aanhalingstekens (of gebruik een spatie, geen tab, vóór #).'
+    yaml_parse: De YAML-tekst kan niet worden geparsed.
+    json_parse: De JSON-tekst kan niet worden geparsed.
+    duplicate_key: Een sleutel komt twee keer voor in hetzelfde object.
+    unknown_key: Onbekende sleutel op het hoogste niveau.
+    header_invalid: De documentkop is ongeldig.
+    items_not_a_list: items moet een lijst zijn.
+    too_many_items: Te veel items in één document.
+    too_many_documents: Te veel documenten in één bestand.
+    line_too_long: Een JSON Lines-regel is te lang.
+    not_a_document: Het document is geen object.
+    no_document: Het bestand bevat geen document.
+    duplicate_provider: Een provider komt twee keer voor in het bestand.
+    too_many_nodes: Een item is te groot.
+    string_too_long: Een tekst is te lang.
+    too_deep: Een item is te diep genest.
+    too_many_properties: Een object heeft te veel eigenschappen.
+    unsupported_value: Waardetype niet ondersteund.
+    unreadable: Het bestand kan niet worden gelezen.
+  row:
+    not_an_object: Het item moet een object zijn.
+    float_not_allowed: Decimale getallen zijn niet toegestaan in dit veld.
+    key_invalid: De natuurlijke sleutel ontbreekt of is ongeldig.
+    duplicate_key: De natuurlijke sleutel komt twee keer voor in het document.
+    secret_plaintext: Een geheim veld moet een vault:-referentie bevatten, nooit het geheim.
+    secret_refused: De vault-referentie bestaat niet, hoort niet bij deze scope of mag niet worden gebruikt.
+    schema_type: Verkeerd waardetype.
+    schema_required: Een verplicht veld ontbreekt.
+    schema_enum: De waarde is niet een van de toegestane waarden.
+    schema_const: De waarde moet de vaste waarde zijn.
+    schema_maxLength: De tekst is te lang.
+    schema_minLength: De tekst is te kort.
+    schema_pattern: De tekst volgt het verwachte patroon niet.
+    schema_format: De waarde heeft niet het verwachte formaat.
+    schema_additionalProperties: Onbekend veld.
+    schema_minimum: Het getal is te klein.
+    schema_maximum: Het getal is te groot.
+    schema_maxItems: De lijst heeft te veel items.
+    schema_minItems: De lijst heeft te weinig items.
+    schema_uniqueItems: De lijst heeft dubbele items.

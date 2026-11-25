@@ -1,0 +1,67 @@
+# NowoSeedKitBundle translations (eu): error codes, reader reasons and row rules (keys are flat dot paths).
+seed_kit:
+  error:
+    SEED_001: Seed hornitzailea ez dago erregistratuta edo ez dago erabilgarri esparru mota honetarako.
+    SEED_002: Ezin da seed dokumentua irakurri.
+    SEED_003: Seed dokumentua ez da baliozkoa; ez da ezer idatzi.
+    SEED_004: Eremu sekretu batek balio garbia edo hemen erabili ezin den erreferentzia bat du; vault erreferentziak bakarrik onartzen dira.
+    SEED_005: Datuak aldatu dira berrikusitako planetik; berrikusi diff berria eta aplikatu berriro.
+    SEED_006: Errenkada bat aldatu da plana aplikatzean; aplikatutako sortak mantentzen dira. Aplikatu dokumentua berriro.
+    SEED_007: Dokumentuaren esparru mota ez dator bat helburuko esparruarekin.
+    SEED_010: Hornitzaileak huts egin du sorta bat aplikatzean; aplikatutako sortak mantentzen dira.
+    SEED_011: Seed hornitzaile batek bere kontratua urratu du; bundleak ez du ezer idatzi.
+    SEED_012: Ezabatze-babes batek plana baztertu du; berretsi esplizituki.
+    ACCESS_001: Esparrua ez da existitzen edo ez da ikusgai.
+    ACCESS_002: Sarbidea ukatuta.
+    CONFLICT_001: Datu-baseak idazketa baztertzen jarraitu du blokeo-gatazka baten ondorioz; ez da ezer idatzi. Saiatu berriro geroago.
+    CONFLICT_002: Datu-baseak idazketa baztertzen jarraitu du blokeo-gatazka baten ondorioz; exekuzioaren zati bat aplikatu da. Aplikatu dokumentua berriro.
+  read:
+    too_large: Fitxategia baimendutakoa baino handiagoa da.
+    too_large_for_tree: Fitxategia handiegia da YAML edo JSONerako; erabili JSON Lines.
+    encoding: Fitxategiak UTF-8 testua izan behar du, NUL byterik gabe.
+    yaml_tag: YAML etiketak ez daude baimenduta.
+    yaml_anchor: YAML aingurak ez daude baimenduta.
+    yaml_alias: YAML aliasak ez daude baimenduta.
+    yaml_merge_key: YAML bateratze-gakoak ez daude baimenduta.
+    yaml_directive: YAML direktibak ez daude baimenduta.
+    yaml_explicit_key: 'YAML gako esplizituak (? eta : sarrera baten hasieran) ez daude baimenduta.'
+    yaml_ambiguous: 'YAML eraikuntza hau anbiguoa da; jarri balioa komatxo artean (edo erabili zuriune bat, ez tabulazio bat, # aurretik).'
+    yaml_parse: Ezin da YAML testua aztertu.
+    json_parse: Ezin da JSON testua aztertu.
+    duplicate_key: Gako bat bi aldiz agertzen da objektu berean.
+    unknown_key: Goi-mailako gako ezezaguna.
+    header_invalid: Dokumentuaren goiburua ez da baliozkoa.
+    items_not_a_list: items zerrenda bat izan behar da.
+    too_many_items: Elementu gehiegi dokumentu batean.
+    too_many_documents: Dokumentu gehiegi fitxategi batean.
+    line_too_long: JSON Lines lerro bat luzeegia da.
+    not_a_document: Dokumentua ez da objektu bat.
+    no_document: Fitxategiak ez du dokumenturik.
+    duplicate_provider: Hornitzaile bat bi aldiz agertzen da fitxategian.
+    too_many_nodes: Elementu bat handiegia da.
+    string_too_long: Testu bat luzeegia da.
+    too_deep: Elementu bat sakonegi habiaratuta dago.
+    too_many_properties: Objektu batek propietate gehiegi ditu.
+    unsupported_value: Balio mota ez da onartzen.
+    unreadable: Ezin da fitxategia irakurri.
+  row:
+    not_an_object: Elementuak objektu bat izan behar du.
+    float_not_allowed: Eremu honetan ez da zenbaki hamartarrik onartzen.
+    key_invalid: Gako naturala falta da edo ez da baliozkoa.
+    duplicate_key: Gako naturala bi aldiz agertzen da dokumentuan.
+    secret_plaintext: 'Eremu sekretu batek vault: erreferentzia bat izan behar du, inoiz ez sekretua.'
+    secret_refused: Vault erreferentzia ez da existitzen, ez da esparru honetakoa edo ezin da erabili.
+    schema_type: Balio mota okerra.
+    schema_required: Derrigorrezko eremu bat falta da.
+    schema_enum: Balioa ez da baimendutakoetako bat.
+    schema_const: Balioak balio finkoa izan behar du.
+    schema_maxLength: Testua luzeegia da.
+    schema_minLength: Testua laburregia da.
+    schema_pattern: Testuak ez du espero zen eredua betetzen.
+    schema_format: Balioak ez du espero zen formatua.
+    schema_additionalProperties: Eremu ezezaguna.
+    schema_minimum: Zenbakia txikiegia da.
+    schema_maximum: Zenbakia handiegia da.
+    schema_maxItems: Zerrendak sarrera gehiegi ditu.
+    schema_minItems: Zerrendak sarrera gutxiegi ditu.
+    schema_uniqueItems: Zerrendak sarrera errepikatuak ditu.

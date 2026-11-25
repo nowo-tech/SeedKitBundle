@@ -1,0 +1,28 @@
+name: CodeRabbit
+
+# Optional AI review (shared workflow nowo-tech/ci-actions). Needs the CodeRabbit GitHub App on nowo-tech/SeedKitBundle
+# or the CODERABBIT_API_KEY secret; without either it does nothing. Never a required check.
+on:
+  pull_request:
+    branches: [main, master]
+    types: [opened, synchronize, reopened]
+  push:
+    branches: [main, master]
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pull-requests: write
+
+concurrency:
+  group: coderabbit-${{ github.event.pull_request.number || github.event.workflow_run.id || github.sha }}
+  cancel-in-progress: true
+
+jobs:
+  coderabbit:
+    uses: nowo-tech/ci-actions/.github/workflows/coderabbit.yml@v1
+    secrets:
+      CODERABBIT_API_KEY: ${{ secrets.CODERABBIT_API_KEY }}

@@ -1,0 +1,93 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Overview{% endblock %}
+
+{% block nowo_ui_page_header %}
+    {{ include(nowo_ui_partial('page_header'), {
+        title: 'Seed Kit Bundle',
+        intro: 'Seed data for Symfony: one provider per kind of data, export (empty template or current rows), a dry-run diff and an idempotent apply of YAML / JSON / JSON Lines documents. Version 0.1.0 is console + provider API: this page lists the demo providers and serves the exports.',
+    }) }}
+{% endblock %}
+
+{% block body %}
+    {% embed '@NowoUiKit/demo_platform/_section.html.twig' with {title: 'Providers', intro: 'Two providers of the demo (src/Seed), in dependency order. Rows live in the demo database through a small application service, never raw SQL.', kind: 'table', testid: 'demo-providers', providers: providers, user: app.user} %}
+        {% block section_body %}
+            <table class="nowo-ui-data-table">
+                <thead>
+                    <tr>
+                        <th scope="col">Provider</th>
+                        <th scope="col">Version</th>
+                        <th scope="col">Natural key</th>
+                        <th scope="col">Depends on</th>
+                        <th scope="col">Rows</th>
+                        <th scope="col">Downloads (GET)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for provider in providers %}
+                        <tr data-testid="demo-provider-{{ provider.name }}">
+                            <th scope="row"><code class="nowo-ui-code">{{ provider.name }}</code></th>
+                            <td>{{ provider.version }}</td>
+                            <td><code class="nowo-ui-code">{{ provider.key }}</code></td>
+                            <td>{{ provider.depends_on ?: '-' }}</td>
+                            <td data-testid="demo-rows-{{ provider.name }}">{{ provider.rows }}</td>
+                            <td>
+                                {% if user %}
+                                    <a class="nowo-ui-link" href="{{ path('demo_seed_download', {provider: provider.name, kind: 'empty'}) }}" data-testid="demo-download-empty-{{ provider.name }}">Empty template</a>
+                                    · <a class="nowo-ui-link" href="{{ path('demo_seed_download', {provider: provider.name, kind: 'current'}) }}" data-testid="demo-download-current-{{ provider.name }}">Current export</a>
+                                    · <a class="nowo-ui-link" href="{{ path('demo_seed_download', {provider: provider.name, kind: 'schema'}) }}" data-testid="demo-download-schema-{{ provider.name }}">JSON Schema</a>
+                                {% else %}
+                                    <a class="nowo-ui-link" href="{{ path('demo_login') }}" data-testid="demo-download-login-{{ provider.name }}">Sign in to download</a>
+                                {% endif %}
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        {% endblock %}
+    {% endembed %}
+
+    {% embed '@NowoUiKit/demo_platform/_section.html.twig' with {title: 'Console commands to try', intro: 'Run them inside the PHP container (make shell). Without --actor a writing command refuses to run; the demo files are in config/seeds.', kind: 'content', testid: 'demo-commands', commands: commands} %}
+        {% block section_body %}
+            <ul class="nowo-ui-list">
+                {% for command in commands %}
+                    <li><code class="nowo-ui-code">{{ command }}</code></li>
+                {% endfor %}
+            </ul>
+            <p class="nowo-ui-muted">FrankenPHP: {{ worker ? 'worker mode (kernel kept alive, not reset)' : 'classic mode' }}. Sign in as <code class="nowo-ui-code">admin</code> (may export) or <code class="nowo-ui-code">viewer</code> (refused by the guard), password <code class="nowo-ui-code">demo</code>.</p>
+        {% endblock %}
+    {% endembed %}
+
+    {% embed '@NowoUiKit/demo_platform/_section.html.twig' with {title: 'Last runs', intro: 'The newest apply runs of the bundle history (RunMaintenance::list).', kind: 'table', testid: 'demo-runs', empty: runs is empty, state_message: 'No run yet: apply config/seeds/catalog.yaml from the console.', runs: runs} %}
+        {% block section_body %}
+            <table class="nowo-ui-data-table">
+                <thead>
+                    <tr>
+                        <th scope="col">Run</th>
+                        <th scope="col">Status</th>
+                        <th scope="col">Actor</th>
+                        <th scope="col">Channel</th>
+                        <th scope="col">Providers</th>
+                        <th scope="col">Prune</th>
+                        <th scope="col">Create / update / delete</th>
+                        <th scope="col">Created</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for run in runs %}
+                        <tr>
+                            <th scope="row"><code class="nowo-ui-code">{{ run.id|slice(0, 8) }}</code></th>
+                            <td><span class="nowo-ui-badge">{{ run.status }}</span></td>
+                            <td>{{ run.actor }}</td>
+                            <td>{{ run.channel }}</td>
+                            <td>{{ run.providers }}</td>
+                            <td>{{ run.prune ? 'yes' : 'no' }}</td>
+                            <td>{{ run.counts.create ?? 0 }} / {{ run.counts.update ?? 0 }} / {{ run.counts.delete ?? 0 }}</td>
+                            <td>{{ run.created }}</td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        {% endblock %}
+    {% endembed %}
+{% endblock %}
