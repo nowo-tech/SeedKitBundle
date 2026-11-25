@@ -199,7 +199,8 @@ final readonly class Applier
 
             throw $interrupted;
         } catch (Throwable $e) {
-            $this->logger?->error('Seed run {run} failed in a provider: {exception_class}.', ['run' => $runId->value, 'exception_class' => $e::class, 'exception' => $e]);
+            // Class and code only: driver messages quote row values (personal data, contract 13.1 / 14).
+            $this->logger?->error('Seed run {run} failed in a provider: {exception_class} ({exception_code}).', ['run' => $runId->value, 'exception_class' => $e::class, 'exception_code' => (string) $e->getCode()]);
             $interrupted = new ApplyInterruptedException(ApplyInterruptedException::PROVIDER_FAILED, $done, $total, $runId->value, null, $e);
             $this->fail($runId, $interrupted);
 
@@ -251,7 +252,10 @@ final readonly class Applier
             $counts[ChangeOp::Create->value] += $result->created;
             $counts[ChangeOp::Update->value] += $result->updated;
             $counts[ChangeOp::Delete->value] += $result->deleted;
-            $this->runs->markBatch($step->runId, $sequence, $counts);
+            if (!$this->runs->markBatch($step->runId, $sequence, $counts)) {
+                // The run's progress moved on without us (a replayed or skipped batch): roll the unit back.
+                throw new ApplyInterruptedException(ApplyInterruptedException::CONFLICT, $before, $step->total, $step->runId->value);
+            }
 
             return [$counts, $result, $changes];
         });

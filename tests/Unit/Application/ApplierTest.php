@@ -264,7 +264,7 @@ final class ApplierTest extends TestCase
     {
         $provider               = new ScriptedProvider();
         $provider->onApplyBatch = static function (): BatchResult {
-            throw new RuntimeException('secret detail');
+            throw new RuntimeException('secret detail', 42);
         };
         try {
             $this->apply([$provider], [Harness::document($provider, [['code' => 'a']])]);
@@ -277,7 +277,34 @@ final class ApplierTest extends TestCase
         self::assertSame(RunStatus::Failed, $this->onlyRun()->status);
         self::assertSame('SEED_010', $this->onlyRun()->errorCode);
         self::assertSame('error', $this->logger->records[0][0]);
-        self::assertSame(RuntimeException::class, $this->logger->records[0][2]['exception_class']);
+        self::assertSame(['run' => '00000000-0000-7000-8000-000000000001', 'exception_class' => RuntimeException::class, 'exception_code' => '42'], $this->logger->records[0][2], 'class and code only, never the exception (ZBK L1)');
+    }
+
+    #[Test]
+    public function aBatchTheRunAlreadyRecordedRollsBackAsAConflict(): void
+    {
+        $provider = new ScriptedProvider();
+        $runs     = $this->runs;
+        $writer   = new HookedWriteRunner(static function (int $call) use ($runs): void {
+            if ($call === 2) {
+                // Another delivery of the same run recorded batch 1 first (ZBK L2).
+                self::assertTrue($runs->markBatch(new RunId('00000000-0000-7000-8000-000000000001'), 1, ['create' => 9, 'update' => 0, 'delete' => 0]));
+            }
+        });
+        try {
+            $this->apply([$provider], [Harness::document($provider, [['code' => 'a'], ['code' => 'b']])], batchSize: 1, writer: $writer);
+            self::fail('expected');
+        } catch (ApplyInterruptedException $e) {
+            self::assertSame(ApplyInterruptedException::CONFLICT, $e->kind);
+            self::assertSame('CONFLICT_001', $e->errorCode());
+            self::assertSame([0, 2], [$e->batchesCommitted, $e->batchesTotal]);
+        }
+        $run = $this->onlyRun();
+        self::assertSame(RunStatus::Failed, $run->status);
+        self::assertSame('CONFLICT_001', $run->errorCode);
+        self::assertSame(1, $run->batchesDone, 'the other delivery\'s progress is kept');
+        self::assertSame(['create' => 9, 'update' => 0, 'delete' => 0], $run->counts);
+        self::assertSame(['SeedRunFailedEvent'], $this->events->names(), 'no batch event for the refused batch');
     }
 
     #[Test]

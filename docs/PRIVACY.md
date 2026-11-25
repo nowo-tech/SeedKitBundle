@@ -49,7 +49,8 @@ one hour while a run is planned and deletes it when the run ends (contract Q-SK-
 
 - Row errors name the row index, the natural key, the field pointer and the rule, never the value. The natural key is
   shown to the operator who runs the command (and to the uploader in 0.2), and **never logged**.
-- Log records, events and audit entries carry no item, natural key, value or file name.
+- Log records, events and audit entries carry no item, natural key, value or file name. A provider or database failure
+  during an apply is logged with the exception class and code only: driver messages quote row values.
 - Audit retention is the sink's (your log retention, or AuditKit's).
 
 ## Erasure
