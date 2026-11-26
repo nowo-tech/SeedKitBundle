@@ -7,6 +7,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-11-26
+
 0.2.0: the opt-in import / export pages (UiKit + FormKit) and the asynchronous apply (Messenger), on top of the 0.1
 core. No schema change: the 0.1 tables already hold the new columns' data.
 
