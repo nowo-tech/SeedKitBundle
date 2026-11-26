@@ -26,6 +26,8 @@ security:
                 target: demo_home
     access_control:
         - { path: '^/seed(/|$)', roles: IS_AUTHENTICATED_FULLY }
+        # SeedKit UI (nowo_seed_kit.ui_paths): the bundle's guard decides who may use it; the firewall needs a login.
+        - { path: '^/seeds(/|$)', roles: IS_AUTHENTICATED_FULLY }
         - { path: '^/', roles: PUBLIC_ACCESS }
 
 when@test:

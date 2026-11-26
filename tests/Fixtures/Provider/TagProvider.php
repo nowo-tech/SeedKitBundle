@@ -18,6 +18,7 @@ use Nowo\SeedKitBundle\Domain\Plan\PlanOptions;
 use Nowo\SeedKitBundle\Domain\Plan\RowChange;
 use Nowo\SeedKitBundle\Domain\Provider\AbstractSeedProvider;
 use Nowo\SeedKitBundle\Domain\Schema\SeedSchema;
+use RuntimeException;
 
 use function ksort;
 use function strcmp;
@@ -131,6 +132,9 @@ final class TagProvider extends AbstractSeedProvider
 
     protected function currentRows(SeedContext $context, array $keys, PlanOptions $options): array
     {
+        if ($this->store->failPlan) {
+            throw new RuntimeException('host failure while planning');
+        }
         if ($options->lockForUpdate) {
             ++$this->store->lockedPlans;
         }

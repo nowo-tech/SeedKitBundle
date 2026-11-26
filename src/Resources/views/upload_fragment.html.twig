@@ -1,0 +1,26 @@
+{#-
+  SeedKit upload dialog fragment (UiKit remote form dialog, 2.28): the same form as upload.html.twig, posted inside the
+  dialog; a 422 re-renders it in place, a valid file answers 204 + X-Nowo-Redirect to the run page.
+  Variables: page (View\FormPage), errors, max_bytes.
+-#}
+{% extends '@NowoUiKit/layout/fragment.html.twig' %}
+
+{% block body %}
+    {% set _b = page.bundle %}
+    {% set form = page.form %}
+    <div data-testid="seed-kit-upload-fragment">
+        {{ include('@NowoSeedKitBundle/_upload_errors.html.twig', {errors: errors, bundle: _b}) }}
+        {{ form_start(form, {attr: {class: nowo_ui_class('form', _b), 'data-testid': 'seed-kit-upload-form'}}) }}
+            {{ form_errors(form) }}
+            {% for child in form %}
+                {% if not child.rendered %}
+                    {{ form_row(child) }}
+                {% endif %}
+            {% endfor %}
+            <div class="{{ nowo_ui_class('form_actions', _b) }}" data-nowo-ui-dialog-actions>
+                <button type="submit" class="{{ nowo_ui_class('btn_primary', _b) }}" data-testid="seed-kit-upload-submit">{{ page.submitLabel|nowo_ui_trans }}</button>
+                <button type="button" class="{{ nowo_ui_class('btn_secondary', _b) }}" data-nowo-ui-dialog-close>{{ 'action.cancel'|trans({}, 'NowoUiKitBundle') }}</button>
+            </div>
+        {{ form_end(form) }}
+    </div>
+{% endblock %}

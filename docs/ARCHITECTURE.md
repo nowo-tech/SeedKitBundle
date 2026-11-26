@@ -23,14 +23,15 @@ src/Domain/Plan/            SeedPlan, DocumentPlan, RowChange, FieldChange, Fiel
 src/Domain/Schema/          SeedSchema (item schema + x-seed-* keywords)
 src/Domain/Provider/        AbstractSeedProvider (optional base for standard hosts), RowDiffer
 src/Domain/Context/         SeedContext (scope, actor, channel, run, pending keys, prune, visibility)
-src/Domain/Run/             RunRecord, RunStatus, Channel, SeedAction
+src/Domain/Run/             RunRecord, RunStatus, Channel, SeedAction, BatchManifest (stored batch layout, 0.2)
 src/Domain/Port/            SPI and ports (below)
 src/Domain/Event/           after-commit events (value objects and ids only)
 src/Domain/Exception/       SeedKitException and the coded exceptions
 src/Domain/Audit/           SeedAuditRecord
 src/Domain/Support/         CanonicalJson (RFC 8785 rules)
 src/Application/            ProviderRegistry, ItemNormaliser, Planner, PlanHasher, Applier, Exporter, SchemaPublisher,
-                            SchemaLinter, SeedOperations (entry points), RunMaintenance, SeedKitSettings, value types
+                            SchemaLinter, SeedOperations (entry points), SeedRuns (stored UI / Messenger runs, 0.2),
+                            RunMaintenance, SeedKitSettings, value types (RunView, ApplyOutcome, …)
 src/Infrastructure/Reader/  DocumentReader (YAML / JSON / JSON Lines), YamlPreScanner, JsonDuplicateKeyScanner,
                             ReaderLimits
 src/Infrastructure/Writer/  DocumentWriter (YAML with comments, JSON, JSON Lines)
@@ -38,13 +39,18 @@ src/Infrastructure/Schema/  OpisSchemaValidator
 src/Infrastructure/Dbal/    DbalRunStore, DbalLeaseStore, DbalWriteRunner, ConnectionOnlyRegistry, TableNames, DbalSql
 src/Infrastructure/Doctrine/ read-only entities SeedRun / SeedLease, SchemaMetadataListener (prefix, collations)
 src/Infrastructure/Support/ PsrLogAuditSink, UuidV7IdGenerator
+src/Infrastructure/Run/     GzipRunDocumentCodec (stored document of a UI run, 0.2)
 src/Infrastructure/Symfony/ Command (console), Security (guard, voter, checkers, default resolvers), Event,
-                            CacheWarmer, Attribute, DependencyInjection (config tree, services, compiler pass)
+                            CacheWarmer, Attribute, Controller + Form + Routing (0.2 UI: SeedKitController, FormKit
+                            forms, route loader), DependencyInjection (config tree, services, compiler pass)
 src/Bridge/AuditKit/        AuditKitSeedAuditSink
 src/Bridge/Vault/           VaultSecretReferenceValidator
+src/Bridge/Messenger/       ApplySeedRun, ApplySeedRunHandler, MessengerRunQueue (0.2)
+src/Bridge/Scheduler/       SeedKitPurgeSchedule, PurgeSeedRuns, PurgeSeedRunsHandler (0.2)
 src/Testing/                SeedProviderContractTestCase + in-memory support doubles (shipped for hosts)
 src/Resources/config/doctrine/  XML mapping of the two tables
 src/Resources/translations/     NowoSeedKitBundle.{en,es,it,fr,pt,de,nl,ca,eu,gl}.yaml
+src/Resources/views/            Twig pages on UiKit scaffolds (namespace NowoSeedKitBundle, 0.2)
 ```
 
 ## Ports
@@ -63,6 +69,9 @@ src/Resources/translations/     NowoSeedKitBundle.{en,es,it,fr,pt,de,nl,ca,eu,gl
 | `RunStoreInterface`, `LeaseStoreInterface` | `DbalRunStore`, `DbalLeaseStore` | in-memory doubles in `src/Testing/Support` |
 | `WriteRunnerInterface` | `DbalWriteRunner` | `DirectWriteRunner` in tests |
 | `IdGeneratorInterface` | `UuidV7IdGenerator` | `SequentialIdGenerator` in tests |
+| `RunDocumentCodecInterface` (0.2) | `GzipRunDocumentCodec` | — |
+| `RunQueueInterface` (0.2) | `MessengerRunQueue` (`messenger.enabled`) | none: no asynchronous apply |
+| `SeedCurrentScopeInterface` (0.2) | Host (`ui.current_scope`) | none: mounts need `{scopeId}` for kinds with an id |
 
 Public surface: the ports, the value objects, the events, the enums, the exceptions, `SeedOperations`,
 `AbstractSeedProvider` (the only class meant to be extended, optional) and the contract test kit. Concrete services are

@@ -58,6 +58,12 @@ unit test calls `reset()`; correctness never depends on the reset.
 
 It runs in `make test` and in CI.
 
+0.2 adds `tests/Integration/Ui/WorkerUiTest`: one container, `http_kernel` called directly (no `services_resetter`
+between requests), HTTP Basic per request, 300 requests alternating two users over the index, a run page and the
+progress JSON: the diff and the apply form appear for the run's own actor only, every page answers the same, memory
+growth after the warm-up stays below 3 MiB. The controller, `SeedRuns`, the codec, the route loader and the Messenger /
+Scheduler handlers are `readonly` services holding configuration only (Igor: 161 services, 0 KO).
+
 ## Static analysis
 
 - PHPStan level max with the `nowo-tech/phpstan-frankenphp` classic and worker rulesets (`make phpstan`, CI job

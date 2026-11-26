@@ -63,11 +63,22 @@ final readonly class SeedOperations
     /**
      * The providers available in a scope kind (all for null), in dependency order.
      *
+     * Every operation below refuses the `system` actor outside the console (web and Messenger, QB-SK-5).
+     *
      * @return list<SeedProviderInterface>
      */
     public function providers(?SeedScope $scope = null): array
     {
         return $this->registry->all($scope?->kind);
+    }
+
+    /**
+     * Whether the actor may run the action on the provider in an already resolved scope (the UI lists only what the
+     * viewer may use; every operation re-checks anyway).
+     */
+    public function isGranted(SeedAction $action, ProviderName $provider, SeedScope $scope, Channel $channel, ActorRef $actor): bool
+    {
+        return $this->gate->isGranted($action, $provider, $scope, $channel, $actor);
     }
 
     /**
@@ -130,15 +141,19 @@ final readonly class SeedOperations
     }
 
     /**
-     * The dry run: the plan of a document set (nothing stored or written).
+     * The dry run: the plan of a document set (nothing stored or written). `$announce` false re-plans for display only
+     * (the UI run page) without a second {@see SeedRunPlannedEvent}.
      *
      * @throws SeedKitException
      */
-    public function diff(DocumentSet $set, SeedScope $requested, ActorRef $actor, Channel $channel, PruneOptions $prune): SeedPlan
+    public function diff(DocumentSet $set, SeedScope $requested, ActorRef $actor, Channel $channel, PruneOptions $prune, bool $announce = true): SeedPlan
     {
         [$documents, $context] = $this->prepare($set, $requested, $actor, $channel, $prune);
         $plan                  = $this->planner->plan($documents, $context, $prune, !$context->canSeeCurrentValues);
-        $providers             = [];
+        if (!$announce) {
+            return $plan;
+        }
+        $providers = [];
         foreach ($plan->documents as $document) {
             $providers[] = $document->provider->value;
         }
@@ -209,13 +224,14 @@ final readonly class SeedOperations
     }
 
     /**
-     * Scope, documents, access and the run context.
+     * Scope, documents, access (`SEED_APPLY` on every provider, `SEED_PRUNE` too with prune) and the run context: the
+     * checks of a dry run and of an apply, shared with {@see SeedRuns} (UI and Messenger runs re-check them per call).
      *
      * @throws SeedKitException
      *
      * @return array{0: list<PreparedDocument>, 1: SeedContext}
      */
-    private function prepare(DocumentSet $set, SeedScope $requested, ActorRef $actor, Channel $channel, PruneOptions $prune): array
+    public function prepare(DocumentSet $set, SeedScope $requested, ActorRef $actor, Channel $channel, PruneOptions $prune): array
     {
         $scope     = $this->resolveScope($requested, $actor, $channel);
         $documents = $this->planner->prepare($set, $scope);

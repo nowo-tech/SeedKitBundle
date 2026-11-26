@@ -22,6 +22,12 @@
 | Lease renew / release | One statement each | `UPDATE … WHERE … AND run_id = ?` | Renew lost (lease expired and taken): the run stops as a conflict (`CONFLICT_002` after a commit) |
 | Run create | One write unit | Insert of a fresh UUID v7 row (`running`) after the leases and the stale-plan check | — |
 | Run finish | One write unit | `UPDATE … WHERE id = ?` (`applied`, `partially_applied`, `failed` + error code) | Best effort: a failure is logged, the lease expires anyway |
+| UI run create (upload, 0.2) | One write unit | Insert of a `planned` row with the gzip document; the same actor + scope + document + plan + prune reuses the live planned run instead | — |
+| **Run claim** (UI apply, Messenger, 0.2) | One write unit | `UPDATE … SET status = 'running', version = version + 1 WHERE id = ? AND status IN (planned, queued, partially_applied[, running]) AND version = ? [AND (status <> 'running' OR updated_at < now − lease)]`: one request or worker wins; a crashed worker's run is taken over after `apply.lease_seconds` | 0 rows: another request has it, or it is over: the page shows the run (idempotent double click / redelivery); a lock on the row: replays, then `CONFLICT_001` 409 + `Retry-After` |
+| Queue (0.2) | One write unit | Same compare-and-set `planned / partially_applied → queued` before the message is dispatched; a failed dispatch puts it back | 0 rows: already queued / running |
+| Release of a claim (0.2) | One write unit | `running →` back to `planned` / `queued` / `partially_applied` when nothing was written (lease held, prune guard, a provider failure in the re-plan); `running → failed` on a stale plan | Best effort: a stuck claim is taken over after the lease |
+| Discard (0.2) | One write unit | Compare-and-set `planned / partially_applied → discarded`, document deleted | 0 rows: `SEED_008` (404) |
+| Document expiry (0.2) | Batches of 500 ids (100 on an upload) | Keyset; `planned / queued → expired`, `partially_applied` keeps its status; document deleted | Best effort on upload; the purge command / schedule retry |
 | `runs:purge` | Batches of 500 ids | Keyset `SELECT id … ORDER BY id LIMIT 500`, `DELETE … WHERE id IN (…)` | Lock: exit 1, run it again |
 | `actor:forget` | Batches of 500 | `UPDATE … SET actor_ref = NULL` by id batch | Lock: exit 1 |
 
@@ -39,6 +45,15 @@ The dry run (`diff`) and exports write nothing and take no lock.
    → re-plan the slice with `lockForUpdate` → compare the batch digest → `applyBatch()` through the provider →
    `markBatch()` → commit → `afterBatch()` → renew the leases → `SeedBatchCommittedEvent`.
 6. **Finish** the run (`applied`), release the leases in `finally`, dispatch `SeedRunAppliedEvent`, audit.
+
+### Stored runs (0.2)
+
+A UI run is applied by whoever claims it (the web request or the Messenger worker). The batches use the same unit as
+above, but their numbering and reviewed digests come from the **stored batch layout** of the reviewed plan, and the
+batches up to `batches_done` are skipped: a redelivered message, a second worker or a retry after a partial apply
+never applies a batch twice (`markBatch()` is a compare-and-set on `batches_done`; when another worker recorded the
+batch first, ours rolls back with a conflict). Only a run with no committed batch is compared with its reviewed plan
+hash; after that, each remaining batch must still match its digest under the row locks.
 
 ## Atomicity
 
@@ -110,6 +125,11 @@ answers these codes with 409, `Retry-After` and `X-Conflict-Code`.
   nested, without replay).
 
 ## Tests and the Databases job
+
+0.2 adds `tests/Integration/Database/StoredRunConcurrencyTest` (two connections): a run claimed on the other
+connection is busy and writes nothing; a batch recorded by another worker makes ours roll back; a lock on the run row
+makes the claim replay and give up with nothing written, then the run applies; a crashed worker's run is taken over
+after the lease. `DbalStoredRunTest` checks the compare-and-set, the binary document and the expiry on each database.
 
 `tests/Integration/Database` runs on SQLite by default and on a server with `NOWO_TEST_DATABASE_URL`
 (`make test-with-db`, MySQL 8.4 from the `db` Compose profile). `ConcurrencyTest` uses **two connections**:

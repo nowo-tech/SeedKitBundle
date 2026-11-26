@@ -34,6 +34,7 @@
 - [Audit and events](#audit-and-events)
 - [Errors](#errors)
 - [Calling the operations from PHP](#calling-the-operations-from-php)
+- [Import / export pages](#import--export-pages)
 
 ## Concepts
 
@@ -735,3 +736,53 @@ $result = $operations->apply($set, SeedScope::parse('organization:o1'), new Acto
 ```
 
 Long applies belong on the console or, from 0.2, Messenger; do not run them inside a web request.
+
+## Import / export pages
+
+0.2, opt-in (`ui.enabled`; packages and routes in [INSTALLATION.md](INSTALLATION.md#ui-routes-02), options in
+[CONFIGURATION.md](CONFIGURATION.md#ui)):
+
+1. *Import / export* lists the kinds of data the viewer may export or apply in the scope of the page.
+2. *Empty template* / *Current data* / *JSON Schema* download the files to edit (by hand or with an AI using the schema).
+3. *Upload file* opens the upload dialog: the file is read, validated and planned; a refused file lists its row
+   errors (nothing stored); a valid one becomes a **planned run** and the run page opens with the diff.
+4. *Apply* (confirm dialog) applies the reviewed plan — or queues it with Messenger above
+   `messenger.async_threshold_changes`. *Discard* deletes the stored document.
+5. *History* lists the runs of the scope.
+
+```php
+// The same from PHP (an admin action of your own, a test):
+$run     = $seedRuns->upload($documentSet, $scope, $actor, prune: false);
+$outcome = $seedRuns->apply($run->id, $run->planHash, $scope, $actor);   // applied, queued or busy
+```
+
+### Asynchronous apply
+
+Route the message and give the checker a way to decide for a stored actor:
+
+```yaml
+framework:
+    messenger:
+        routing:
+            Nowo\SeedKitBundle\Bridge\Messenger\ApplySeedRun: async
+nowo_seed_kit:
+    messenger:
+        enabled: true
+        async_threshold_changes: 2000
+```
+
+```php
+public function canForActor(ActorRef $actor, SeedAction $action, ProviderName $provider, SeedScope $scope): bool
+{
+    return $this->can($this->users->byActorRef($actor), $action, $provider, $scope); // same rules as the web
+}
+```
+
+The handler applies the run once, as its actor, even when the message is delivered twice; a lock conflict or a held
+lease is retried, any other refusal fails the run for good (audited).
+
+### Current scope without an id in the path
+
+For `/organization/seeds` ("the organization I am working in"), implement `SeedCurrentScopeInterface::currentId()` and
+set `ui.current_scope`; the id is then resolved and checked by your scope resolver like an id from the URL.
+

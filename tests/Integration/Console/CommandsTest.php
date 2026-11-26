@@ -347,9 +347,9 @@ final class CommandsTest extends KernelTestCase
         $dry = $this->command('nowo:seed-kit:runs:purge', ['--before' => '2030-01-01', '--dry-run' => true]);
         self::assertSame(0, $dry->getStatusCode());
         self::assertStringContainsString('1 run(s) would be deleted.', $dry->getDisplay());
-        self::assertStringContainsString('0 run(s) deleted.', $this->command('seed:runs:purge')->getDisplay(), 'history window: nothing old enough');
+        self::assertStringContainsString('0 run(s) deleted, 0 stored document(s) expired.', $this->command('seed:runs:purge')->getDisplay(), 'history window: nothing old enough');
         self::assertSame(CommandSupport::EXIT_INVALID, $this->command('nowo:seed-kit:runs:purge', ['--before' => 'not a date'])->getStatusCode());
-        self::assertStringContainsString('1 run(s) deleted.', $this->command('nowo:seed-kit:runs:purge', ['--before' => '2030-01-01'])->getDisplay());
+        self::assertStringContainsString('1 run(s) deleted, 0 stored document(s) expired.', $this->command('nowo:seed-kit:runs:purge', ['--before' => '2030-01-01'])->getDisplay());
     }
 
     #[Test]

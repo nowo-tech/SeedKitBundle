@@ -6,6 +6,8 @@ namespace Nowo\SeedKitBundle\Tests\Fixtures\Host;
 
 use DateTimeImmutable;
 use Nowo\SeedKitBundle\Domain\Model\ActorRef;
+use Nowo\SeedKitBundle\Domain\Model\DocumentHash;
+use Nowo\SeedKitBundle\Domain\Model\PlanHash;
 use Nowo\SeedKitBundle\Domain\Model\RunId;
 use Nowo\SeedKitBundle\Domain\Model\SeedScope;
 use Nowo\SeedKitBundle\Domain\Port\RunStoreInterface;
@@ -20,7 +22,7 @@ use RuntimeException;
  */
 final readonly class ConflictingRunStore implements RunStoreInterface
 {
-    public function create(RunRecord $run): void
+    public function create(RunRecord $run, ?string $document = null): void
     {
         throw $this->conflict();
     }
@@ -40,9 +42,29 @@ final readonly class ConflictingRunStore implements RunStoreInterface
         return null;
     }
 
-    public function list(?SeedScope $scope, ?RunStatus $status, int $limit, ?RunId $before = null): array
+    public function list(?SeedScope $scope, ?RunStatus $status, int $limit, ?RunId $before = null, ?ActorRef $actor = null): array
     {
         return [];
+    }
+
+    public function document(RunId $run): ?string
+    {
+        return null;
+    }
+
+    public function findPlanned(ActorRef $actor, SeedScope $scope, DocumentHash $document, PlanHash $plan, bool $prune, DateTimeImmutable $now): ?RunRecord
+    {
+        return null;
+    }
+
+    public function transition(RunId $run, ?int $version, array $from, RunStatus $to, ?string $errorCode = null, ?DateTimeImmutable $expiresAt = null, ?DateTimeImmutable $staleBefore = null): bool
+    {
+        throw $this->conflict();
+    }
+
+    public function expire(DateTimeImmutable $now, int $batchSize): int
+    {
+        throw $this->conflict();
     }
 
     public function purge(DateTimeImmutable $before, int $batchSize): int

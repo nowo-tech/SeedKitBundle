@@ -1,0 +1,97 @@
+{#-
+  SeedKit run page (contract 12.5, REQ-UI-003 show scaffold): summary (status, counts, batches, plan hash), then the
+  progress of a queued / running run (UiKit `auto-refresh` region + a refresh link without JavaScript), the warnings,
+  the mass-prune confirmation form and the diff preview (changed fields before → after; values of the current data are
+  hidden without SEED_EXPORT).
+  Variables: page (View\ShowPage), run (RunRecord), documents (preview), warnings, stale, error, owner, apply_form
+  (FormView of a mass prune, or null), deletes, active, poll_ms, self_href, upload_href, progress_href.
+-#}
+{% extends '@NowoUiKit/page/show.html.twig' %}
+
+{% block nowo_ui_show_after %}
+    {% set _b = page.bundle %}
+    {% if active %}
+        <section class="{{ nowo_ui_class('section', _b) }}" data-controller="auto-refresh" data-auto-refresh-interval-value="{{ poll_ms }}" data-testid="seed-kit-run-progress" aria-live="polite">
+            <div id="seed-kit-run-progress-region" data-auto-refresh-region>
+                {{ include(nowo_ui_partial('progress', _b), {value: run.batchesDone, max: run.manifest ? run.manifest.writingBatches() : 0, label: 'seed_kit.ui.run.progress'|trans({'%done%': run.batchesDone, '%total%': run.manifest ? run.manifest.writingBatches() : 0}, 'NowoSeedKitBundle'), id: 'seed-kit-run-meter', bundle: _b}) }}
+            </div>
+            <p><a class="nowo-ui-link" href="{{ self_href }}" data-testid="seed-kit-run-refresh">{{ 'seed_kit.ui.run.refresh'|trans({}, 'NowoSeedKitBundle') }}</a></p>
+        </section>
+    {% endif %}
+
+    {% if stale %}
+        <div class="{{ nowo_ui_class('flash_warning', _b) }}" role="alert" data-testid="seed-kit-run-stale">{{ 'seed_kit.ui.run.stale'|trans({}, 'NowoSeedKitBundle') }} <a class="nowo-ui-link" href="{{ upload_href }}">{{ 'seed_kit.ui.upload.open'|trans({}, 'NowoSeedKitBundle') }}</a></div>
+    {% endif %}
+    {% if error %}
+        <div class="{{ nowo_ui_class('flash_error', _b) }}" role="alert" data-testid="seed-kit-run-error">{{ ('seed_kit.error.' ~ error)|trans({}, 'NowoSeedKitBundle') }} ({{ error }})</div>
+    {% endif %}
+    {% for warning in warnings %}
+        <div class="{{ nowo_ui_class('flash_warning', _b) }}" role="status" data-testid="seed-kit-run-warning">{{ ('seed_kit.warning.' ~ warning)|trans({}, 'NowoSeedKitBundle') }}</div>
+    {% endfor %}
+    {% if run.isMassPrune() and owner and run.status.value in ['planned', 'partially_applied'] %}
+        <div class="{{ nowo_ui_class('flash_error', _b) }}" role="alert" data-testid="seed-kit-run-mass-prune">{{ 'seed_kit.ui.run.mass_prune'|trans({'%count%': deletes}, 'NowoSeedKitBundle') }}</div>
+    {% endif %}
+
+    {% if apply_form %}
+        <section class="{{ nowo_ui_class('section', _b) }} {{ nowo_ui_class('card', _b) }}" data-testid="seed-kit-apply-mass">
+            <div class="{{ nowo_ui_class('card_body', _b) }}">
+                {{ form_start(apply_form, {attr: {class: nowo_ui_class('form', _b)}}) }}
+                    {% for child in apply_form %}
+                        {% if not child.rendered %}{{ form_row(child) }}{% endif %}
+                    {% endfor %}
+                    <div class="{{ nowo_ui_class('form_actions', _b) }}">
+                        <button type="submit" class="{{ nowo_ui_class('btn_danger', _b) }}" data-testid="seed-kit-apply">{{ 'seed_kit.ui.run.apply'|trans({}, 'NowoSeedKitBundle') }}</button>
+                    </div>
+                {{ form_end(apply_form) }}
+            </div>
+        </section>
+    {% endif %}
+
+    {% for document in documents %}
+        <section class="{{ nowo_ui_class('section', _b) }} {{ nowo_ui_class('card', _b) }}" aria-labelledby="seed-kit-diff-{{ loop.index }}" data-testid="seed-kit-diff-{{ document.provider }}">
+            <header class="{{ nowo_ui_class('card_header', _b) }}">
+                <h2 id="seed-kit-diff-{{ loop.index }}" class="{{ nowo_ui_class('card_title', _b) }}"><code class="nowo-ui-code">{{ document.provider }}</code></h2>
+                <p class="{{ nowo_ui_class('table_cell_muted', _b) }}" data-testid="seed-kit-diff-counts">{{ 'seed_kit.ui.run.counts'|trans({'%create%': document.counts.create, '%update%': document.counts.update, '%delete%': document.counts.delete, '%unchanged%': document.counts.unchanged}, 'NowoSeedKitBundle') }}</p>
+            </header>
+            <div class="{{ nowo_ui_class('card_body', _b) }}">
+                {% if document.rows is empty %}
+                    <p class="{{ nowo_ui_class('table_cell_muted', _b) }}">{{ 'seed_kit.ui.run.no_changes'|trans({}, 'NowoSeedKitBundle') }}</p>
+                {% else %}
+                    <div class="{{ nowo_ui_class('table_wrap', _b) }}" tabindex="0">
+                        <table class="{{ nowo_ui_class('table', _b) }}">
+                            <caption class="visually-hidden">{{ 'seed_kit.ui.run.preview_caption'|trans({'%provider%': document.provider}, 'NowoSeedKitBundle') }}</caption>
+                            <thead>
+                                <tr>
+                                    <th scope="col">{{ 'seed_kit.ui.run.op'|trans({}, 'NowoSeedKitBundle') }}</th>
+                                    <th scope="col">{{ 'seed_kit.ui.run.key'|trans({}, 'NowoSeedKitBundle') }}</th>
+                                    <th scope="col">{{ 'seed_kit.ui.run.fields'|trans({}, 'NowoSeedKitBundle') }}</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for row in document.rows %}
+                                    <tr data-testid="seed-kit-diff-row" data-op="{{ row.op }}">
+                                        <td><span class="{{ nowo_ui_class(row.op == 'create' ? 'badge_success' : (row.op == 'delete' ? 'badge_danger' : 'badge_info'), _b) }}">{{ ('seed_kit.ui.op.' ~ row.op)|trans({}, 'NowoSeedKitBundle') }}</span></td>
+                                        <td><code class="nowo-ui-code">{{ row.key }}</code></td>
+                                        <td>
+                                            {% if row.fields is not empty %}
+                                                <ul class="nowo-ui-list">
+                                                    {% for field in row.fields %}
+                                                        <li><code class="nowo-ui-code">{{ field.path }}</code>:
+                                                            {% if field.before_kind == 'value' %}<del>{{ field.before }}</del>{% elseif field.before_kind == 'hidden' %}<em>{{ 'seed_kit.ui.run.hidden'|trans({}, 'NowoSeedKitBundle') }}</em>{% else %}—{% endif %}
+                                                            →
+                                                            {% if field.after_kind == 'value' %}<ins>{{ field.after }}</ins>{% elseif field.after_kind == 'hidden' %}<em>{{ 'seed_kit.ui.run.hidden'|trans({}, 'NowoSeedKitBundle') }}</em>{% else %}—{% endif %}
+                                                        </li>
+                                                    {% endfor %}
+                                                </ul>
+                                            {% else %}—{% endif %}
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% endif %}
+            </div>
+        </section>
+    {% endfor %}
+{% endblock %}

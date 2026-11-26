@@ -8,6 +8,8 @@ seed_kit:
     SEED_005: Los datos cambiaron desde el plan revisado; revisa el nuevo diff y vuelve a aplicar.
     SEED_006: Una fila cambió mientras se aplicaba el plan; los lotes ya aplicados se mantienen. Vuelve a aplicar el documento.
     SEED_007: El tipo de ámbito del documento no coincide con el ámbito destino.
+    SEED_008: La ejecución de seeds no está disponible; no existe, no es tuya o su documento ha caducado.
+    SEED_009: El plan es demasiado grande para aplicarse en una petición web; aplica el fichero desde la consola.
     SEED_010: El proveedor falló al aplicar un lote; los lotes ya aplicados se mantienen.
     SEED_011: Un proveedor de seeds incumplió su contrato; el bundle no ha escrito nada.
     SEED_012: Una protección de borrado rechazó el plan; confírmalo explícitamente.
@@ -65,3 +67,117 @@ seed_kit:
     schema_maxItems: La lista tiene demasiadas entradas.
     schema_minItems: La lista tiene muy pocas entradas.
     schema_uniqueItems: La lista tiene entradas repetidas.
+  warning:
+    exported_from_differs: El fichero se exportó desde un ámbito distinto de aquel al que lo aplicas; revisa el diff.
+  ui:
+    index:
+      title: Importar / exportar
+      intro: Descarga una plantilla o los datos actuales de cada tipo de datos, edita el fichero, súbelo, revisa el diff y aplícalo.
+      caption: Tipos de datos que puedes exportar o importar aquí
+      provider: Datos
+      description: Descripción
+      key: Clave natural
+      depends: Depende de
+      data: Notas
+      personal_data: Datos personales
+      secrets: Secretos como referencias
+      export_only: Solo exportar
+      download_empty: Plantilla vacía
+      download_current: Datos actuales
+      download_schema: JSON Schema
+      empty_title: Nada que importar ni exportar
+      empty: No puedes exportar ni importar ningún tipo de datos en este ámbito.
+    export:
+      confirm_title: ¿Descargar datos personales?
+      personal_data: El fichero de %provider% contiene datos personales. Guárdalo de forma segura, compártelo solo como permita tu organización y bórralo cuando ya no lo necesites. La descarga queda registrada.
+      download: Descargar
+    upload:
+      open: Subir fichero
+      title: Subir un fichero de seeds
+      intro: 'YAML, JSON o JSON Lines, de uno o varios tipos de datos. Todavía no se escribe nada: primero verás el diff.'
+      file: Fichero
+      file_help: Un fichero .yaml, .json o .jsonl exportado aquí o escrito con el JSON Schema.
+      prune: Borrar las filas que el fichero omite
+      prune_help: Solo las filas que puedes borrar en este ámbito. Confirmarás el número de borrados antes de borrar nada.
+      submit: Comprobar el fichero
+      errors_title: Se han encontrado %count% problema(s); no se ha guardado nada.
+      error_row: Fila
+      error_key: Clave
+      error_field: Campo
+      error_message: Problema
+    run:
+      title: Ejecución %id%
+      intro: Revisa los cambios y luego aplícalos o descarta la ejecución.
+      summary: Resumen
+      providers: Datos
+      scope: Ámbito
+      planned: Previsto
+      counts: '%create% por crear, %update% por actualizar, %delete% por borrar, %unchanged% sin cambios'
+      written: Escrito
+      written_counts: '%create% creadas, %update% actualizadas, %delete% borradas'
+      batches: Lotes
+      prune: Borra las filas que el fichero omite
+      plan_hash: Hash del plan
+      created: Subido
+      error: Último error
+      apply: Aplicar
+      apply_confirm_title: ¿Aplicar esta ejecución?
+      apply_confirm: Se escribirán %changes% fila(s). Las filas sin cambios no se tocan.
+      discard: Descartar
+      discard_confirm_title: ¿Descartar esta ejecución?
+      discard_confirm: El documento subido se elimina; no se escribe nada.
+      confirm_deletes: Número de filas a borrar
+      confirm_deletes_help: Escribe el número de borrados indicado arriba para confirmarlos.
+      confirm_deletes_wrong: El número no coincide con los borrados de esta ejecución.
+      mass_prune: Esta ejecución borra %count% fila(s), más de la proporción permitida de las filas actuales. Escribe el número para confirmar.
+      stale: Los datos cambiaron desde que se comprobó este fichero. Súbelo de nuevo para ver el nuevo diff.
+      progress: '%done% de %total% lotes aplicados'
+      refresh: Actualizar
+      no_changes: Sin cambios para este tipo de datos.
+      preview_caption: Cambios de %provider%
+      op: Cambio
+      key: Clave
+      fields: Campos (antes → después)
+      hidden: oculto
+    runs:
+      title: Historial
+      intro: Ficheros de seeds subidos y aplicados en este ámbito.
+      caption: Ejecuciones, las más recientes primero
+      created: Subido
+      status: Estado
+      providers: Datos
+      changes: Cambios
+      actor: Por
+      channel: Desde
+      empty_title: Aún no hay ejecuciones
+      empty: Sube un fichero para empezar.
+      older: Ejecuciones anteriores
+      pager: Páginas de ejecuciones
+    status:
+      planned: Listo para aplicar
+      queued: En cola
+      running: Aplicando
+      applied: Aplicada
+      partially_applied: Aplicada parcialmente
+      failed: Fallida
+      discarded: Descartada
+      expired: Caducada
+    channel:
+      http: Web
+      console: Consola
+      messenger: Segundo plano
+    op:
+      create: Crear
+      update: Actualizar
+      unchanged: Sin cambios
+      delete: Borrar
+    message:
+      title: No se pudo continuar la ejecución
+      what: Qué ha pasado
+      code: Código
+      back: Volver a importar / exportar
+      conflict: Otra ejecución está aplicando ahora mismo los mismos datos. Espera un momento e inténtalo de nuevo.
+      interrupted: La aplicación se detuvo tras %done% de %total% lotes; los lotes aplicados se mantienen. Vuelve a aplicar la ejecución para terminarla, o sube el fichero de nuevo.
+      stale: Los datos cambiaron desde que se comprobó el fichero. Súbelo de nuevo para revisar el nuevo diff.
+      too_large: La ejecución escribe %changes% filas; una petición web puede escribir como máximo %limit%. Aplica el fichero desde la consola.
+      refused: Se rechazó la petición.

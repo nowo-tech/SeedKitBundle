@@ -20,6 +20,9 @@ final class InMemoryStore
     /** Calls of afterBatch(). */
     public int $afterBatchCalls = 0;
 
+    /** Makes the fixture providers fail while planning (a host failure in a re-plan). */
+    public bool $failPlan = false;
+
     /** Whether planBatch() was asked for locks. */
     public int $lockedPlans = 0;
 

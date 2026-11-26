@@ -1,0 +1,23 @@
+{#-
+  SeedKit runs list (contract 12.5, REQ-UI-003 list scaffold). Variables: page (View\ListPage), next_href (keyset pager:
+  older runs, or null).
+-#}
+{% extends '@NowoUiKit/page/list.html.twig' %}
+
+{% block nowo_ui_list_row %}
+    {%- set _b = page.bundle -%}
+    <td class="{{ nowo_ui_class('table_cell', _b) }}" data-label="{{ 'seed_kit.ui.runs.created'|trans({}, 'NowoSeedKitBundle') }}"><a class="nowo-ui-link" href="{{ row.href }}">{{ row.created }}</a></td>
+    <td class="{{ nowo_ui_class('table_cell', _b) }}" data-label="{{ 'seed_kit.ui.runs.status'|trans({}, 'NowoSeedKitBundle') }}"><span class="{{ nowo_ui_class('badge_' ~ row.tone, _b) }}" data-testid="seed-kit-run-row-status">{{ row.status_label }}</span></td>
+    <td class="{{ nowo_ui_class('table_cell', _b) }}" data-label="{{ 'seed_kit.ui.runs.providers'|trans({}, 'NowoSeedKitBundle') }}" data-nowo-ui-priority="2"><code class="nowo-ui-code">{{ row.providers }}</code></td>
+    <td class="{{ nowo_ui_class('table_cell', _b) }} nowo-ui-cell--end" data-label="{{ 'seed_kit.ui.runs.changes'|trans({}, 'NowoSeedKitBundle') }}" data-nowo-ui-priority="2">{{ row.changes }}</td>
+    <td class="{{ nowo_ui_class('table_cell', _b) }}{{ row.actor ? '' : ' ' ~ nowo_ui_class('table_cell_muted', _b) }}" data-label="{{ 'seed_kit.ui.runs.actor'|trans({}, 'NowoSeedKitBundle') }}" data-nowo-ui-priority="3">{{ row.actor ?? '—' }}</td>
+    <td class="{{ nowo_ui_class('table_cell', _b) }}" data-label="{{ 'seed_kit.ui.runs.channel'|trans({}, 'NowoSeedKitBundle') }}" data-nowo-ui-priority="3">{{ ('seed_kit.ui.channel.' ~ row.channel)|trans({}, 'NowoSeedKitBundle') }}</td>
+{% endblock %}
+
+{% block nowo_ui_list_after %}
+    {% if next_href %}
+        <nav class="{{ nowo_ui_class('toolbar', page.bundle) }}" aria-label="{{ 'seed_kit.ui.runs.pager'|trans({}, 'NowoSeedKitBundle') }}">
+            <a class="{{ nowo_ui_class('btn_secondary', page.bundle) }}" href="{{ next_href }}" data-testid="seed-kit-runs-older">{{ 'seed_kit.ui.runs.older'|trans({}, 'NowoSeedKitBundle') }}</a>
+        </nav>
+    {% endif %}
+{% endblock %}

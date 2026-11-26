@@ -1,0 +1,4 @@
+# SeedKit UI routes (nowo_seed_kit_<kind>_<page>), one set per ui.mounts entry.
+nowo_seed_kit:
+    resource: .
+    type: nowo_seed_kit

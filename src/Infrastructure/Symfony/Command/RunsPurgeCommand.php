@@ -23,7 +23,7 @@ use function sprintf;
  * `nowo:seed-kit:runs:purge` (alias `seed:runs:purge`): deletes finished runs older than `--before` (default: now minus
  * `runs.history_days`), in batches; `--dry-run` only counts. Exit 0, 1 on a lock conflict, 2 for a bad date.
  */
-#[AsCommand(name: 'nowo:seed-kit:runs:purge', description: 'Delete finished seed runs older than the history window')]
+#[AsCommand(name: 'nowo:seed-kit:runs:purge', description: 'Expire stored run documents past their TTL and delete finished seed runs older than the history window')]
 final class RunsPurgeCommand extends Command
 {
     /**
@@ -57,7 +57,9 @@ final class RunsPurgeCommand extends Command
             } catch (Exception) {
                 throw new InvalidValueException('--before is not a date.');
             }
-            $count = $this->runs->purge($limit, (bool) $input->getOption('dry-run'));
+            $dryRun  = (bool) $input->getOption('dry-run');
+            $expired = $dryRun ? 0 : $this->runs->expire();
+            $count   = $this->runs->purge($limit, $dryRun);
         } catch (SeedKitException $e) {
             return $this->support->fail($io, $e);
         } catch (ConcurrencyConflict $e) {
@@ -65,7 +67,7 @@ final class RunsPurgeCommand extends Command
 
             return CommandSupport::EXIT_FAILURE;
         }
-        $io->success(sprintf($input->getOption('dry-run') ? '%d run(s) would be deleted.' : '%d run(s) deleted.', $count));
+        $io->success($dryRun ? sprintf('%d run(s) would be deleted.', $count) : sprintf('%d run(s) deleted, %d stored document(s) expired.', $count, $expired));
 
         return Command::SUCCESS;
     }

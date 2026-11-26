@@ -12,6 +12,7 @@ use Nowo\SeedKitBundle\Domain\Event\SeedRunAppliedEvent;
 use Nowo\SeedKitBundle\Domain\Event\SeedRunFailedEvent;
 use Nowo\SeedKitBundle\Domain\Exception\ApplyInterruptedException;
 use Nowo\SeedKitBundle\Domain\Exception\LeaseHeldException;
+use Nowo\SeedKitBundle\Domain\Exception\RunNotAvailableException;
 use Nowo\SeedKitBundle\Domain\Exception\StalePlanException;
 use Nowo\SeedKitBundle\Domain\Model\PlanHash;
 use Nowo\SeedKitBundle\Domain\Model\ProviderName;
@@ -27,6 +28,7 @@ use Nowo\SeedKitBundle\Domain\Port\IdGeneratorInterface;
 use Nowo\SeedKitBundle\Domain\Port\LeaseStoreInterface;
 use Nowo\SeedKitBundle\Domain\Port\RunStoreInterface;
 use Nowo\SeedKitBundle\Domain\Port\WriteRunnerInterface;
+use Nowo\SeedKitBundle\Domain\Run\BatchManifest;
 use Nowo\SeedKitBundle\Domain\Run\RunRecord;
 use Nowo\SeedKitBundle\Domain\Run\RunStatus;
 use Nowo\TransactionContract\ConcurrencyConflict;
@@ -49,6 +51,11 @@ use function usort;
  * never applies a batch twice). Leases are released in `finally`; events and audit come after the last commit.
  *
  * A plan without changes writes nothing at all (no run row, no transaction): re-applying a file is a no-op (SC-002).
+ *
+ * 0.2: {@see applyStored()} applies a run stored by the UI (claimed `running` by the caller): its batches are numbered
+ * and checked against the stored batch layout ({@see BatchManifest}), batches up to `batches_done` are skipped (a
+ * Messenger redelivery or a resume never applies a batch twice), and only a run that has not committed any batch is
+ * compared with its reviewed plan hash (a resumed run relies on the per-batch digests, checked under the row locks).
  * Stateless; everything per run lives in local variables.
  */
 final readonly class Applier
@@ -105,8 +112,21 @@ final readonly class Applier
             if ($plan->changes() === 0) {
                 return new ApplyResult($plan, null, 0);
             }
+            $manifest  = BatchManifest::fromPlan($plan);
+            $counts    = [ChangeOp::Create->value => 0, ChangeOp::Update->value => 0, ChangeOp::Delete->value => 0];
+            $providers = [];
+            foreach ($plan->documents as $document) {
+                $providers[$document->provider->value] = $document->version;
+            }
+            $record = new RunRecord($runId, $context->scope, $context->actor, $context->channel, RunStatus::Running, $providers, $prune->prune, $set->hash, $plan->hash, $manifest->flat(), 0, $counts, null, $this->clock->now(), null, $manifest);
+            // @igor-ignore - the write runner calls the closure inside one write unit and keeps nothing.
+            $this->writer->write(function () use ($record): null {
+                $this->runs->create($record);
 
-            return $this->run($set, $documents, $context, $prune, $plan, $runId, $held);
+                return null;
+            });
+
+            return $this->run($set, $documents, $context, $prune, $plan, $record, $held, false);
         } finally {
             foreach ($held as $name) {
                 $this->release($name, $context, $runId);
@@ -115,39 +135,74 @@ final readonly class Applier
     }
 
     /**
-     * Records the run and applies its batches.
+     * Applies a run the UI stored and the caller claimed (`running`): leases, the stale check of a run that has not
+     * committed a batch yet (`$run->planHash`), then the batches of the stored layout after `batches_done`.
+     *
+     * @param list<PreparedDocument> $documents from {@see Planner::prepare()} over the stored document
+     *
+     * @throws LeaseHeldException when another run holds a lease (nothing written; the caller releases the claim)
+     * @throws StalePlanException when the data changed since the review and no batch was committed (nothing written)
+     * @throws ApplyInterruptedException when the run stopped after it started writing (the run row is updated)
+     */
+    public function applyStored(RunRecord $run, DocumentSet $set, array $documents, SeedContext $context, PruneOptions $prune): ApplyResult
+    {
+        if (!$run->manifest instanceof BatchManifest) {
+            throw new RunNotAvailableException();
+        }
+        $names = [];
+        foreach ($documents as $document) {
+            $names[] = $document->provider->name();
+        }
+        usort($names, static fn (ProviderName $a, ProviderName $b): int => $a->value <=> $b->value);
+        $held = [];
+        try {
+            foreach ($names as $name) {
+                $left = $this->leases->acquire($name, $context->scope, $run->id, $this->settings->leaseSeconds);
+                if ($left > 0) {
+                    throw new LeaseHeldException($left);
+                }
+                $held[] = $name;
+            }
+            $planContext = new SeedContext($context->scope, $context->actor, $context->channel, null, new PendingKeys(), $prune->prune, $context->canSeeCurrentValues);
+            $plan        = $this->planner->plan($documents, $planContext, $prune);
+            if ($run->batchesDone === 0 && !$plan->hash->equals($run->planHash)) {
+                throw new StalePlanException();
+            }
+
+            return $this->run($set, $documents, $context, $prune, $plan, $run, $held, true);
+        } finally {
+            foreach ($held as $name) {
+                $this->release($name, $context, $run->id);
+            }
+        }
+    }
+
+    /**
+     * Applies the batches of a recorded run after `batches_done`, in the layout of its manifest, and ends it.
      *
      * @param list<PreparedDocument> $documents
      * @param list<ProviderName> $held
      *
      * @throws ApplyInterruptedException
      */
-    private function run(DocumentSet $set, array $documents, SeedContext $context, PruneOptions $prune, SeedPlan $plan, RunId $runId, array $held): ApplyResult
+    private function run(DocumentSet $set, array $documents, SeedContext $context, PruneOptions $prune, SeedPlan $plan, RunRecord $record, array $held, bool $stored): ApplyResult
     {
-        $digests   = [];
-        $writes    = [];
-        $providers = [];
-        $flat      = [];
-        foreach ($plan->documents as $document) {
-            $digests[$document->provider->value]   = [...$document->upsertDigests, ...$document->deleteDigests];
-            $writes[$document->provider->value]    = $document->writes;
-            $providers[$document->provider->value] = $document->version;
-            foreach ($digests[$document->provider->value] as $digest) {
-                $flat[] = $digest;
-            }
+        $runId    = $record->id;
+        $manifest = $record->manifest ?? BatchManifest::fromPlan($plan);
+        $digests  = [];
+        $writes   = [];
+        foreach ($documents as $document) {
+            $name           = $document->provider->name()->value;
+            $digests[$name] = $manifest->digests($name);
+            $writes[$name]  = $manifest->writes($name);
         }
-        $total  = $plan->writingBatches();
-        $counts = [ChangeOp::Create->value => 0, ChangeOp::Update->value => 0, ChangeOp::Delete->value => 0];
-        $record = new RunRecord($runId, $context->scope, $context->actor, $context->channel, RunStatus::Running, $providers, $prune->prune, $set->hash, $plan->hash, $flat, 0, $counts, null, $this->clock->now());
-        // @igor-ignore - the write runner calls the closure inside one write unit and keeps nothing.
-        $this->writer->write(function () use ($record): null {
-            $this->runs->create($record);
-
-            return null;
-        });
+        $providers = $record->providers;
+        $total     = $manifest->writingBatches();
+        $counts    = $record->counts + [ChangeOp::Create->value => 0, ChangeOp::Update->value => 0, ChangeOp::Delete->value => 0];
 
         $runContext = new SeedContext($context->scope, $context->actor, $context->channel, $runId, new PendingKeys(), $prune->prune, $context->canSeeCurrentValues);
-        $done       = 0;
+        $done       = $record->batchesDone;
+        $sequence   = 0;
         $step       = new BatchStep($runId, $total, $held);
         try {
             $seenByProvider = [];
@@ -158,7 +213,8 @@ final readonly class Applier
                 $number = 0;
                 foreach ($this->planner->slices($document, $runContext, $seen, $errors) as $slice) {
                     ++$number;
-                    if (!($writes[$name->value][$number - 1] ?? false)) {
+                    if (!($writes[$name->value][$number - 1] ?? false) || ++$sequence <= $done) {
+                        // Not writing, or committed by an earlier attempt of this run (resume / redelivery).
                         continue;
                     }
                     $items = [];
@@ -177,6 +233,9 @@ final readonly class Applier
                     [$seen, $first] = $seenByProvider[$name->value];
                     $slices         = count($digests[$name->value]) - $first;
                     for ($slice = 1; $slice <= $slices; ++$slice) {
+                        if (++$sequence <= $done) {
+                            continue;
+                        }
                         // The earlier deletion slices are committed, so the planned slice N is now the first one.
                         $replan = function (PlanOptions $options) use ($document, $runContext, $seen): array {
                             foreach ($this->planner->deletionSlices($document, $runContext, $seen, $options) as $changes) {
@@ -190,19 +249,19 @@ final readonly class Applier
                 }
             }
         } catch (ApplyInterruptedException $e) {
-            $this->fail($runId, $e);
+            $this->fail($runId, $e, $stored);
 
             throw $e;
         } catch (ConcurrencyConflict $e) {
             $interrupted = new ApplyInterruptedException(ApplyInterruptedException::CONFLICT, $done, $total, $runId->value, $e->retryAfterSeconds(), $e);
-            $this->fail($runId, $interrupted);
+            $this->fail($runId, $interrupted, $stored);
 
             throw $interrupted;
         } catch (Throwable $e) {
             // Class and code only: driver messages quote row values (personal data, contract 13.1 / 14).
             $this->logger?->error('Seed run {run} failed in a provider: {exception_class} ({exception_code}).', ['run' => $runId->value, 'exception_class' => $e::class, 'exception_code' => (string) $e->getCode()]);
             $interrupted = new ApplyInterruptedException(ApplyInterruptedException::PROVIDER_FAILED, $done, $total, $runId->value, null, $e);
-            $this->fail($runId, $interrupted);
+            $this->fail($runId, $interrupted, $stored);
 
             throw $interrupted;
         }
@@ -212,9 +271,10 @@ final readonly class Applier
 
             return null;
         });
-        $this->dispatcher?->dispatch(new SeedRunAppliedEvent($runId, array_keys($providers), $context->scope, $counts, $set->hash, $plan->hash, $context->actor, $context->channel));
+        $written = [ChangeOp::Create->value => $counts[ChangeOp::Create->value], ChangeOp::Update->value => $counts[ChangeOp::Update->value], ChangeOp::Delete->value => $counts[ChangeOp::Delete->value]];
+        $this->dispatcher?->dispatch(new SeedRunAppliedEvent($runId, array_keys($providers), $context->scope, $written, $set->hash, $record->planHash, $context->actor, $context->channel));
 
-        return new ApplyResult($plan, $runId, $done, $counts);
+        return new ApplyResult($plan, $runId, $done, $written);
     }
 
     /**
@@ -275,14 +335,20 @@ final readonly class Applier
     }
 
     /**
-     * Marks the run failed or partially applied (best effort) and dispatches the failure event.
+     * Marks the run failed or partially applied (best effort) and dispatches the failure event. A stored (UI) run that
+     * met a lock conflict before its first batch goes back to `planned`, so it can simply be applied again.
      */
-    private function fail(RunId $runId, ApplyInterruptedException $e): void
+    private function fail(RunId $runId, ApplyInterruptedException $e, bool $stored): void
     {
         try {
             // @igor-ignore - the write runner calls the closure inside one write unit and keeps nothing.
-            $this->writer->write(function () use ($runId, $e): null {
-                $this->runs->finish($runId, $e->batchesCommitted > 0 ? RunStatus::PartiallyApplied : RunStatus::Failed, $e->errorCode());
+            $this->writer->write(function () use ($runId, $e, $stored): null {
+                if ($stored && !$e->isPartial() && $e->kind === ApplyInterruptedException::CONFLICT) {
+                    $this->runs->transition($runId, null, [RunStatus::Running], RunStatus::Planned, $e->errorCode());
+
+                    return null;
+                }
+                $this->runs->finish($runId, $e->isPartial() ? RunStatus::PartiallyApplied : RunStatus::Failed, $e->errorCode());
 
                 return null;
             });

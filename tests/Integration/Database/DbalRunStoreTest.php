@@ -71,10 +71,9 @@ final class DbalRunStoreTest extends DatabaseTestCase
     }
 
     #[Test]
-    public function finishingSetsTheStatusTheErrorAndClearsTheDocument(): void
+    public function finishingSetsTheStatusTheErrorAndKeepsTheDocumentOfAPartialRun(): void
     {
-        $this->runs->create($this->record(1));
-        $this->connection->executeStatement("UPDATE nowo_seed_run SET document = 'gz'");
+        $this->runs->create($this->record(1), 'gz');
         $this->clock->modify('+5 minutes');
 
         $this->runs->finish(self::runId(1), RunStatus::PartiallyApplied, 'SEED_006');
@@ -83,7 +82,12 @@ final class DbalRunStoreTest extends DatabaseTestCase
         self::assertSame(RunStatus::PartiallyApplied, $run?->status);
         self::assertSame('SEED_006', $run->errorCode);
         self::assertSame('2026-11-24 09:05:00', $run->finishedAt?->format('Y-m-d H:i:s'));
-        self::assertNull($this->connection->fetchOne('SELECT document FROM nowo_seed_run'));
+        self::assertTrue($run->hasDocument, 'a partially applied run may be resumed until its document expires');
+        self::assertSame('gz', $this->runs->document(self::runId(1)));
+
+        $this->runs->finish(self::runId(1), RunStatus::Failed, 'SEED_006');
+        self::assertNull($this->runs->document(self::runId(1)), 'a final status clears the document');
+        self::assertFalse($this->runs->find(self::runId(1))?->hasDocument);
     }
 
     #[Test]

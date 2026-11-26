@@ -1,6 +1,6 @@
 {#- REQ-DEMO-014: the demo runs inside UiKit's shared demo platform shell (@NowoUiKit/demo_platform/layout.html.twig):
     the same top bar, aside, content width, theme and footer as every other nowo-tech bundle demo. This file only
-    declares the demo (nowo_ui_demo_platform). Bundle 0.1.0 has no UI of its own (console + provider API). -#}
+    declares the demo (nowo_ui_demo_platform). The bundle's 0.2 pages (/seeds) extend UiKit scaffolds on this layout (ui.layout). -#}
 {% extends '@NowoUiKit/demo_platform/layout.html.twig' %}
 {% set nowo_ui_demo_platform = {
     bundle: 'Seed Kit',
@@ -11,6 +11,7 @@
     auth: {login_route: 'demo_login', logout_route: 'demo_logout'},
     nav: [
         {label: 'Overview', route: 'demo_home'},
+        {label: 'Import / export', route: 'nowo_seed_kit_platform_index'},
     ],
 } %}
 

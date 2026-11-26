@@ -8,6 +8,8 @@ seed_kit:
     SEED_005: De gegevens zijn gewijzigd sinds het beoordeelde plan; bekijk de nieuwe diff en pas opnieuw toe.
     SEED_006: Een rij is gewijzigd tijdens het toepassen; reeds toegepaste batches blijven. Pas het document opnieuw toe.
     SEED_007: Het soort scope van het document komt niet overeen met de doelscope.
+    SEED_008: De seed-run is niet beschikbaar; hij bestaat niet, is niet van jou of het document is verlopen.
+    SEED_009: Het plan is te groot om in een webverzoek toe te passen; pas het bestand toe vanaf de console.
     SEED_010: De provider kon een batch niet toepassen; reeds toegepaste batches blijven.
     SEED_011: Een seed-provider heeft zijn contract geschonden; de bundle heeft niets geschreven.
     SEED_012: Een verwijderbeveiliging heeft het plan geweigerd; bevestig het expliciet.
@@ -65,3 +67,117 @@ seed_kit:
     schema_maxItems: De lijst heeft te veel items.
     schema_minItems: De lijst heeft te weinig items.
     schema_uniqueItems: De lijst heeft dubbele items.
+  warning:
+    exported_from_differs: Het bestand is geëxporteerd uit een ander bereik dan waarop je het toepast; controleer de diff.
+  ui:
+    index:
+      title: Importeren / exporteren
+      intro: Download een sjabloon of de huidige gegevens van elk soort gegevens, bewerk het bestand, upload het, controleer de diff en pas het toe.
+      caption: Soorten gegevens die je hier mag exporteren of importeren
+      provider: Gegevens
+      description: Beschrijving
+      key: Natuurlijke sleutel
+      depends: Hangt af van
+      data: Opmerkingen
+      personal_data: Persoonsgegevens
+      secrets: Geheimen als verwijzingen
+      export_only: Alleen exporteren
+      download_empty: Leeg sjabloon
+      download_current: Huidige gegevens
+      download_schema: JSON Schema
+      empty_title: Niets te importeren of te exporteren
+      empty: Je mag in dit bereik geen enkel soort gegevens exporteren of importeren.
+    export:
+      confirm_title: Persoonsgegevens downloaden?
+      personal_data: Het bestand van %provider% bevat persoonsgegevens. Bewaar het veilig, deel het alleen zoals je organisatie toestaat en verwijder het als je het niet meer nodig hebt. De download wordt vastgelegd.
+      download: Downloaden
+    upload:
+      open: Bestand uploaden
+      title: Een seed-bestand uploaden
+      intro: 'YAML, JSON of JSON Lines, met een of meer soorten gegevens. Er wordt nog niets geschreven: je ziet eerst de diff.'
+      file: Bestand
+      file_help: Een .yaml-, .json- of .jsonl-bestand dat hier is geëxporteerd of met het JSON Schema is geschreven.
+      prune: Rijen verwijderen die het bestand weglaat
+      prune_help: Alleen rijen die je in dit bereik mag verwijderen. Je bevestigt het aantal verwijderingen voordat er iets wordt verwijderd.
+      submit: Bestand controleren
+      errors_title: '%count% probleem/problemen gevonden; er is niets opgeslagen.'
+      error_row: Rij
+      error_key: Sleutel
+      error_field: Veld
+      error_message: Probleem
+    run:
+      title: Run %id%
+      intro: Controleer de wijzigingen en pas ze dan toe of verwerp de run.
+      summary: Samenvatting
+      providers: Gegevens
+      scope: Bereik
+      planned: Gepland
+      counts: '%create% aan te maken, %update% bij te werken, %delete% te verwijderen, %unchanged% ongewijzigd'
+      written: Geschreven
+      written_counts: '%create% aangemaakt, %update% bijgewerkt, %delete% verwijderd'
+      batches: Batches
+      prune: Verwijdert de rijen die het bestand weglaat
+      plan_hash: Planhash
+      created: Geüpload
+      error: Laatste fout
+      apply: Toepassen
+      apply_confirm_title: Deze run toepassen?
+      apply_confirm: '%changes% rij(en) worden geschreven. Ongewijzigde rijen worden niet aangeraakt.'
+      discard: Verwerpen
+      discard_confirm_title: Deze run verwerpen?
+      discard_confirm: Het geüploade document wordt verwijderd; er wordt niets geschreven.
+      confirm_deletes: Aantal te verwijderen rijen
+      confirm_deletes_help: Typ het hierboven getoonde aantal verwijderingen om ze te bevestigen.
+      confirm_deletes_wrong: Het aantal komt niet overeen met de verwijderingen van deze run.
+      mass_prune: Deze run verwijdert %count% rij(en), meer dan het toegestane aandeel van de huidige rijen. Typ het aantal om te bevestigen.
+      stale: De gegevens zijn gewijzigd sinds dit bestand is gecontroleerd. Upload het opnieuw om de nieuwe diff te zien.
+      progress: '%done% van %total% batches toegepast'
+      refresh: Vernieuwen
+      no_changes: Geen wijzigingen voor dit soort gegevens.
+      preview_caption: Wijzigingen van %provider%
+      op: Wijziging
+      key: Sleutel
+      fields: Velden (voor → na)
+      hidden: verborgen
+    runs:
+      title: Geschiedenis
+      intro: Seed-bestanden die in dit bereik zijn geüpload en toegepast.
+      caption: Runs, nieuwste eerst
+      created: Geüpload
+      status: Status
+      providers: Gegevens
+      changes: Wijzigingen
+      actor: Door
+      channel: Via
+      empty_title: Nog geen runs
+      empty: Upload een bestand om te beginnen.
+      older: Oudere runs
+      pager: Pagina's met runs
+    status:
+      planned: Klaar om toe te passen
+      queued: In de wachtrij
+      running: Wordt toegepast
+      applied: Toegepast
+      partially_applied: Gedeeltelijk toegepast
+      failed: Mislukt
+      discarded: Verworpen
+      expired: Verlopen
+    channel:
+      http: Web
+      console: Console
+      messenger: Achtergrond
+    op:
+      create: Aanmaken
+      update: Bijwerken
+      unchanged: Ongewijzigd
+      delete: Verwijderen
+    message:
+      title: De run kon niet doorgaan
+      what: Wat er gebeurde
+      code: Code
+      back: Terug naar importeren / exporteren
+      conflict: Een andere run past op dit moment dezelfde gegevens toe. Wacht even en probeer het opnieuw.
+      interrupted: Het toepassen stopte na %done% van %total% batches; de toegepaste batches blijven staan. Pas de run opnieuw toe om hem af te maken, of upload het bestand opnieuw.
+      stale: De gegevens zijn gewijzigd sinds het bestand is gecontroleerd. Upload het opnieuw om de nieuwe diff te controleren.
+      too_large: De run schrijft %changes% rijen; een webverzoek mag er hoogstens %limit% schrijven. Pas het bestand toe vanaf de console.
+      refused: Het verzoek is geweigerd.

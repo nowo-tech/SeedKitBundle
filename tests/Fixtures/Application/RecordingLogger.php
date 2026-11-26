@@ -21,4 +21,17 @@ final class RecordingLogger extends AbstractLogger
     {
         $this->records[] = [is_string($level) ? $level : '?', (string) $message, $context];
     }
+
+    /**
+     * Records of one level.
+     */
+    public function count(string $level): int
+    {
+        $count = 0;
+        foreach ($this->records as [$recorded]) {
+            $count += $recorded === $level ? 1 : 0;
+        }
+
+        return $count;
+    }
 }

@@ -1,0 +1,31 @@
+# Seed Kit: providers export / import seed documents through your own handlers. Every key is optional; the values
+# below are the defaults. See docs/CONFIGURATION.md.
+nowo_seed_kit:
+    # scope_kinds:
+    #     platform:     { requires_id: false }
+    #     organization: { requires_id: true }
+    # scope_resolver: App\Seed\TenantScopeResolver    # needed for kinds other than platform
+    doctrine:
+        entity_manager: ~          # EM whose connection holds nowo_seed_run / nowo_seed_lease (default EM)
+        table_prefix: nowo_
+    console:
+        require_actor: true        # writing commands need --actor (--actor=system on fresh installs)
+        allowed_dirs: ['%kernel.project_dir%/config/seeds', '%kernel.project_dir%/var/seeds']
+    security:
+        access_roles: [ROLE_ADMIN]
+        export_roles: [ROLE_ADMIN]
+        apply_roles: [ROLE_ADMIN]
+        prune_roles: []            # nobody may prune until you map it
+    # secrets:
+    #     vault_bridge: { enabled: true }   # needs nowo-tech/vault-bundle
+    # Import / export pages (0.2; needs UiKit, FormKit, Twig, symfony/form + validator, SecurityBundle):
+    # ui:
+    #     enabled: true
+    #     layout: ~                              # your admin layout (default nowo_ui_kit.layouts.admin)
+    #     max_upload_bytes: 2097152
+    #     mounts:
+    #         platform: { path: /admin/seeds }
+    # messenger:                                 # route Nowo\SeedKitBundle\Bridge\Messenger\ApplySeedRun to async
+    #     enabled: true
+    # scheduler:
+    #     enabled: true                          # schedule nowo_seed_kit: document expiry + history purge

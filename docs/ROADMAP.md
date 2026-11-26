@@ -17,7 +17,7 @@ requests with tests, docs and a green CI; every 0.x tag waits for its immediate 
 | --- | --- | --- | --- |
 | S0 scaffold | `main`, no tag | Composer, Docker (MySQL 8.4, MariaDB 11.4, PostgreSQL), Makefile + `release-check`, CI, PHPStan, Igor, Rector, CS, Deptrac, coverage gate, Spec Kit baseline, docs set, Flex recipe, strict config tree | Done (with 0.1.0) |
 | A: core + console | **0.1.0** | Provider SPI, readers / writer, schemas and lint, planner, plan hash and digests, applier with leases and batches, run history, access guard / voter / event, audit, Vault and AuditKit bridges, console, contract test kit, 10 locales, demo with two providers | Built on `feat/0.1.0`, waiting for the immediate audit |
-| B: UI + async | 0.2.0 | Pages below, Messenger apply | Not started |
+| B: UI + async | 0.2.0 | Pages below, Messenger apply | Built (PR, awaiting the immediate audit) |
 | C | 0.3.0 | Below | Not started |
 | Later | 0.4+ | Below | Not started |
 
@@ -30,7 +30,7 @@ requests with tests, docs and a green CI; every 0.x tag waits for its immediate 
 - Planned runs stored with a short-lived normalised document (`runs.document_ttl`, default 1 h), deleted when the run
   ends (Q-SK-5).
 - Messenger apply for big plans (`messenger.async_threshold_changes`), access re-checked for the stored actor through
-  `canForActor()` or `messenger.trust_run_actor`; console `--async`.
+  `canForActor()` or `messenger.trust_run_actor`. (Console `--async`: moved to 0.3.)
 - Scheduler bridge for `runs:purge`; BreadcrumbKit crumbs; HTTP reader caps; 409 + `Retry-After` + `X-Conflict-Code`.
 - Playwright e2e per access profile and WebP screenshots; immediate security audit (permissions, CSRF).
 

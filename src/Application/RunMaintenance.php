@@ -48,6 +48,15 @@ final readonly class RunMaintenance
     }
 
     /**
+     * Ends the stored documents past `runs.document_ttl` (0.2 UI runs): `planned` / `queued` runs become `expired`, a
+     * `partially_applied` run loses its document. Returns the rows changed.
+     */
+    public function expire(): int
+    {
+        return $this->runs->expire(DateTimeImmutable::createFromInterface($this->clock->now()), self::BATCH);
+    }
+
+    /**
      * Deletes (or counts, on a dry run) the finished runs created before the instant.
      */
     public function purge(DateTimeImmutable $before, bool $dryRun): int

@@ -118,7 +118,23 @@ string(36), `locked_until` datetime (UTC).
 | `symfony/security-bundle` | `SeedKitVoter`, the role-based checker with the role hierarchy, the user identifier as actor | always on when installed |
 | `nowo-tech/audit-kit-bundle` | Audit entries in the action log | `audit.auditkit: true` (default); used only when the recorder service exists |
 | `nowo-tech/vault-bundle` | `vault:<item-uuid>` references checked against the target scope and the actor | `secrets.vault_bridge.enabled: true` |
-| `symfony/translation` | Translated console messages (10 locales) | always on when installed |
+| `symfony/translation` | Translated console messages and pages (10 locales) | always on when installed |
+| `nowo-tech/ui-kit-bundle` ^2.74.1, `nowo-tech/form-kit-bundle` ^2.25.1, `symfony/twig-bundle`, `symfony/form`, `symfony/validator`, `symfony/security-bundle` | The import / export pages (0.2) | `ui.enabled: true` + `ui.mounts` + the routes below |
+| `symfony/messenger` | Asynchronous apply of large UI runs (`ApplySeedRun`) | `messenger.enabled: true` + a route to an async transport |
+| `symfony/scheduler` | Schedule `nowo_seed_kit` (expiry + purge) | `scheduler.enabled: true` |
+
+### UI routes (0.2)
+
+```yaml
+# config/routes/nowo_seed_kit.yaml
+nowo_seed_kit:
+    resource: .
+    type: nowo_seed_kit
+```
+
+One route set per `ui.mounts` entry, named `nowo_seed_kit_<kind>_<page>` (`index`, `export`, `schema`, `upload`,
+`runs`, `run`, `run_apply`, `run_discard`, `run_progress`). Put the prefixes (`nowo_seed_kit.ui_paths`) behind your
+firewall, e.g. `- { path: '^/developer/seeds', roles: IS_AUTHENTICATED_FULLY }`.
 
 ## First provider and first run
 

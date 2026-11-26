@@ -8,6 +8,8 @@ seed_kit:
     SEED_005: Datuak aldatu dira berrikusitako planetik; berrikusi diff berria eta aplikatu berriro.
     SEED_006: Errenkada bat aldatu da plana aplikatzean; aplikatutako sortak mantentzen dira. Aplikatu dokumentua berriro.
     SEED_007: Dokumentuaren esparru mota ez dator bat helburuko esparruarekin.
+    SEED_008: Seed-exekuzioa ez dago erabilgarri; ez dago, ez da zurea edo bere dokumentua iraungi da.
+    SEED_009: Plana handiegia da web eskaera batean aplikatzeko; aplikatu fitxategia kontsolatik.
     SEED_010: Hornitzaileak huts egin du sorta bat aplikatzean; aplikatutako sortak mantentzen dira.
     SEED_011: Seed hornitzaile batek bere kontratua urratu du; bundleak ez du ezer idatzi.
     SEED_012: Ezabatze-babes batek plana baztertu du; berretsi esplizituki.
@@ -65,3 +67,117 @@ seed_kit:
     schema_maxItems: Zerrendak sarrera gehiegi ditu.
     schema_minItems: Zerrendak sarrera gutxiegi ditu.
     schema_uniqueItems: Zerrendak sarrera errepikatuak ditu.
+  warning:
+    exported_from_differs: Fitxategia aplikatzen ari zaren eremuaz bestelako eremu batetik esportatu zen; berrikusi diff-a.
+  ui:
+    index:
+      title: Inportatu / esportatu
+      intro: Deskargatu datu mota bakoitzaren txantiloia edo oraingo datuak, editatu fitxategia, igo, berrikusi diff-a eta aplikatu.
+      caption: Hemen esporta edo inporta ditzakezun datu motak
+      provider: Datuak
+      description: Deskribapena
+      key: Gako naturala
+      depends: Honen mende dago
+      data: Oharrak
+      personal_data: Datu pertsonalak
+      secrets: Sekretuak erreferentzia gisa
+      export_only: Esportatzeko soilik
+      download_empty: Txantiloi hutsa
+      download_current: Oraingo datuak
+      download_schema: JSON Schema
+      empty_title: Ez dago ezer inportatzeko edo esportatzeko
+      empty: Eremu honetan ezin duzu datu mota bat ere esportatu edo inportatu.
+    export:
+      confirm_title: Datu pertsonalak deskargatu?
+      personal_data: '%provider% hornitzailearen fitxategiak datu pertsonalak ditu. Gorde segurtasunez, partekatu zure erakundeak onartzen duen moduan bakarrik eta ezabatu behar ez duzunean. Deskarga erregistratzen da.'
+      download: Deskargatu
+    upload:
+      open: Igo fitxategia
+      title: Igo seed fitxategi bat
+      intro: 'YAML, JSON edo JSON Lines, datu mota batekin edo gehiagorekin. Oraindik ez da ezer idazten: lehenengo diff-a ikusiko duzu.'
+      file: Fitxategia
+      file_help: Hemen esportatutako edo JSON Schema-rekin idatzitako .yaml, .json edo .jsonl fitxategia.
+      prune: Ezabatu fitxategiak uzten dituen errenkadak
+      prune_help: Eremu honetan ezaba ditzakezun errenkadak soilik. Ezabaketen kopurua baieztatuko duzu ezer ezabatu aurretik.
+      submit: Egiaztatu fitxategia
+      errors_title: '%count% arazo aurkitu dira; ez da ezer gorde.'
+      error_row: Errenkada
+      error_key: Gakoa
+      error_field: Eremua
+      error_message: Arazoa
+    run:
+      title: '%id% exekuzioa'
+      intro: Berrikusi aldaketak, eta gero aplikatu edo baztertu exekuzioa.
+      summary: Laburpena
+      providers: Datuak
+      scope: Eremua
+      planned: Aurreikusia
+      counts: '%create% sortzeko, %update% eguneratzeko, %delete% ezabatzeko, %unchanged% aldatu gabe'
+      written: Idatzia
+      written_counts: '%create% sortu dira, %update% eguneratu dira, %delete% ezabatu dira'
+      batches: Loteak
+      prune: Fitxategiak uzten dituen errenkadak ezabatzen ditu
+      plan_hash: Planaren hash-a
+      created: Igo da
+      error: Azken errorea
+      apply: Aplikatu
+      apply_confirm_title: Exekuzio hau aplikatu?
+      apply_confirm: '%changes% errenkada idatziko dira. Aldatu gabeko errenkadei ez zaie ukitzen.'
+      discard: Baztertu
+      discard_confirm_title: Exekuzio hau baztertu?
+      discard_confirm: Igotako dokumentua ezabatzen da; ez da ezer idazten.
+      confirm_deletes: Ezabatu beharreko errenkada kopurua
+      confirm_deletes_help: Idatzi goian erakutsitako ezabaketa kopurua baieztatzeko.
+      confirm_deletes_wrong: Zenbakia ez dator bat exekuzio honen ezabaketekin.
+      mass_prune: Exekuzio honek %count% errenkada ezabatzen ditu, oraingo errenkaden onartutako zatia baino gehiago. Idatzi zenbakia baieztatzeko.
+      stale: Datuak aldatu dira fitxategi hau egiaztatu zenetik. Igo berriro diff berria ikusteko.
+      progress: '%total% loteetatik %done% aplikatu dira'
+      refresh: Freskatu
+      no_changes: Ez dago aldaketarik datu mota honetarako.
+      preview_caption: '%provider% hornitzailearen aldaketak'
+      op: Aldaketa
+      key: Gakoa
+      fields: Eremuak (aurretik → ondoren)
+      hidden: ezkutuan
+    runs:
+      title: Historia
+      intro: Eremu honetan igo eta aplikatu diren seed fitxategiak.
+      caption: Exekuzioak, berrienak lehenengo
+      created: Igo da
+      status: Egoera
+      providers: Datuak
+      changes: Aldaketak
+      actor: Nork
+      channel: Nondik
+      empty_title: Oraindik ez dago exekuziorik
+      empty: Igo fitxategi bat hasteko.
+      older: Exekuzio zaharragoak
+      pager: Exekuzioen orriak
+    status:
+      planned: Aplikatzeko prest
+      queued: Ilaran
+      running: Aplikatzen
+      applied: Aplikatua
+      partially_applied: Zati batean aplikatua
+      failed: Huts egin du
+      discarded: Baztertua
+      expired: Iraungia
+    channel:
+      http: Weba
+      console: Kontsola
+      messenger: Atzeko planoa
+    op:
+      create: Sortu
+      update: Eguneratu
+      unchanged: Aldatu gabe
+      delete: Ezabatu
+    message:
+      title: Exekuzioak ezin izan du jarraitu
+      what: Zer gertatu da
+      code: Kodea
+      back: Itzuli inportatu / esportatu orrira
+      conflict: Beste exekuzio bat datu berberak aplikatzen ari da orain. Itxaron pixka bat eta saiatu berriro.
+      interrupted: Aplikazioa %total% loteetatik %done% aplikatu ondoren gelditu da; aplikatutako loteak mantentzen dira. Aplikatu exekuzioa berriro amaitzeko, edo igo fitxategia berriro.
+      stale: Datuak aldatu dira fitxategia egiaztatu zenetik. Igo berriro diff berria berrikusteko.
+      too_large: Exekuzioak %changes% errenkada idazten ditu; web eskaera batek gehienez %limit% idatz ditzake. Aplikatu fitxategia kontsolatik.
+      refused: Eskaera baztertu da.

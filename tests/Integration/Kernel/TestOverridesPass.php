@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Nowo\SeedKitBundle\Tests\Integration\Kernel;
 
+use Nowo\SeedKitBundle\Domain\Port\RunStoreInterface;
+use Nowo\SeedKitBundle\Tests\Fixtures\Host\ConflictingRunStore;
 use Symfony\Component\DependencyInjection\Compiler\CompilerPassInterface;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 
@@ -17,11 +19,16 @@ use function str_starts_with;
 final class TestOverridesPass implements CompilerPassInterface
 {
     /** Framework services the tests read. */
-    private const PUBLIC = ['event_dispatcher', 'security.token_storage', 'security.authorization_checker', 'translator', 'doctrine.dbal.default_connection', 'doctrine.dbal.seed_connection'];
+    private const PUBLIC = ['event_dispatcher', 'security.token_storage', 'security.authorization_checker', 'translator', 'doctrine.dbal.default_connection', 'doctrine.dbal.seed_connection', 'messenger.transport.async'];
 
     public function process(ContainerBuilder $container): void
     {
         $container->setAlias('clock', 'test.mock_clock')->setPublic(true);
+        if ($container->hasParameter('test.conflicting_runs')) {
+            // Every run-store write meets a lock conflict the write unit gave up on.
+            $container->register('test.conflicting_runs', ConflictingRunStore::class);
+            $container->setAlias(RunStoreInterface::class, 'test.conflicting_runs');
+        }
         foreach ($container->getDefinitions() as $id => $definition) {
             if ($this->exposed($id)) {
                 $definition->setPublic(true);

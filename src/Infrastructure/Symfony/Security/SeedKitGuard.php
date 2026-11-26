@@ -14,6 +14,7 @@ use Nowo\SeedKitBundle\Domain\Run\SeedAction;
 use Nowo\SeedKitBundle\Infrastructure\Symfony\Event\SeedAccessCheckEvent;
 use Nowo\SeedKitBundle\Infrastructure\Symfony\Event\SeedKitEvents;
 use Symfony\Component\Security\Core\Authentication\Token\Storage\TokenStorageInterface;
+use Symfony\Component\Security\Core\User\UserInterface;
 use Symfony\Contracts\EventDispatcher\EventDispatcherInterface;
 
 /**
@@ -60,6 +61,20 @@ final readonly class SeedKitGuard implements SeedAccessGateInterface
         $this->dispatcher->dispatch($event, SeedKitEvents::ACCESS_CHECK);
 
         return $event->isGranted();
+    }
+
+    /**
+     * Whether the current user may open the UI area of the scope (`security.access_roles` / the checker's
+     * `canUseArea()`): false without a user unless `allow_unauthenticated` (demos).
+     */
+    public function canUseArea(SeedScope $scope): bool
+    {
+        $user = $this->tokens?->getToken()?->getUser();
+        if (!$user instanceof UserInterface && !$this->allowUnauthenticated) {
+            return false;
+        }
+
+        return $this->checker->canUseArea($user, $scope);
     }
 
     /**

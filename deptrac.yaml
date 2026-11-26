@@ -16,12 +16,12 @@ deptrac:
       collectors:
         - type: classLike
           value: '^Nowo\\SeedKitBundle\\Application\\'
-    # UI: the console edge and the security edge (guard, voter, checkers, access event) plus the provider attribute and
-    # the lint warmer, inside Infrastructure\Symfony (not re-laid out).
+    # UI: the console edge, the HTTP edge (0.2: controller, FormKit forms, route loader) and the security edge (guard,
+    # voter, checkers, access event) plus the provider attribute and the lint warmer, inside Infrastructure\Symfony.
     - name: UI
       collectors:
         - type: classLike
-          value: '^Nowo\\SeedKitBundle\\Infrastructure\\Symfony\\(Command|Security|Event|CacheWarmer|Attribute)\\'
+          value: '^Nowo\\SeedKitBundle\\Infrastructure\\Symfony\\(Command|Security|Event|CacheWarmer|Attribute|Controller|Form|Routing)\\'
     # DependencyInjection: the composition root (bundle class, configuration tree, service definitions, pass).
     - name: DependencyInjection
       collectors:
@@ -85,6 +85,11 @@ deptrac:
       collectors:
         - type: classLike
           value: '^PHPUnit\\'
+    # UI packages of the opt-in pages (0.2): UiKit view models / remote dialog, FormKit attribute, Twig.
+    - name: UiPackages
+      collectors:
+        - type: classLike
+          value: '^(Nowo\\(UiKitBundle|FormKitBundle)|Twig)\\'
     # Bridged packages (optional, suggested).
     - name: BridgedPackages
       collectors:
@@ -115,12 +120,15 @@ deptrac:
       - TransactionContract
       - SymfonyContracts
       - Symfony
+      - UiPackages
     Bridge:
       - Domain
       - Application
       - Infrastructure
       - Psr
       - BridgedPackages
+      # Messenger handler / queue and the Scheduler schedule (0.2).
+      - Symfony
     Testing:
       - Domain
       - Application
@@ -142,5 +150,6 @@ deptrac:
       - TransactionDoctrine
       - Composer
       - BridgedPackages
+      - UiPackages
   # Legacy public API that cannot change before 1.0.0 (REQ-ARCH-002 rule 3). Empty from the first release.
   skip_violations: {}
