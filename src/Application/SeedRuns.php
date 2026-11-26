@@ -353,16 +353,20 @@ final readonly class SeedRuns
         }
         $expiry = $this->expiry(DateTimeImmutable::createFromInterface($this->clock->now()));
         // @igor-ignore - the write runner calls the closure inside one write unit and keeps nothing.
-        $claimed = $this->writer->write(fn (): bool => $this->runs->transition($run->id, $run->version, [RunStatus::Planned, RunStatus::PartiallyApplied], RunStatus::Queued, null, $expiry));
+        // A stalled `running` run (its worker or request died) is queued again too (ZCE-v-L1), with the same cut-off and
+        // version fencing as the synchronous takeover; the caller already checked it is the run's own actor.
+        $claimed = $this->writer->write(fn (): bool => $this->runs->transition($run->id, $run->version, [RunStatus::Planned, RunStatus::PartiallyApplied, RunStatus::Running], RunStatus::Queued, null, $expiry, $this->staleBefore()));
         if ($claimed !== true) {
             return new ApplyOutcome(ApplyOutcome::BUSY, $this->runs->find($run->id) ?? $run);
         }
         try {
             $queue->queue($run->id, $run->planHash);
         } catch (Throwable $e) {
-            // Not handed over: back to where it was, so the user can try again.
-            $this->writer->write(function () use ($run): null { // @igor-ignore - called at once inside one write unit; nothing kept
-                $this->runs->transition($run->id, null, [RunStatus::Queued], $run->status);
+            // Not handed over: back to where it was (a taken-over run to partially applied or planned), fenced by the
+            // version of our queue transition, so the user can try again.
+            $back = $run->status !== RunStatus::Running ? $run->status : ($run->batchesDone > 0 ? RunStatus::PartiallyApplied : RunStatus::Planned);
+            $this->writer->write(function () use ($run, $back): null { // @igor-ignore - called at once inside one write unit; nothing kept
+                $this->runs->transition($run->id, $run->version + 1, [RunStatus::Queued], $back);
 
                 return null;
             });
@@ -433,6 +437,10 @@ final readonly class SeedRuns
             $this->auditFailure($run, $actor, $scope, $channel, $e);
 
             throw $e;
+        }
+        if (!$result->finished) {
+            // Taken over after our last batch: the new claimer ends, reports and audits the run (ZCE-v).
+            return new ApplyOutcome(ApplyOutcome::BUSY, $this->runs->find($run->id) ?? $current);
         }
         $this->audit->record(new SeedAuditRecord(
             $run->prune ? SeedAuditRecord::PRUNE : SeedAuditRecord::APPLY,

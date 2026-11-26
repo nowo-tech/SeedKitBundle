@@ -134,6 +134,20 @@ final class DbalStoredRunTest extends DatabaseTestCase
     }
 
     #[Test]
+    public function aStalledRunIsQueuedAgainOnlyAfterTheLeaseAndAtItsVersion(): void
+    {
+        $this->runs->create($this->planned(1, RunStatus::Running), 'gz');
+        $requeue = fn (int $version, string $staleBefore): bool => $this->runs->transition(self::runId(1), $version, [RunStatus::Planned, RunStatus::PartiallyApplied, RunStatus::Running], RunStatus::Queued, null, new DateTimeImmutable('2026-11-24 12:00:00 UTC'), new DateTimeImmutable($staleBefore . ' UTC'));
+
+        self::assertFalse($requeue(1, '2026-11-24 08:00:00'), 'still showing progress (ZCE-v-L1)');
+        self::assertFalse($requeue(2, '2026-11-24 10:00:00'), 'another version');
+        self::assertTrue($requeue(1, '2026-11-24 10:00:00'));
+        self::assertSame(RunStatus::Queued, $this->runs->find(self::runId(1))?->status);
+        self::assertTrue($this->runs->transition(self::runId(1), 2, [RunStatus::Queued], RunStatus::PartiallyApplied), 'a failed dispatch puts it back, fenced');
+        self::assertTrue($this->runs->find(self::runId(1))?->hasDocument);
+    }
+
+    #[Test]
     public function aStalledRunningRunExpiresAfterItsTtlAndTheLease(): void
     {
         $this->runs->create($this->planned(1, RunStatus::Running), 'gz');

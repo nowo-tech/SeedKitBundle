@@ -45,6 +45,7 @@ use Nowo\SeedKitBundle\Tests\Fixtures\Application\CapturingWriter;
 use Nowo\SeedKitBundle\Tests\Fixtures\Application\Harness;
 use Nowo\SeedKitBundle\Tests\Fixtures\Application\HookedWriteRunner;
 use Nowo\SeedKitBundle\Tests\Fixtures\Application\RecordingAuditSink;
+use Nowo\SeedKitBundle\Tests\Fixtures\Application\RecordingDispatcher;
 use Nowo\SeedKitBundle\Tests\Fixtures\Application\RecordingLogger;
 use Nowo\SeedKitBundle\Tests\Fixtures\Provider\InMemoryStore;
 use Nowo\SeedKitBundle\Tests\Fixtures\Provider\PrefixSecretValidator;
@@ -84,6 +85,8 @@ final class SeedRunsTest extends TestCase
 
     private RecordingLogger $logger;
 
+    private RecordingDispatcher $events;
+
     private MockClock $clock;
 
     /** @var list<string> refused attributes, `SEED_X` or `SEED_X:actor` */
@@ -108,6 +111,7 @@ final class SeedRunsTest extends TestCase
         $this->leases = new InMemoryLeaseStore();
         $this->audit  = new RecordingAuditSink();
         $this->logger = new RecordingLogger();
+        $this->events = new RecordingDispatcher();
         $this->clock  = new MockClock(new DateTimeImmutable('2026-11-24T10:00:00Z'));
     }
 
@@ -133,7 +137,7 @@ final class SeedRunsTest extends TestCase
         $writer   = new HookedWriteRunner(static function (int $call) use ($test): void {
             $test->before($call);
         });
-        $applier = Harness::applier($planner, $settings, $writer, $this->leases, $this->runs, $this->logger);
+        $applier = Harness::applier($planner, $settings, $writer, $this->leases, $this->runs, $this->logger, $this->events);
         $gate    = new class($test) implements SeedAccessGateInterface {
             public function __construct(private readonly SeedRunsTest $test)
             {
@@ -788,8 +792,43 @@ final class SeedRunsTest extends TestCase
             }
         });
         $outcome = $runs->apply($fresh->id, $fresh->planHash, SeedScope::platform(), $this->alice());
+        self::assertSame(ApplyOutcome::BUSY, $outcome->kind, 'the new claimer ends it');
         self::assertSame(RunStatus::Running, $outcome->run->status, 'not marked applied by the old claim');
         self::assertSame(1, $this->logger->count('warning'));
+        self::assertSame(['apply:CONFLICT_001:http'], $this->outcomes(), 'no success audit from the old claim (ZCE-v)');
+        self::assertNotContains('SeedRunAppliedEvent', $this->events->names(), 'no applied event from the old claim (ZCE-v)');
+    }
+
+    #[Test]
+    public function aStalledRunAboveTheThresholdIsQueuedAgain(): void
+    {
+        $settings = $this->settings(1, 1, 1);
+        $runs     = $this->service($settings, true);
+        $run      = $runs->upload($this->set([['slug' => 'a', 'label' => 'A'], ['slug' => 'b', 'label' => 'B']]), SeedScope::platform(), $this->alice(), false);
+        self::assertTrue($this->runs->transition($run->id, $run->version, [RunStatus::Planned], RunStatus::Running), 'a worker claimed it and died');
+        $this->runs->touch($run->id, new DateTimeImmutable('2026-11-24T09:59:00Z'));
+        self::assertSame(ApplyOutcome::BUSY, $runs->apply($run->id, $run->planHash, SeedScope::platform(), $this->alice())->kind, 'not before the lease');
+
+        $this->runs->touch($run->id, new DateTimeImmutable('2026-11-24T09:50:00Z'));
+        $this->assertThrows(RunNotAvailableException::class, static fn (): ApplyOutcome => $runs->apply($run->id, $run->planHash, SeedScope::platform(), new ActorRef('bob')));
+        $outcome = $runs->apply($run->id, $run->planHash, SeedScope::platform(), $this->alice());
+        self::assertSame(ApplyOutcome::QUEUED, $outcome->kind, 'queued again (ZCE-v-L1)');
+        self::assertSame([[$run->id->value, $run->planHash->value]], $this->queued);
+        self::assertSame(ApplyOutcome::APPLIED, $runs->applyQueued($run->id, $run->planHash)?->kind);
+        self::assertSame(2, $this->tagCount());
+
+        // A failed hand-over puts a stalled run back where it stood: planned (no batch) or partially applied.
+        $failing = $this->service($settings, true, new RuntimeException('bus down'));
+        foreach ([0 => RunStatus::Planned, 1 => RunStatus::PartiallyApplied] as $batches => $expected) {
+            $stuck = $failing->upload($this->set([['slug' => 'x' . $batches, 'label' => 'X'], ['slug' => 'y' . $batches, 'label' => 'Y']]), SeedScope::platform(), $this->alice(), false);
+            self::assertTrue($this->runs->transition($stuck->id, $stuck->version, [RunStatus::Planned], RunStatus::Running));
+            if ($batches > 0) {
+                self::assertTrue($this->runs->markBatch($stuck->id, 1, ['create' => 1] + $stuck->counts));
+            }
+            $this->runs->touch($stuck->id, new DateTimeImmutable('2026-11-24T09:50:00Z'));
+            $this->assertThrows(RuntimeException::class, fn (): ApplyOutcome => $failing->apply($stuck->id, $stuck->planHash, SeedScope::platform(), $this->alice()));
+            self::assertSame($expected, $this->runs->find($stuck->id)?->status);
+        }
     }
 
     /**

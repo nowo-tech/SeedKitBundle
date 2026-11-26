@@ -285,11 +285,13 @@ final readonly class Applier
         }
         // @igor-ignore - the write runner calls the closure inside one write unit and keeps nothing.
         $finished = $this->writer->write(fn (): bool => $this->runs->finish($runId, RunStatus::Applied, null, $claim->version));
+        $written  = [ChangeOp::Create->value => $counts[ChangeOp::Create->value], ChangeOp::Update->value => $counts[ChangeOp::Update->value], ChangeOp::Delete->value => $counts[ChangeOp::Delete->value]];
         if ($finished !== true) {
-            // Taken over after the last batch: the new claimer ends the run.
+            // Taken over after the last batch: the new claimer ends the run and dispatches its event (ZCE-v).
             $this->logger?->warning('Seed run {run} was taken over before it could be marked applied.', ['run' => $runId->value]);
+
+            return new ApplyResult($plan, $runId, $done, $written, false);
         }
-        $written = [ChangeOp::Create->value => $counts[ChangeOp::Create->value], ChangeOp::Update->value => $counts[ChangeOp::Update->value], ChangeOp::Delete->value => $counts[ChangeOp::Delete->value]];
         $this->dispatcher?->dispatch(new SeedRunAppliedEvent($runId, array_keys($providers), $context->scope, $written, $set->hash, $record->planHash, $context->actor, $context->channel));
 
         return new ApplyResult($plan, $runId, $done, $written);

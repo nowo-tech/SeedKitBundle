@@ -59,6 +59,10 @@ core. No schema change: the 0.1 tables already hold the new columns' data.
   `causeClass` / `causeCode` (ZCE-L4).
 - A document past `runs.document_ttl` is never shown or applied (`SEED_005`) and is ended on the spot; the history page
   sweeps too (ZCE-L5).
+- ZCE-v: a stalled run above `messenger.async_threshold_changes` is queued again by its actor (same lease cut-off and
+  version fencing as the synchronous takeover); a failed hand-over puts it back to `partially_applied` or `planned`.
+  A claim taken over after its last batch no longer dispatches `SeedRunAppliedEvent` or writes a success audit (the
+  new claimer does).
 - The *History* action used the explicit icon `history` (rendered as the nonexistent `bi:history`, a 500 for hosts
   with their own icon set): every action now passes a UiKit kind only (`view`, `download`, `import`, `run`, `cancel`,
   `prev`), mapped by the host's `action_icons`.

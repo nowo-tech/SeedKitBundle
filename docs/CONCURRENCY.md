@@ -56,7 +56,8 @@ the lease renew / release (by holder). A worker whose run was taken over after t
 write: its batch rolls back, it changes no status and it cannot release the new claimer's leases.
 
 **Stalled runs (ZCE-M1).** A `running` run without progress for longer than `apply.lease_seconds` (killed request,
-dead worker) is taken over by its actor's next apply on the web or by the next Messenger delivery; its actor may
+dead worker) is taken over by its actor's next apply on the web (queued again above the async threshold, reverted to
+`partially_applied` / `planned` if the hand-over fails) or by the next Messenger delivery; its actor may
 discard it, and so may an admin of the kind. The expiry sweep (upload, history page, `runs:purge`, Scheduler) ends a
 stalled run past its TTL: `partially_applied` when batches were committed, else `expired`, document deleted.
 
