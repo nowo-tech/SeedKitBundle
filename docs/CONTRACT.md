@@ -59,6 +59,7 @@ Packagist before the first tag. What 0.1.0 implements differently from the text 
   - [23.1 Owner (Q-SK)](#231-owner-q-sk)
   - [23.2 Symfony Beacon (QB-SK)](#232-symfony-beacon-qb-sk)
 - [24. Deviations in 0.1.0](#24-deviations-in-010)
+- [25. Deviations in 0.2.0](#25-deviations-in-020)
 
 ## Summary (10 lines)
 
@@ -968,3 +969,40 @@ Accepted by the coordinator on 2026-11-24; the code and the docs describe the im
 | D11 | `nowo_seed_run.document` holds the normalised upload (§11) | The column exists and stays empty in 0.1 (no upload flow yet) |
 | D12 | Lease held answers `CONFLICT_001` + `Retry-After` (§10.2) | Console exit 5 with the seconds to wait (no HTTP in 0.1); `CONFLICT_001` after the replays prints the same exit 5 |
 | D13 | Console exit codes (§12.4) | As listed, plus: `actor:forget` declined exits 1; `runs:purge` exits 2 for a bad date; `list` / `runs:list` exit 2 for an invalid filter |
+
+## 25. Deviations in 0.2.0
+
+Built 2026-11-26 for the UI + Messenger slice (§18 B). Beacon's 0.2 answers (2026-11-26) are in §25.1.
+
+| # | Contract text | 0.2.0 |
+|---|---|---|
+| E1 | Message `ApplySeedRunMessage(runId, planHash)` (§10.5) | **`Nowo\SeedKitBundle\Bridge\Messenger\ApplySeedRun`** (stable name agreed with Beacon), same two fields, strings |
+| E2 | `reader.max_bytes: {http, console}`, `max_items: {http, console}` (§15) | The console caps stay `reader.*`; the web caps are **`ui.max_upload_bytes`** (default **2 MiB**, Beacon) and `ui.max_items` (10 000); `max_tree_bytes` is capped at the upload size |
+| E3 | Mount paths carry `{scopeId}` (§12.5) | A kind that requires an id may be mounted without `{scopeId}` (Beacon `/organization/seeds`): the id comes from the new optional port **`SeedCurrentScopeInterface`** (`ui.current_scope`), then the scope resolver checks it like a route id (unknown / invisible ⇒ 404). Checked at build time |
+| E4 | — | **`ui.layout`**: base layout of every page (Beacon: wrap in the host layout with no overrides); pages are UiKit scaffolds with data blocks; overrides in `templates/bundles/NowoSeedKitBundle/` still work |
+| E5 | `GET /{provider}/export`, `/{provider}/schema.json` (§12.5) | `GET /providers/{provider}/export`, `/providers/{provider}/schema.json`, so a provider name never collides with `upload` / `runs` |
+| E6 | Personal-data export: UiKit confirm dialog first (§12.5, §14) | The current export of a provider with personal-data **or secret** fields is a **POST** with CSRF from the confirm dialog; a GET shows the full-page confirmation (no-JS) |
+| E7 | Provider not granted ⇒ 404 (§12.1) | Not listed, export / schema 404. An upload naming a provider the viewer may not apply is refused **on the form** (422, static message); access withdrawn between the dry run and the apply ⇒ 403 |
+| E8 | Runs list: own runs; all runs with `SEED_APPLY` on every provider of the run (§12.1) | All runs when the viewer has `SEED_APPLY` on **every provider of the scope kind**, else own runs (keeps the keyset pager exact). The run page of another actor (allowed with apply on every provider of the run) shows metadata only: no diff, no apply, no discard |
+| E9 | Stored document = normalised canonical JSON lines (§11) | Gzip JSON lines of the **parsed items** (as the reader produced them, floats keep their fraction): the apply re-normalises and re-validates them, and the plan hash is identical (tested). Plaintext secrets never reach it (refused while planning) |
+| E10 | Apply re-plans and compares the plan hash (§10.2) | Only while no batch of the run is committed. A resumed run (after `partially_applied` or a redelivery) skips batches ≤ `batches_done` using the **stored batch layout** (`BatchManifest`), and each remaining batch is checked against its reviewed digest under the row locks. A stale plan ⇒ run `failed` (`SEED_005`, document deleted: upload again). A lock conflict before the first batch ⇒ back to `planned` (retry) instead of `failed` |
+| E11 | Claim from `planned` / `queued` / `partially_applied` (§10.3) | Also from `running` when its last progress (heartbeat or batch) is older than `apply.lease_seconds`: a killed web request or a dead / slow worker, on the web (its actor) and on Messenger. Every claim is **fenced** (ZCE-L1): it gets the row's `version` as a fencing token and a lease holder of its own; batch progress, heartbeats, `finish()`, the release of the claim and the lease renew / release all require them, so a taken-over worker can neither record a batch, nor change the final status, nor touch the new claimer's leases (two-connection test `aSlowWorkerTakenOverChangesNothingAnyMore`). An admin of the kind (`SEED_APPLY` on every provider of the run) may discard a stalled run of another actor; the expiry sweep ends a stalled run past its TTL. Above `messenger.async_threshold_changes` the actor's apply queues a stalled run again (same cut-off and fencing; a failed hand-over reverts it). A claim whose final `finish()` lost the run reports nothing: no applied event, no success audit (ZCE-v) |
+| E12 | Mass prune: second UI confirmation typed with the count (§10.4) | The diff is shown with a warning; the apply form asks for the number of deletions typed (server-checked), no second dialog. An empty prune is refused in the UI (no override flag) |
+| E13 | `apply --async` (§12.4) | Not in 0.2 (console applies stay synchronous); moved to 0.3 |
+| E14 | BreadcrumbKit bridge (§3) | Crumbs are UiKit `PageHeader` crumbs, which UiKit renders through BreadcrumbKit when it is installed (`ui.breadcrumbs`, `ui.breadcrumb_collection`); no class under `src/Bridge/BreadcrumbKit` |
+| E15 | UiKit polling attribute + refresh link (§12.5) | The `auto-refresh` region markup (UiKit Stimulus peer, for hosts that register it) and a plain refresh link; no `Refresh` header |
+| E16 | `SEED_010` page "apply failed, N batches applied" 500 (§5.5) | As listed; `SEED_006` and `CONFLICT_00x` answer 409, `SEED_012` (late prune guard) 422, other SeedKit failures of an apply are server errors (500) |
+| E17 | REQ-ASSETS-001…005 (§22) | Still — : no own JavaScript or CSS is shipped (UiKit runtimes only) |
+| E18 | Document deleted at `runs.document_ttl` (§11) | Also checked at use (ZCE-L5): a document past its TTL is never shown or applied (`SEED_005`, upload again) and is ended on the spot; the Scheduler bridge stays opt-in (it needs `symfony/scheduler` and a Messenger setup); bounded sweeps run on upload and on the history page |
+| E19 | Messenger retry policy (§10.5, REQ-MSG-001) | A lock conflict before the first batch puts a queued run back to `queued` (not `planned`), so the transport's retry applies it (ZCE-L2); no exception thrown to Messenger chains its cause, and `ApplyInterruptedException` keeps only the class and code of its cause (ZCE-L4) |
+| E20 | CSRF (§12.1) | `ui.enabled` with form CSRF off or without a CSRF token manager fails the container build (`CsrfProtectionPass`, ZCE-L3) |
+| E21 | — | Actions pass UiKit kinds only (`SeedKitController::ACTION_KINDS`), never icon names, so the host's `action_icons` decide (Beacon, `bi:history` did not exist) |
+
+### 25.1 Symfony Beacon, 0.2 answers (2026-11-26)
+
+| # | Answer | Where |
+|---|---|---|
+| QB-SK2-a | Beacon reuses its scope resolver, access checker and actor resolver unchanged for the web and Messenger; unknown or invisible scope ⇒ 404; the bundle itself refuses `system` on the web and on Messenger | `SeedOperations::resolveScope()` (both channels), guard, `SeedRuns::applyQueued()` |
+| QB-SK2-b | The host owns the prefixes, one page per scope kind (`/developer/seeds`, `/organization/seeds`, `/projects/{uuid}/settings/seeds`); pages wrappable without overrides; dialogs load when they open | `ui.mounts`, `ui.current_scope` (E3), `ui.layout` (E4), UiKit remote form dialog |
+| QB-SK2-c | `ApplySeedRun` routed to Beacon's existing `async` transport; stable, documented name | E1, docs/CONFIGURATION.md |
+| QB-SK2-d | Upload cap 2 MB by default, configurable | E2 |

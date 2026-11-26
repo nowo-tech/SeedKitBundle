@@ -8,6 +8,8 @@ seed_kit:
     SEED_005: Os dados mudaram desde o plano revisto; reveja o novo diff e aplique de novo.
     SEED_006: Uma linha mudou enquanto o plano era aplicado; os lotes já aplicados mantêm-se. Aplique o documento de novo.
     SEED_007: O tipo de âmbito do documento não corresponde ao âmbito de destino.
+    SEED_008: A execução de seeds não está disponível; não existe, não é sua ou o documento expirou.
+    SEED_009: O plano é demasiado grande para ser aplicado num pedido web; aplique o ficheiro a partir da consola.
     SEED_010: O fornecedor falhou ao aplicar um lote; os lotes já aplicados mantêm-se.
     SEED_011: Um fornecedor de seeds violou o seu contrato; o bundle não escreveu nada.
     SEED_012: Uma proteção de eliminação recusou o plano; confirme-o explicitamente.
@@ -65,3 +67,118 @@ seed_kit:
     schema_maxItems: A lista tem demasiadas entradas.
     schema_minItems: A lista tem poucas entradas.
     schema_uniqueItems: A lista tem entradas repetidas.
+  warning:
+    exported_from_differs: O ficheiro foi exportado de um âmbito diferente daquele a que o está a aplicar; verifique o diff.
+  ui:
+    index:
+      title: Importar / exportar
+      intro: Descarregue um modelo ou os dados atuais de cada tipo de dados, edite o ficheiro, carregue-o, reveja o diff e aplique-o.
+      caption: Tipos de dados que pode exportar ou importar aqui
+      provider: Dados
+      description: Descrição
+      key: Chave natural
+      depends: Depende de
+      data: Notas
+      personal_data: Dados pessoais
+      secrets: Segredos como referências
+      export_only: Apenas exportar
+      download_empty: Modelo vazio
+      download_current: Dados atuais
+      download_schema: JSON Schema
+      empty_title: Nada para importar ou exportar
+      empty: Não pode exportar nem importar nenhum tipo de dados neste âmbito.
+    export:
+      confirm_title: Descarregar dados pessoais?
+      personal_data: O ficheiro de %provider% contém dados pessoais. Guarde-o em segurança, partilhe-o apenas como a sua organização permitir e apague-o quando já não precisar dele. A transferência fica registada.
+      download: Descarregar
+    upload:
+      open: Carregar ficheiro
+      title: Carregar um ficheiro de seeds
+      intro: 'YAML, JSON ou JSON Lines, com um ou vários tipos de dados. Ainda não se escreve nada: verá primeiro o diff.'
+      file: Ficheiro
+      file_help: Um ficheiro .yaml, .json ou .jsonl exportado aqui ou escrito com o JSON Schema.
+      prune: Apagar as linhas que o ficheiro omite
+      prune_help: Apenas as linhas que pode apagar neste âmbito. Confirmará o número de eliminações antes de apagar o que quer que seja.
+      submit: Verificar o ficheiro
+      errors_title: '%count% problema(s) encontrado(s); nada foi guardado.'
+      error_row: Linha
+      error_key: Chave
+      error_field: Campo
+      error_message: Problema
+    run:
+      title: Execução %id%
+      intro: Reveja as alterações e depois aplique-as ou descarte a execução.
+      summary: Resumo
+      providers: Dados
+      scope: Âmbito
+      planned: Previsto
+      counts: '%create% a criar, %update% a atualizar, %delete% a apagar, %unchanged% sem alterações'
+      written: Escrito
+      written_counts: '%create% criadas, %update% atualizadas, %delete% apagadas'
+      batches: Lotes
+      prune: Apaga as linhas que o ficheiro omite
+      plan_hash: Hash do plano
+      created: Carregado
+      error: Último erro
+      apply: Aplicar
+      apply_confirm_title: Aplicar esta execução?
+      apply_confirm: Serão escritas %changes% linha(s). As linhas sem alterações não são tocadas.
+      discard: Descartar
+      discard_confirm_title: Descartar esta execução?
+      discard_confirm: O documento carregado é eliminado; nada é escrito.
+      confirm_deletes: Número de linhas a apagar
+      confirm_deletes_help: Escreva o número de eliminações indicado acima para as confirmar.
+      confirm_deletes_wrong: O número não corresponde às eliminações desta execução.
+      mass_prune: Esta execução apaga %count% linha(s), mais do que a proporção permitida das linhas atuais. Escreva o número para confirmar.
+      stale: Os dados mudaram desde que este ficheiro foi verificado. Carregue-o novamente para ver o novo diff.
+      stalled: 'Esta execução deixou de responder: o seu pedido ou worker terminou. Aplique-a de novo para continuar após o último lote confirmado, ou descarte-a.'
+      progress: '%done% de %total% lotes aplicados'
+      refresh: Atualizar
+      no_changes: Sem alterações para este tipo de dados.
+      preview_caption: Alterações de %provider%
+      op: Alteração
+      key: Chave
+      fields: Campos (antes → depois)
+      hidden: oculto
+    runs:
+      title: Histórico
+      intro: Ficheiros de seeds carregados e aplicados neste âmbito.
+      caption: Execuções, as mais recentes primeiro
+      created: Carregado
+      status: Estado
+      providers: Dados
+      changes: Alterações
+      actor: Por
+      channel: De
+      empty_title: Ainda não há execuções
+      empty: Carregue um ficheiro para começar.
+      older: Execuções anteriores
+      pager: Páginas de execuções
+    status:
+      planned: Pronta a aplicar
+      queued: Em fila
+      running: A aplicar
+      applied: Aplicada
+      partially_applied: Parcialmente aplicada
+      failed: Falhada
+      discarded: Descartada
+      expired: Expirada
+    channel:
+      http: Web
+      console: Consola
+      messenger: Segundo plano
+    op:
+      create: Criar
+      update: Atualizar
+      unchanged: Sem alterações
+      delete: Apagar
+    message:
+      title: Não foi possível continuar a execução
+      what: O que aconteceu
+      code: Código
+      back: Voltar a importar / exportar
+      conflict: Outra execução está a aplicar os mesmos dados neste momento. Aguarde um instante e tente novamente.
+      interrupted: A aplicação parou após %done% de %total% lotes; os lotes aplicados mantêm-se. Aplique a execução novamente para a terminar, ou carregue o ficheiro de novo.
+      stale: Os dados mudaram desde que o ficheiro foi verificado. Carregue-o novamente para rever o novo diff.
+      too_large: A execução escreve %changes% linhas; um pedido web pode escrever no máximo %limit%. Aplique o ficheiro a partir da consola.
+      refused: O pedido foi recusado.

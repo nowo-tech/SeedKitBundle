@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Nowo\SeedKitBundle\Tests\Fixtures\Provider;
 
+use Closure;
 use Nowo\SeedKitBundle\Domain\Context\SeedContext;
 use Nowo\SeedKitBundle\Domain\Document\SeedItem;
 use Nowo\SeedKitBundle\Domain\Model\NaturalKey;
@@ -18,6 +19,7 @@ use Nowo\SeedKitBundle\Domain\Plan\PlanOptions;
 use Nowo\SeedKitBundle\Domain\Plan\RowChange;
 use Nowo\SeedKitBundle\Domain\Provider\AbstractSeedProvider;
 use Nowo\SeedKitBundle\Domain\Schema\SeedSchema;
+use RuntimeException;
 
 use function ksort;
 use function strcmp;
@@ -131,6 +133,12 @@ final class TagProvider extends AbstractSeedProvider
 
     protected function currentRows(SeedContext $context, array $keys, PlanOptions $options): array
     {
+        if ($this->store->failPlan) {
+            throw new RuntimeException('host failure while planning');
+        }
+        if ($this->store->onPlan instanceof Closure) {
+            ($this->store->onPlan)($options);
+        }
         if ($options->lockForUpdate) {
             ++$this->store->lockedPlans;
         }

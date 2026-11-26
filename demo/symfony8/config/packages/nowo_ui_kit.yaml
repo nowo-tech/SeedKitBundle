@@ -3,7 +3,16 @@
 nowo_ui_kit:
     css_framework: custom
     base_stylesheet: true
-    icon_set: none
+    icon_set: svg_inline   # icons drawn inline (no font, no CDN); the bundle passes kinds, UiKit draws their icon
+    # One icon per action kind (the Seed Kit pages pass kinds, never icon names). Under svg_inline the kit draws its own
+    # glyph of each mapped kind; a host on ux_icon / tabler names its icons here (see SeedKit docs/TEMPLATES.md).
+    action_icons:
+        view: 'bi:eye'
+        download: 'bi:download'
+        import: 'bi:upload'
+        run: 'bi:play'
+        cancel: 'bi:x-lg'
+        prev: 'bi:chevron-left'
     layouts:
         admin: base.html.twig
         guest: base.html.twig

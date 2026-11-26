@@ -8,6 +8,8 @@ seed_kit:
     SEED_005: I dati sono cambiati dal piano revisionato; rivedi il nuovo diff e applica di nuovo.
     SEED_006: Una riga è cambiata durante l'applicazione del piano; i lotti già applicati restano. Applica di nuovo il documento.
     SEED_007: Il tipo di ambito del documento non corrisponde all'ambito di destinazione.
+    SEED_008: L'esecuzione dei seed non è disponibile; non esiste, non è tua o il suo documento è scaduto.
+    SEED_009: Il piano è troppo grande per essere applicato in una richiesta web; applica il file dalla console.
     SEED_010: Il provider non è riuscito ad applicare un lotto; i lotti già applicati restano.
     SEED_011: Un provider di seed ha violato il suo contratto; il bundle non ha scritto nulla.
     SEED_012: Una protezione di eliminazione ha rifiutato il piano; confermalo esplicitamente.
@@ -65,3 +67,118 @@ seed_kit:
     schema_maxItems: La lista ha troppe voci.
     schema_minItems: La lista ha troppo poche voci.
     schema_uniqueItems: La lista ha voci ripetute.
+  warning:
+    exported_from_differs: Il file è stato esportato da un ambito diverso da quello a cui lo stai applicando; controlla il diff.
+  ui:
+    index:
+      title: Importa / esporta
+      intro: Scarica un modello o i dati attuali di ogni tipo di dati, modifica il file, caricalo, controlla il diff e applicalo.
+      caption: Tipi di dati che puoi esportare o importare qui
+      provider: Dati
+      description: Descrizione
+      key: Chiave naturale
+      depends: Dipende da
+      data: Note
+      personal_data: Dati personali
+      secrets: Segreti come riferimenti
+      export_only: Solo esportazione
+      download_empty: Modello vuoto
+      download_current: Dati attuali
+      download_schema: JSON Schema
+      empty_title: Niente da importare o esportare
+      empty: In questo ambito non puoi esportare né importare alcun tipo di dati.
+    export:
+      confirm_title: Scaricare i dati personali?
+      personal_data: Il file di %provider% contiene dati personali. Conservalo al sicuro, condividilo solo come consentito dalla tua organizzazione ed eliminalo quando non ti serve più. Il download viene registrato.
+      download: Scarica
+    upload:
+      open: Carica file
+      title: Carica un file di seed
+      intro: 'YAML, JSON o JSON Lines, con uno o più tipi di dati. Non viene ancora scritto nulla: vedrai prima il diff.'
+      file: File
+      file_help: Un file .yaml, .json o .jsonl esportato da qui o scritto con il JSON Schema.
+      prune: Elimina le righe che il file omette
+      prune_help: Solo le righe che puoi eliminare in questo ambito. Confermerai il numero di eliminazioni prima di eliminare qualcosa.
+      submit: Controlla il file
+      errors_title: Trovati %count% problema/i; non è stato salvato nulla.
+      error_row: Riga
+      error_key: Chiave
+      error_field: Campo
+      error_message: Problema
+    run:
+      title: Esecuzione %id%
+      intro: Controlla le modifiche, poi applicale o scarta l'esecuzione.
+      summary: Riepilogo
+      providers: Dati
+      scope: Ambito
+      planned: Previsto
+      counts: '%create% da creare, %update% da aggiornare, %delete% da eliminare, %unchanged% invariate'
+      written: Scritto
+      written_counts: '%create% create, %update% aggiornate, %delete% eliminate'
+      batches: Batch
+      prune: Elimina le righe che il file omette
+      plan_hash: Hash del piano
+      created: Caricato
+      error: Ultimo errore
+      apply: Applica
+      apply_confirm_title: Applicare questa esecuzione?
+      apply_confirm: Verranno scritte %changes% riga/righe. Le righe invariate non vengono toccate.
+      discard: Scarta
+      discard_confirm_title: Scartare questa esecuzione?
+      discard_confirm: Il documento caricato viene eliminato; non viene scritto nulla.
+      confirm_deletes: Numero di righe da eliminare
+      confirm_deletes_help: Digita il numero di eliminazioni mostrato sopra per confermarle.
+      confirm_deletes_wrong: Il numero non corrisponde alle eliminazioni di questa esecuzione.
+      mass_prune: Questa esecuzione elimina %count% riga/righe, più della quota consentita delle righe attuali. Digita il numero per confermare.
+      stale: I dati sono cambiati da quando il file è stato controllato. Caricalo di nuovo per vedere il nuovo diff.
+      stalled: 'Questa esecuzione ha smesso di rispondere: la sua richiesta o il suo worker è terminato. Applicala di nuovo per continuare dopo l''ultimo lotto confermato, oppure scartala.'
+      progress: '%done% di %total% batch applicati'
+      refresh: Aggiorna
+      no_changes: Nessuna modifica per questo tipo di dati.
+      preview_caption: Modifiche di %provider%
+      op: Modifica
+      key: Chiave
+      fields: Campi (prima → dopo)
+      hidden: nascosto
+    runs:
+      title: Cronologia
+      intro: File di seed caricati e applicati in questo ambito.
+      caption: Esecuzioni, le più recenti per prime
+      created: Caricato
+      status: Stato
+      providers: Dati
+      changes: Modifiche
+      actor: Da
+      channel: Origine
+      empty_title: Ancora nessuna esecuzione
+      empty: Carica un file per iniziare.
+      older: Esecuzioni precedenti
+      pager: Pagine delle esecuzioni
+    status:
+      planned: Pronta da applicare
+      queued: In coda
+      running: In applicazione
+      applied: Applicata
+      partially_applied: Applicata parzialmente
+      failed: Non riuscita
+      discarded: Scartata
+      expired: Scaduta
+    channel:
+      http: Web
+      console: Console
+      messenger: Sfondo
+    op:
+      create: Crea
+      update: Aggiorna
+      unchanged: Invariata
+      delete: Elimina
+    message:
+      title: Non è stato possibile continuare l'esecuzione
+      what: Cosa è successo
+      code: Codice
+      back: Torna a importa / esporta
+      conflict: Un'altra esecuzione sta applicando gli stessi dati in questo momento. Attendi un attimo e riprova.
+      interrupted: L'applicazione si è interrotta dopo %done% di %total% batch; i batch applicati restano. Applica di nuovo l'esecuzione per completarla, oppure carica di nuovo il file.
+      stale: I dati sono cambiati da quando il file è stato controllato. Caricalo di nuovo per controllare il nuovo diff.
+      too_large: L'esecuzione scrive %changes% righe; una richiesta web può scriverne al massimo %limit%. Applica il file dalla console.
+      refused: La richiesta è stata rifiutata.

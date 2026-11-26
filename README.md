@@ -59,8 +59,17 @@ This bundle is **FrankenPHP worker mode friendly**.
   ([FRANKENPHP-WORKER-AUDIT.md](docs/FRANKENPHP-WORKER-AUDIT.md)).
 - 10 locales (en, es, it, fr, pt, de, nl, ca, eu, gl), translation domain `NowoSeedKitBundle`.
 
-0.1.0 ships the core, the console and the contract test kit. The import / export pages and the Messenger apply arrive
-in 0.2.0 ([ROADMAP.md](docs/ROADMAP.md)).
+- **Import / export pages** (0.2, opt-in): one page per scope kind at a prefix you choose, on UiKit scaffolds and
+  FormKit forms, wrapped in your layout (`ui.layout`): downloads, an upload dialog loaded when it opens, the diff,
+  apply / discard, history and progress ([TEMPLATES.md](docs/TEMPLATES.md)).
+- **Asynchronous apply** (0.2, opt-in): large UI applies are queued as `ApplySeedRun` on your Messenger transport and
+  applied once, as the run's actor, even on redelivery; a Scheduler bridge expires stored documents and purges the
+  history.
+
+| Import / export | Upload dialog | Diff before apply |
+| --- | --- | --- |
+| ![Import / export page](docs/images/demo/import-export-light.webp) | ![Upload dialog](docs/images/demo/upload-dialog-light.webp) | ![Run diff](docs/images/demo/run-diff-light.webp) |
+| ![Import / export page, dark](docs/images/demo/import-export-dark.webp) | ![Runs](docs/images/demo/runs-light.webp) | ![Run diff, dark](docs/images/demo/run-diff-dark.webp) |
 
 ## Installation
 
@@ -166,6 +175,7 @@ the schema for `admin` (may export) and `viewer` (denied), password `demo`. `mak
 - [Concurrency](docs/CONCURRENCY.md)
 - [FrankenPHP worker audit](docs/FRANKENPHP-WORKER-AUDIT.md)
 - [Privacy](docs/PRIVACY.md)
+- [Templates and pages](docs/TEMPLATES.md)
 - [Contract](docs/CONTRACT.md)
 - [Demo with FrankenPHP](docs/DEMO-FRANKENPHP.md)
 - [GitHub Actions CI](docs/GITHUB_CI.md)

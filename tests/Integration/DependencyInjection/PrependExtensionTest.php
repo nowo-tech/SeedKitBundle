@@ -5,14 +5,18 @@ declare(strict_types=1);
 namespace Nowo\SeedKitBundle\Tests\Integration\DependencyInjection;
 
 use Doctrine\Bundle\DoctrineBundle\DependencyInjection\DoctrineExtension;
+use Nowo\FormKitBundle\DependencyInjection\FormKitExtension;
 use Nowo\SeedKitBundle\NowoSeedKitBundle;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
+use Symfony\Bundle\TwigBundle\DependencyInjection\TwigExtension;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\DependencyInjection\Extension\PrependExtensionInterface;
+use Symfony\Component\Filesystem\Filesystem;
 
 use function array_key_first;
+use function array_values;
 use function count;
 use function dirname;
 use function is_array;
@@ -138,5 +142,40 @@ final class PrependExtensionTest extends TestCase
         [$manager] = $this->mapping($this->prepend($seedKit, $doctrine));
 
         self::assertSame($expected, $manager);
+    }
+
+    #[Test]
+    public function theTwigNamespaceAndTheFormKitProfileArePrepended(): void
+    {
+        $project = sys_get_temp_dir() . '/nowo-seed-kit-prepend';
+        (new Filesystem())->mkdir($project . '/templates/bundles/NowoSeedKitBundle');
+        $builder = new ContainerBuilder();
+        $builder->setParameter('kernel.project_dir', $project);
+        $builder->setParameter('kernel.environment', 'test');
+        $builder->setParameter('kernel.build_dir', sys_get_temp_dir());
+        $own = (new NowoSeedKitBundle())->getContainerExtension();
+        self::assertInstanceOf(PrependExtensionInterface::class, $own);
+        $builder->registerExtension($own);
+        $builder->registerExtension(new TwigExtension());
+        $builder->registerExtension(new FormKitExtension());
+        $builder->loadFromExtension('nowo_form_kit', ['profiles' => ['other' => []]]);
+        $own->prepend($builder);
+
+        $paths = $builder->getExtensionConfig('twig')[0]['paths'] ?? null;
+        self::assertIsArray($paths);
+        self::assertSame(['NowoSeedKitBundle', 'NowoSeedKitBundle'], array_values($paths));
+        self::assertSame($project . '/templates/bundles/NowoSeedKitBundle', array_key_first($paths), 'host overrides first');
+        $profiles = $builder->getExtensionConfig('nowo_form_kit')[0]['profiles'] ?? null;
+        self::assertIsArray($profiles);
+        self::assertArrayHasKey('seed_kit', $profiles);
+
+        $builder = new ContainerBuilder();
+        $builder->setParameter('kernel.environment', 'test');
+        $builder->setParameter('kernel.build_dir', sys_get_temp_dir());
+        $builder->registerExtension($own);
+        $builder->registerExtension(new FormKitExtension());
+        $builder->loadFromExtension('nowo_form_kit', ['profiles' => ['seed_kit' => ['alias' => 'mine']]]);
+        $own->prepend($builder);
+        self::assertCount(1, $builder->getExtensionConfig('nowo_form_kit'), 'a host profile of the same name wins');
     }
 }

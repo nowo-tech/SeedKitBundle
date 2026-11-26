@@ -6,6 +6,8 @@ namespace Nowo\SeedKitBundle\Tests\Integration\Kernel;
 
 use Doctrine\Bundle\DoctrineBundle\DoctrineBundle;
 use Nowo\AuditKitBundle\ActionLog\ActionLogRecorderInterface;
+use Nowo\FormKitBundle\NowoFormKitBundle;
+use Nowo\SeedKitBundle\Bridge\Messenger\ApplySeedRun;
 use Nowo\SeedKitBundle\Infrastructure\Symfony\Event\SeedKitEvents;
 use Nowo\SeedKitBundle\NowoSeedKitBundle;
 use Nowo\SeedKitBundle\Tests\Fixtures\Application\RecordingAuditSink;
@@ -13,6 +15,7 @@ use Nowo\SeedKitBundle\Tests\Fixtures\Application\RecordingLogger;
 use Nowo\SeedKitBundle\Tests\Fixtures\Host\AccessListener;
 use Nowo\SeedKitBundle\Tests\Fixtures\Host\FixedActorResolver;
 use Nowo\SeedKitBundle\Tests\Fixtures\Host\HostArticleProvider;
+use Nowo\SeedKitBundle\Tests\Fixtures\Host\HostCurrentScope;
 use Nowo\SeedKitBundle\Tests\Fixtures\Host\HostHooks;
 use Nowo\SeedKitBundle\Tests\Fixtures\Host\HostNoteProvider;
 use Nowo\SeedKitBundle\Tests\Fixtures\Host\HostScopeResolver;
@@ -23,18 +26,22 @@ use Nowo\SeedKitBundle\Tests\Fixtures\Provider\PrefixSecretValidator;
 use Nowo\SeedKitBundle\Tests\Support\QueryLog;
 use Nowo\SeedKitBundle\Tests\Support\QueryLogMiddleware;
 use Nowo\SeedKitBundle\Tests\Support\TestDatabase;
+use Nowo\UiKitBundle\NowoUiKitBundle;
 use Nowo\VaultBundle\Service\VaultAccessCheckInterface;
 use Nowo\VaultBundle\Service\VaultItemQueryInterface;
 use Psr\Log\NullLogger;
 use Symfony\Bundle\FrameworkBundle\FrameworkBundle;
 use Symfony\Bundle\FrameworkBundle\Kernel\MicroKernelTrait;
 use Symfony\Bundle\SecurityBundle\SecurityBundle;
+use Symfony\Bundle\TwigBundle\TwigBundle;
 use Symfony\Component\Clock\MockClock;
 use Symfony\Component\DependencyInjection\Compiler\PassConfig;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\DependencyInjection\Loader\Configurator\ContainerConfigurator;
 use Symfony\Component\DependencyInjection\Reference;
 use Symfony\Component\HttpKernel\Kernel;
+use Symfony\Component\Routing\Loader\Configurator\RoutingConfigurator;
+use Symfony\Component\Security\Core\User\InMemoryUser;
 
 use function array_replace_recursive;
 use function dirname;
@@ -62,7 +69,7 @@ final class TestKernel extends Kernel
 
     /**
      * @param array<string, mixed> $bundleConfig `nowo_seed_kit` configuration (merged over the host defaults)
-     * @param array<string, bool> $features security, vault, auditkit, broken, no_providers, quiet, query_log, no_debug (production-like: no traceable dispatcher, no DBAL logging)
+     * @param array<string, bool> $features security, ui (TwigBundle, UiKit, FormKit, SecurityBundle with http_basic, the UI routes), no_csrf (with ui: form CSRF off), tabler_icons (with ui: tabler-icons set + action_icons), messenger (with ui: in-memory `async` transport), vault, auditkit, broken, no_providers, quiet, query_log, no_debug (production-like: no traceable dispatcher, no DBAL logging)
      * @param 'ddd'|'first'|'named'|'standard' $host
      */
     public function __construct(
@@ -85,8 +92,13 @@ final class TestKernel extends Kernel
     {
         yield new FrameworkBundle();
         yield new DoctrineBundle();
-        if ($this->feature('security')) {
+        if ($this->feature('security') || $this->feature('ui')) {
             yield new SecurityBundle();
+        }
+        if ($this->feature('ui')) {
+            yield new TwigBundle();
+            yield new NowoUiKitBundle();
+            yield new NowoFormKitBundle();
         }
         yield new NowoSeedKitBundle();
     }
@@ -114,8 +126,21 @@ final class TestKernel extends Kernel
         return $this->host;
     }
 
+    /**
+     * The UI routes (feature `ui`).
+     */
+    protected function configureRoutes(RoutingConfigurator $routes): void
+    {
+        if ($this->feature('ui')) {
+            $routes->import('.', 'nowo_seed_kit');
+        }
+    }
+
     protected function build(ContainerBuilder $container): void
     {
+        if ($this->feature('conflicting_runs')) {
+            $container->setParameter('test.conflicting_runs', true);
+        }
         $container->register('test.mock_clock', MockClock::class)->setArguments(['2026-11-24 10:00:00', 'UTC'])->setPublic(true);
         $container->register('logger', $this->feature('quiet') ? NullLogger::class : RecordingLogger::class)->setPublic(true);
         $container->register('test.secret_validator', PrefixSecretValidator::class);
@@ -136,12 +161,18 @@ final class TestKernel extends Kernel
             } else {
                 $container->register(HostArticleProvider::class, HostArticleProvider::class)->setArguments([$connection, new Reference('test.hooks')])
                     ->addTag('nowo_seed_kit.provider', ['name' => 'host.articles', 'depends_on' => ['host.tags']]);
+                if ($this->feature('ui')) {
+                    // A provider without personal data or secrets (its current export needs no confirmation).
+                    $container->register(HostNoteProvider::class, HostNoteProvider::class)->setArguments([$connection])
+                        ->addTag('nowo_seed_kit.provider', ['name' => 'host.notes', 'depends_on' => ['host.tags']]);
+                }
             }
         }
         if ($this->feature('broken')) {
             $container->register(LintBrokenProvider::class, LintBrokenProvider::class)->addTag('nowo_seed_kit.provider', ['name' => 'host.broken']);
         }
         $container->register('test.scope_resolver', HostScopeResolver::class);
+        $container->register('test.current_scope', HostCurrentScope::class);
         $container->register('test.actor_resolver', FixedActorResolver::class);
         $container->register('test.access_checker', PermissionSetChecker::class)->setArguments([['admin' => ['area', 'export:host.tags', 'apply:host.tags'], 'messenger-bot' => ['apply:host.tags']]]);
         if ($this->feature('vault')) {
@@ -179,7 +210,40 @@ final class TestKernel extends Kernel
             'first' => ['dbal' => ['url' => $url], 'orm' => ['entity_managers' => ['primary' => ['connection' => 'default'], 'secondary' => ['connection' => 'default']]]],
             default => ['dbal' => ['url' => $url], 'orm' => ['entity_managers' => ['default' => ['connection' => 'default']]]],
         });
-        if ($this->feature('security')) {
+        if ($this->feature('ui')) {
+            $container->extension('framework', [
+                'router'          => ['utf8' => true],
+                'session'         => ['storage_factory_id' => 'session.storage.factory.mock_file'],
+                'csrf_protection' => true,
+                'form'            => $this->feature('no_csrf') ? ['csrf_protection' => false] : true,
+                'validation'      => true,
+                'property_access' => true,
+                'messenger'       => $this->feature('messenger') ? [
+                    'transports' => ['async' => 'in-memory://'],
+                    'routing'    => [ApplySeedRun::class => 'async'],
+                ] : false,
+            ]);
+            $container->extension('twig', ['strict_variables' => true]);
+            if ($this->feature('tabler_icons')) {
+                // A host on its own icon set that maps every kind of the bundle and has no bi:* icon at all.
+                $container->extension('nowo_ui_kit', ['icon_set' => 'tabler-icons', 'action_icons' => [
+                    'view' => 'tabler:list', 'download' => 'tabler:download', 'import' => 'tabler:upload',
+                    'run'  => 'tabler:player-play', 'cancel' => 'tabler:x', 'prev' => 'tabler:arrow-left',
+                ]]);
+            }
+            $container->extension('security', [
+                'password_hashers' => [InMemoryUser::class => 'plaintext'],
+                'providers'        => ['memory' => ['memory' => ['users' => [
+                    'admin'  => ['password' => 'x', 'roles' => ['ROLE_ADMIN']],
+                    'pruner' => ['password' => 'x', 'roles' => ['ROLE_ADMIN', 'ROLE_PRUNE']],
+                    'viewer' => ['password' => 'x', 'roles' => ['ROLE_VIEWER']],
+                    'bob'    => ['password' => 'x', 'roles' => ['ROLE_ADMIN']],
+                    'nomad'  => ['password' => 'x', 'roles' => ['ROLE_ADMIN']],
+                    'system' => ['password' => 'x', 'roles' => ['ROLE_ADMIN']],
+                ]]]],
+                'firewalls' => ['main' => ['lazy' => true, 'provider' => 'memory', 'http_basic' => true]],
+            ]);
+        } elseif ($this->feature('security')) {
             $container->extension('security', [
                 'providers' => ['memory' => ['memory' => ['users' => [
                     'admin'  => ['password' => 'x', 'roles' => ['ROLE_ADMIN']],

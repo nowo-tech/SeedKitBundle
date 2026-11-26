@@ -169,8 +169,20 @@ Large files must be JSON Lines, read line by line.
 
 ## CSRF and admin UI
 
-CSRF: N/A — no session mutations in 0.1 (console and PHP API only, REQ-SEC-005). Admin UI: N/A in 0.1; the 0.2 import /
-export pages use FormKit forms with CSRF and get their own immediate audit.
+The 0.2 pages (opt-in, `ui.enabled`) are behind the guard on every action: no user ⇒ the firewall's entry point
+(login / 401) unless `allow_unauthenticated` (demos); `system` ⇒ refused (web and Messenger); unknown or invisible
+scope ⇒ 404 (the host resolver decides; ids cannot be probed); no area access (`access_roles` / `canUseArea()`) ⇒ 403;
+a provider the viewer may not use is not listed and its URLs answer 404. Every POST (upload, apply, discard, the
+personal-data export) is a FormKit form with the `nowo_seed_kit` CSRF token. A run is bound to its actor: another
+actor gets 404 for writes and, with `SEED_APPLY` on every provider of the run, a read-only page without the diff.
+Apply re-checks access and the reviewed plan hash; a mass prune needs the delete count typed. Uploads go through the
+same hardened reader with web caps (`ui.max_upload_bytes`, default 2 MiB; the client file name only picks the parser).
+`ui.enabled` with form CSRF off fails the container build (`CsrfProtectionPass`). A document past its TTL is never shown
+or applied. Demos with `allow_unauthenticated` share one actor (`anonymous`): every visitor owns every run, so never
+use it outside a demo. A current export larger than 2 MiB spills to a PHP temporary file until it is sent. Answers are
+`Cache-Control: no-store, private`; downloads are attachments with `nosniff`. The remote dialog header is
+never trusted for security: it only selects the fragment template. Queued applies re-check access for the stored actor
+(`canForActor()`, deny by default) and the `system` actor is refused there.
 
 ## Dependency and updates
 

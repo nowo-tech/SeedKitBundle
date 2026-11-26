@@ -25,7 +25,7 @@ final readonly class RunMaintenance
     /**
      * Builds the maintenance service.
      */
-    public function __construct(private RunStoreInterface $runs, private ClockInterface $clock, private int $historyDays = 365)
+    public function __construct(private RunStoreInterface $runs, private ClockInterface $clock, private int $historyDays = 365, private int $leaseSeconds = 300)
     {
     }
 
@@ -45,6 +45,18 @@ final readonly class RunMaintenance
     public function defaultBefore(): DateTimeImmutable
     {
         return DateTimeImmutable::createFromInterface($this->clock->now())->modify('-' . $this->historyDays . ' days');
+    }
+
+    /**
+     * Ends the stored documents past `runs.document_ttl` (0.2 UI runs): `planned` / `queued` runs become `expired`, a
+     * `partially_applied` run loses its document, a `running` run without progress for longer than the lease (a killed
+     * request or worker) ends too. Returns the rows changed.
+     */
+    public function expire(): int
+    {
+        $now = DateTimeImmutable::createFromInterface($this->clock->now());
+
+        return $this->runs->expire($now, self::BATCH, $now->modify('-' . $this->leaseSeconds . ' seconds'));
     }
 
     /**

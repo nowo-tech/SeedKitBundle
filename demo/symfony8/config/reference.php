@@ -1733,6 +1733,7 @@ use Symfony\Component\Config\Loader\ParamConfigurator as Param;
  *     },
  *     runs?: array{
  *         history_days?: int|Param, // Default: 365
+ *         document_ttl?: scalar|Param|null, // How long a UI run keeps its uploaded document while planned / queued (ISO 8601 duration, 1 minute to 7 days). // Default: "PT1H"
  *     },
  *     secrets?: array{
  *         validator?: scalar|Param|null, // Service id of a SecretReferenceValidatorInterface. Without one (and without the Vault bridge) every secret reference is refused on import and omitted on export. // Default: null
@@ -1763,6 +1764,30 @@ use Symfony\Component\Config\Loader\ParamConfigurator as Param;
  *             apply_roles?: mixed, // Default: null
  *             prune_roles?: mixed, // Default: null
  *         }>,
+ *     },
+ *     ui?: array{
+ *         enabled?: bool|Param, // Register the Import / export pages (needs SecurityBundle, Twig, symfony/form + validator, UiKit and FormKit). // Default: false
+ *         layout?: scalar|Param|null, // Base layout every page extends (null: nowo_ui_kit.layouts.admin), so the host wraps the pages without overrides. // Default: null
+ *         max_upload_bytes?: int|Param, // Largest upload (bytes). // Default: 2097152
+ *         max_items?: int|Param, // Items per document of an upload. // Default: 10000
+ *         max_sync_changes?: int|Param, // Rows a web request may apply; above it the apply is queued (messenger.enabled) or refused (SEED_009). // Default: 2000
+ *         runs_per_page?: int|Param, // Default: 50
+ *         poll_interval_ms?: int|Param, // Refresh interval of the progress of a queued / running run (UiKit auto-refresh region). // Default: 3000
+ *         breadcrumbs?: bool|Param, // Page-header crumbs (BreadcrumbKit renders them through UiKit when installed). // Default: true
+ *         breadcrumb_collection?: scalar|Param|null, // BreadcrumbKit collection of the crumbs (null: UiKit default). // Default: null
+ *         current_scope?: scalar|Param|null, // Service id of a SeedCurrentScopeInterface: the scope id of mounts whose path has no {scopeId}. // Default: null
+ *         mounts?: array<string, array{ // Default: []
+ *             path?: scalar|Param|null,
+ *         }>,
+ *     },
+ *     messenger?: array{
+ *         enabled?: bool|Param, // Queue large UI applies as Nowo\SeedKitBundle\Bridge\Messenger\ApplySeedRun (route it to an async transport). // Default: false
+ *         async_threshold_changes?: int|Param, // Rows above which a UI apply is queued. // Default: 2000
+ *         trust_run_actor?: bool|Param, // Grant Messenger applies without SeedKitAccessCheckerInterface::canForActor() (default false: the checker decides, deny by default). // Default: false
+ *     },
+ *     scheduler?: array{
+ *         enabled?: bool|Param, // Register the schedule "nowo_seed_kit" (document expiry + history purge). // Default: false
+ *         frequency?: scalar|Param|null, // Default: "1 hour"
  *     },
  * }
  * @psalm-type ConfigType = array{

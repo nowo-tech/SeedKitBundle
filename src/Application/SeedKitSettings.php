@@ -23,6 +23,9 @@ final readonly class SeedKitSettings
      * @param int $maxNodes nodes of one item
      * @param int $maxStringBytes bytes of one string
      * @param int $maxProperties properties of one object
+     * @param int $documentTtl seconds a UI run keeps its document (`runs.document_ttl`)
+     * @param int $maxSyncChanges rows a web request may apply (`ui.max_sync_changes`)
+     * @param int $asyncThreshold rows above which a UI apply is queued when Messenger is enabled
      */
     public function __construct(
         public array $scopeKinds = [ScopeKind::PLATFORM => false],
@@ -36,6 +39,9 @@ final readonly class SeedKitSettings
         public int $maxNodes = 10000,
         public int $maxStringBytes = 65536,
         public int $maxProperties = 256,
+        public int $documentTtl = 3600,
+        public int $maxSyncChanges = 2000,
+        public int $asyncThreshold = 2000,
     ) {
     }
 

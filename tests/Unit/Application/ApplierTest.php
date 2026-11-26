@@ -271,7 +271,8 @@ final class ApplierTest extends TestCase
             self::fail('expected');
         } catch (ApplyInterruptedException $e) {
             self::assertSame(ApplyInterruptedException::PROVIDER_FAILED, $e->kind);
-            self::assertInstanceOf(RuntimeException::class, $e->getPrevious());
+            self::assertSame(RuntimeException::class, $e->causeClass);
+            self::assertNull($e->getPrevious());
             self::assertStringNotContainsString('secret detail', $e->getMessage());
         }
         self::assertSame(RunStatus::Failed, $this->onlyRun()->status);
@@ -300,8 +301,8 @@ final class ApplierTest extends TestCase
             self::assertSame([0, 2], [$e->batchesCommitted, $e->batchesTotal]);
         }
         $run = $this->onlyRun();
-        self::assertSame(RunStatus::Failed, $run->status);
-        self::assertSame('CONFLICT_001', $run->errorCode);
+        self::assertSame(RunStatus::Running, $run->status, 'fenced: the other claimer owns the run now, ours changes nothing (ZCE-L1)');
+        self::assertNull($run->errorCode);
         self::assertSame(1, $run->batchesDone, 'the other delivery\'s progress is kept');
         self::assertSame(['create' => 9, 'update' => 0, 'delete' => 0], $run->counts);
         self::assertSame(['SeedRunFailedEvent'], $this->events->names(), 'no batch event for the refused batch');
@@ -344,7 +345,7 @@ final class ApplierTest extends TestCase
             self::assertSame(ApplyInterruptedException::CONFLICT, $e->kind);
             self::assertSame('CONFLICT_001', $e->errorCode());
             self::assertSame(7, $e->retryAfterSeconds);
-            self::assertInstanceOf(ConcurrencyConflict::class, $e->getPrevious());
+            self::assertSame(ConcurrencyConflict::class, $e->causeClass);
         }
         self::assertSame('CONFLICT_001', $this->onlyRun()->errorCode);
         self::assertSame([], $this->logger->records, 'a conflict is not a provider failure');

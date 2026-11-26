@@ -23,11 +23,17 @@ final readonly class SeedAuditRecord
     /** An apply with prune. */
     public const PRUNE = 'prune';
 
+    /** A UI run discarded before it was applied (0.2). */
+    public const DISCARD = 'discard';
+
     /** Success. */
     public const OUTCOME_SUCCESS = 'success';
 
     /** A failure outside the SeedKit error codes (a host or driver exception); its class and message are not kept. */
     public const OUTCOME_ERROR = 'error';
+
+    /** An apply handed to the asynchronous apply (0.2; the outcome of the run is audited when it ends). */
+    public const OUTCOME_QUEUED = 'queued';
 
     /**
      * @param string $action one of the action constants

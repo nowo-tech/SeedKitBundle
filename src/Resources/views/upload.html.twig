@@ -1,0 +1,11 @@
+{#-
+  SeedKit upload page (contract 12.5, REQ-UI-003 form scaffold; the no-JavaScript fallback and deep link of the upload
+  dialog). Variables: page (View\FormPage), errors (row errors), max_bytes.
+-#}
+{% extends '@NowoUiKit/page/form.html.twig' %}
+
+{% block nowo_ui_form_body %}
+    {{ form_errors(form) }}
+    {{ include('@NowoSeedKitBundle/_upload_errors.html.twig', {errors: errors, bundle: page.bundle}) }}
+    {{ parent() }}
+{% endblock %}

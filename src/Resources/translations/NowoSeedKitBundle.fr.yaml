@@ -8,6 +8,8 @@ seed_kit:
     SEED_005: Les données ont changé depuis le plan relu ; relisez le nouveau diff et appliquez à nouveau.
     SEED_006: Une ligne a changé pendant l'application du plan ; les lots déjà appliqués restent. Appliquez le document à nouveau.
     SEED_007: Le type de périmètre du document ne correspond pas au périmètre cible.
+    SEED_008: L'exécution de seed n'est pas disponible ; elle n'existe pas, n'est pas à vous ou son document a expiré.
+    SEED_009: Le plan est trop volumineux pour être appliqué dans une requête web ; appliquez le fichier depuis la console.
     SEED_010: Le fournisseur a échoué à appliquer un lot ; les lots déjà appliqués restent.
     SEED_011: Un fournisseur de seeds a enfreint son contrat ; le bundle n'a rien écrit.
     SEED_012: Une protection de suppression a refusé le plan ; confirmez-le explicitement.
@@ -65,3 +67,118 @@ seed_kit:
     schema_maxItems: La liste a trop d'entrées.
     schema_minItems: La liste a trop peu d'entrées.
     schema_uniqueItems: La liste a des entrées répétées.
+  warning:
+    exported_from_differs: Le fichier a été exporté depuis un autre périmètre que celui auquel vous l'appliquez ; vérifiez le diff.
+  ui:
+    index:
+      title: Import / export
+      intro: Téléchargez un modèle ou les données actuelles de chaque type de données, modifiez le fichier, envoyez-le, vérifiez le diff et appliquez-le.
+      caption: Types de données que vous pouvez exporter ou importer ici
+      provider: Données
+      description: Description
+      key: Clé naturelle
+      depends: Dépend de
+      data: Notes
+      personal_data: Données personnelles
+      secrets: Secrets sous forme de références
+      export_only: Export uniquement
+      download_empty: Modèle vide
+      download_current: Données actuelles
+      download_schema: JSON Schema
+      empty_title: Rien à importer ni à exporter
+      empty: Vous ne pouvez exporter ni importer aucun type de données dans ce périmètre.
+    export:
+      confirm_title: Télécharger les données personnelles ?
+      personal_data: Le fichier de %provider% contient des données personnelles. Conservez-le en lieu sûr, ne le partagez que dans les limites de votre organisation et supprimez-le quand vous n'en avez plus besoin. Le téléchargement est enregistré.
+      download: Télécharger
+    upload:
+      open: Envoyer un fichier
+      title: Envoyer un fichier de seed
+      intro: 'YAML, JSON ou JSON Lines, avec un ou plusieurs types de données. Rien n''est encore écrit : vous verrez d''abord le diff.'
+      file: Fichier
+      file_help: Un fichier .yaml, .json ou .jsonl exporté ici ou écrit avec le JSON Schema.
+      prune: Supprimer les lignes absentes du fichier
+      prune_help: Uniquement les lignes que vous pouvez supprimer dans ce périmètre. Vous confirmerez le nombre de suppressions avant toute suppression.
+      submit: Vérifier le fichier
+      errors_title: '%count% problème(s) trouvé(s) ; rien n''a été enregistré.'
+      error_row: Ligne
+      error_key: Clé
+      error_field: Champ
+      error_message: Problème
+    run:
+      title: Exécution %id%
+      intro: Vérifiez les changements, puis appliquez-les ou abandonnez l'exécution.
+      summary: Résumé
+      providers: Données
+      scope: Périmètre
+      planned: Prévu
+      counts: '%create% à créer, %update% à mettre à jour, %delete% à supprimer, %unchanged% inchangée(s)'
+      written: Écrit
+      written_counts: '%create% créée(s), %update% mise(s) à jour, %delete% supprimée(s)'
+      batches: Lots
+      prune: Supprime les lignes absentes du fichier
+      plan_hash: Empreinte du plan
+      created: Envoyé
+      error: Dernière erreur
+      apply: Appliquer
+      apply_confirm_title: Appliquer cette exécution ?
+      apply_confirm: '%changes% ligne(s) seront écrites. Les lignes inchangées ne sont pas touchées.'
+      discard: Abandonner
+      discard_confirm_title: Abandonner cette exécution ?
+      discard_confirm: Le document envoyé est supprimé ; rien n'est écrit.
+      confirm_deletes: Nombre de lignes à supprimer
+      confirm_deletes_help: Saisissez le nombre de suppressions indiqué ci-dessus pour les confirmer.
+      confirm_deletes_wrong: Le nombre ne correspond pas aux suppressions de cette exécution.
+      mass_prune: Cette exécution supprime %count% ligne(s), plus que la part autorisée des lignes actuelles. Saisissez le nombre pour confirmer.
+      stale: Les données ont changé depuis la vérification de ce fichier. Envoyez-le à nouveau pour voir le nouveau diff.
+      stalled: 'Cette exécution ne répond plus : sa requête ou son worker s''est arrêté. Appliquez-la de nouveau pour reprendre après le dernier lot validé, ou abandonnez-la.'
+      progress: '%done% lot(s) sur %total% appliqué(s)'
+      refresh: Actualiser
+      no_changes: Aucun changement pour ce type de données.
+      preview_caption: Changements de %provider%
+      op: Changement
+      key: Clé
+      fields: Champs (avant → après)
+      hidden: masqué
+    runs:
+      title: Historique
+      intro: Fichiers de seed envoyés et appliqués dans ce périmètre.
+      caption: Exécutions, les plus récentes d'abord
+      created: Envoyé
+      status: Statut
+      providers: Données
+      changes: Changements
+      actor: Par
+      channel: Depuis
+      empty_title: Aucune exécution pour l'instant
+      empty: Envoyez un fichier pour commencer.
+      older: Exécutions plus anciennes
+      pager: Pages des exécutions
+    status:
+      planned: Prête à appliquer
+      queued: En file d'attente
+      running: Application en cours
+      applied: Appliquée
+      partially_applied: Partiellement appliquée
+      failed: Échouée
+      discarded: Abandonnée
+      expired: Expirée
+    channel:
+      http: Web
+      console: Console
+      messenger: Arrière-plan
+    op:
+      create: Créer
+      update: Mettre à jour
+      unchanged: Inchangé
+      delete: Supprimer
+    message:
+      title: L'exécution n'a pas pu continuer
+      what: Ce qui s'est passé
+      code: Code
+      back: Retour à import / export
+      conflict: Une autre exécution applique les mêmes données en ce moment. Patientez un instant et réessayez.
+      interrupted: L'application s'est arrêtée après %done% lot(s) sur %total% ; les lots appliqués restent. Appliquez à nouveau l'exécution pour la terminer, ou renvoyez le fichier.
+      stale: Les données ont changé depuis la vérification du fichier. Envoyez-le à nouveau pour voir le nouveau diff.
+      too_large: L'exécution écrit %changes% lignes ; une requête web peut en écrire %limit% au maximum. Appliquez le fichier depuis la console.
+      refused: La requête a été refusée.

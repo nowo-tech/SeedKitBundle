@@ -4,9 +4,11 @@ declare(strict_types=1);
 
 namespace Nowo\SeedKitBundle;
 
+use Nowo\SeedKitBundle\Infrastructure\Symfony\DependencyInjection\Compiler\CsrfProtectionPass;
 use Nowo\SeedKitBundle\Infrastructure\Symfony\DependencyInjection\Compiler\SeedProviderPass;
 use Nowo\SeedKitBundle\Infrastructure\Symfony\DependencyInjection\ConfigurationTree;
 use Nowo\SeedKitBundle\Infrastructure\Symfony\DependencyInjection\ServiceDefinitions;
+use Nowo\SeedKitBundle\Infrastructure\Symfony\Form\FormProfile;
 use Symfony\Component\Config\Definition\Configurator\DefinitionConfigurator;
 use Symfony\Component\DependencyInjection\Compiler\PassConfig;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
@@ -16,6 +18,7 @@ use Symfony\Component\HttpKernel\Bundle\AbstractBundle;
 use function array_key_exists;
 use function array_key_first;
 use function is_array;
+use function is_dir;
 use function is_string;
 
 /**
@@ -23,7 +26,8 @@ use function is_string;
  * (by hand or with an AI reading the published JSON Schema), dry-run it as a diff with a plan hash, and apply it in
  * idempotent batches through the host's own handlers, with leases, access checks and audit.
  *
- * 0.1 ships the core, the console commands and the provider contract test kit; the UI pages and Messenger arrive in 0.2.
+ * 0.1 ships the core, the console commands and the provider contract test kit; 0.2 adds the opt-in UI (Import / export
+ * pages per scope kind, upload dialog, diff, apply, runs), the Messenger asynchronous apply and the Scheduler purge.
  *
  * @author Héctor Franco Aceituno <hectorfranco@nowo.tech>
  * @copyright 2026 Nowo.tech
@@ -35,6 +39,12 @@ final class NowoSeedKitBundle extends AbstractBundle
 
     /** Translation domain. */
     public const TRANSLATION_DOMAIN = 'NowoSeedKitBundle';
+
+    /** Twig namespace of the templates (REQ-TWIG-002): `@NowoSeedKitBundle/...`, overrides in `templates/bundles/NowoSeedKitBundle/`. */
+    public const TWIG_NAMESPACE = 'NowoSeedKitBundle';
+
+    /** FormKit profile of the bundle's forms. */
+    public const FORM_PROFILE = FormProfile::NAME;
 
     /** Doctrine mapping name. */
     public const MAPPING_NAME = 'NowoSeedKitBundle';
@@ -50,12 +60,13 @@ final class NowoSeedKitBundle extends AbstractBundle
     }
 
     /**
-     * Adds the provider pass.
+     * Adds the provider pass and the CSRF guard of the pages.
      */
     public function build(ContainerBuilder $container): void
     {
         parent::build($container);
         $container->addCompilerPass(new SeedProviderPass(), PassConfig::TYPE_BEFORE_OPTIMIZATION, 10);
+        $container->addCompilerPass(new CsrfProtectionPass());
     }
 
     /**
@@ -72,6 +83,7 @@ final class NowoSeedKitBundle extends AbstractBundle
      */
     public function prependExtension(ContainerConfigurator $container, ContainerBuilder $builder): void
     {
+        $this->prependUi($builder);
         if (!$builder->hasExtension('doctrine')) {
             return;
         }
@@ -93,6 +105,37 @@ final class NowoSeedKitBundle extends AbstractBundle
             'prefix'    => 'Nowo\SeedKitBundle\Infrastructure\Doctrine\Entity',
             'is_bundle' => false,
         ]]]]]]);
+    }
+
+    /**
+     * The Twig namespace `NowoSeedKitBundle` (host overrides in `templates/bundles/NowoSeedKitBundle/` first, then the
+     * bundle copy, also reachable as `@NowoSeedKit`) and the FormKit profile `seed_kit` when the host does not declare it.
+     */
+    private function prependUi(ContainerBuilder $builder): void
+    {
+        $views = __DIR__ . '/Resources/views';
+        if ($builder->hasExtension('twig')) {
+            $paths   = [];
+            $project = $builder->hasParameter('kernel.project_dir') ? $builder->getParameter('kernel.project_dir') : null;
+            if (is_string($project) && is_dir($project . '/templates/bundles/' . self::TWIG_NAMESPACE)) {
+                $paths[$project . '/templates/bundles/' . self::TWIG_NAMESPACE] = self::TWIG_NAMESPACE;
+            }
+            $paths[$views] = self::TWIG_NAMESPACE;
+            $builder->prependExtensionConfig('twig', ['paths' => $paths]);
+        }
+        if ($builder->hasExtension('nowo_form_kit')) {
+            $declared = false;
+            foreach ($builder->getExtensionConfig('nowo_form_kit') as $config) {
+                $declared = $declared || (is_array($config) && is_array($config['profiles'] ?? null) && array_key_exists(self::FORM_PROFILE, $config['profiles']));
+            }
+            if (!$declared) {
+                $builder->prependExtensionConfig('nowo_form_kit', ['profiles' => [self::FORM_PROFILE => [
+                    'alias'              => self::FORM_PROFILE,
+                    'translation_domain' => self::TRANSLATION_DOMAIN,
+                    'defaults'           => ['attr' => ['class' => 'nowo-ui-input'], 'row_attr' => []],
+                ]]]);
+            }
+        }
     }
 
     /**

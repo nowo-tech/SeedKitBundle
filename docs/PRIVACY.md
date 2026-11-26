@@ -29,12 +29,13 @@ purpose, sends nothing anywhere and makes no outbound call.
 
 | Data | Where | Retention |
 | --- | --- | --- |
-| Uploaded / read documents | Not stored in 0.1: the console reads the file into a temporary stream that is gone after the command | — |
+| Uploaded / read documents | Console: not stored (a temporary stream gone after the command). UI (0.2): the parsed items of a planned run, gzip, in `<prefix>seed_run.document`; never the raw upload, never a plaintext secret (refused before storage) | Deleted when the run ends (applied, failed, discarded), at `runs.document_ttl` (1 h) for planned / queued runs (they become `expired`) and for partially applied runs (they keep their status); purge command + Scheduler bridge + opportunistic expiry on upload |
 | Run history | `<prefix>seed_run`: actor ref, scope, providers, counts, document hash, plan hash, batch digests, status, error code, timestamps. No item, no natural key, no value | `runs.history_days` (365) via `runs:purge` |
 | Leases | `<prefix>seed_lease`: provider, scope, run id, expiry | Overwritten by the next run |
 
-The `document` column of the run table stays empty in 0.1; the 0.2 upload flow keeps a normalised document for at most
-one hour while a run is planned and deletes it when the run ends (contract Q-SK-5).
+The UI shows the diff (and the natural keys of failing rows) to the run's own actor only; another viewer sees the run's
+metadata. The Messenger message carries the run id and the plan hash, never data. A current export of a provider with
+personal-data or secret fields needs a confirmation in the UI (notice + POST) and is audited.
 
 ## Exports
 

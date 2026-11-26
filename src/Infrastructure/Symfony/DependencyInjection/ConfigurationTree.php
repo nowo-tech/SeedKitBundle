@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Nowo\SeedKitBundle\Infrastructure\Symfony\DependencyInjection;
 
+use DateInterval;
 use Symfony\Component\Config\Definition\Builder\ArrayNodeDefinition;
 use Symfony\Component\Config\Definition\Builder\NodeBuilder;
 use Symfony\Component\Config\Definition\Builder\VariableNodeDefinition;
@@ -12,11 +13,14 @@ use function array_is_list;
 use function is_array;
 use function is_string;
 use function preg_match;
+use function str_contains;
+use function str_ends_with;
 
 /**
  * The strict configuration tree of `nowo_seed_kit` (contract section 15, REQ-SF-006). Unknown keys are refused; ranges
- * and cross-field rules fail the container build. 0.1 holds only what 0.1 uses (no dead configuration): the `ui` and
- * `messenger` sections arrive with 0.2.
+ * and cross-field rules fail the container build. 0.2 adds `ui` (opt-in pages), `messenger` (asynchronous apply),
+ * `scheduler` (purge) and `runs.document_ttl`; the package checks (SecurityBundle, UiKit, FormKit, Messenger,
+ * Scheduler) run in {@see ServiceDefinitions}.
  */
 final class ConfigurationTree
 {
@@ -34,6 +38,7 @@ final class ConfigurationTree
         self::limits($children);
         self::features($children);
         self::security($children);
+        self::ui($children);
         $children->end();
 
         $root
@@ -177,6 +182,14 @@ final class ConfigurationTree
                 ->addDefaultsIfNotSet()
                 ->children()
                     ->integerNode('history_days')->min(1)->max(3650)->defaultValue(365)->end()
+                    ->scalarNode('document_ttl')
+                        ->info('How long a UI run keeps its uploaded document while planned / queued (ISO 8601 duration, 1 minute to 7 days).')
+                        ->defaultValue('PT1H')
+                        ->validate()
+                            ->ifTrue(static fn (mixed $ttl): bool => self::seconds($ttl) === null)
+                            ->thenInvalid('nowo_seed_kit.runs.document_ttl must be an ISO 8601 duration between PT1M and P7D; got %s.')
+                        ->end()
+                    ->end()
                 ->end()
             ->end();
     }
@@ -259,6 +272,80 @@ final class ConfigurationTree
                     ->end()
                 ->end()
             ->end();
+    }
+
+    /**
+     * `ui.*` (opt-in pages, contract section 12.5), `messenger.*` (asynchronous apply, 10.5), `scheduler.*` (purge).
+     */
+    private static function ui(NodeBuilder $children): void
+    {
+        $children
+            ->arrayNode('ui')
+                ->addDefaultsIfNotSet()
+                ->children()
+                    ->booleanNode('enabled')->info('Register the Import / export pages (needs SecurityBundle, Twig, symfony/form + validator, UiKit and FormKit).')->defaultFalse()->end()
+                    ->scalarNode('layout')->info('Base layout every page extends (null: nowo_ui_kit.layouts.admin), so the host wraps the pages without overrides.')->defaultNull()->end()
+                    ->integerNode('max_upload_bytes')->info('Largest upload (bytes).')->min(1024)->max(268435456)->defaultValue(2097152)->end()
+                    ->integerNode('max_items')->info('Items per document of an upload.')->min(1)->max(1000000)->defaultValue(10000)->end()
+                    ->integerNode('max_sync_changes')->info('Rows a web request may apply; above it the apply is queued (messenger.enabled) or refused (SEED_009).')->min(1)->max(1000000)->defaultValue(2000)->end()
+                    ->integerNode('runs_per_page')->min(5)->max(200)->defaultValue(50)->end()
+                    ->integerNode('poll_interval_ms')->info('Refresh interval of the progress of a queued / running run (UiKit auto-refresh region).')->min(2000)->max(60000)->defaultValue(3000)->end()
+                    ->booleanNode('breadcrumbs')->info('Page-header crumbs (BreadcrumbKit renders them through UiKit when installed).')->defaultTrue()->end()
+                    ->scalarNode('breadcrumb_collection')->info('BreadcrumbKit collection of the crumbs (null: UiKit default).')->defaultNull()->end()
+                    ->scalarNode('current_scope')->info('Service id of a SeedCurrentScopeInterface: the scope id of mounts whose path has no {scopeId}.')->defaultNull()->end()
+                    ->arrayNode('mounts')
+                        ->info('Scope kind => {path}: one Import / export page per kind, at a prefix the host chooses ({scopeId} for the id of the scope).')
+                        ->useAttributeAsKey('kind')
+                        ->arrayPrototype()
+                            ->children()
+                                ->scalarNode('path')
+                                    ->isRequired()
+                                    ->validate()
+                                        ->ifTrue(static fn (mixed $path): bool => !is_string($path) || preg_match('#\A/[A-Za-z0-9_\-./]*(\{scopeId\}[A-Za-z0-9_\-./]*)?\z#D', $path) !== 1 || str_contains($path, '//'))
+                                        ->thenInvalid('nowo_seed_kit.ui.mounts.*.path must be an absolute path whose only placeholder is {scopeId}; got %s.')
+                                    ->end()
+                                ->end()
+                            ->end()
+                        ->end()
+                        ->defaultValue([])
+                    ->end()
+                ->end()
+            ->end()
+            ->arrayNode('messenger')
+                ->addDefaultsIfNotSet()
+                ->children()
+                    ->booleanNode('enabled')->info('Queue large UI applies as Nowo\SeedKitBundle\Bridge\Messenger\ApplySeedRun (route it to an async transport).')->defaultFalse()->end()
+                    ->integerNode('async_threshold_changes')->info('Rows above which a UI apply is queued.')->min(1)->max(1000000)->defaultValue(2000)->end()
+                    ->booleanNode('trust_run_actor')->info('Grant Messenger applies without SeedKitAccessCheckerInterface::canForActor() (default false: the checker decides, deny by default).')->defaultFalse()->end()
+                ->end()
+            ->end()
+            ->arrayNode('scheduler')
+                ->addDefaultsIfNotSet()
+                ->children()
+                    ->booleanNode('enabled')->info('Register the schedule "nowo_seed_kit" (document expiry + history purge).')->defaultFalse()->end()
+                    ->scalarNode('frequency')
+                        ->defaultValue('1 hour')
+                        ->validate()
+                            ->ifTrue(static fn (mixed $frequency): bool => !is_string($frequency) || preg_match('/\A(\d{1,4} (second|minute|hour|day)s?|P(T?\d{1,4}[SMHD]){1,3})\z/D', $frequency) !== 1)
+                            ->thenInvalid('nowo_seed_kit.scheduler.frequency must be like "1 hour", "30 minutes" or "PT1H"; got %s.')
+                        ->end()
+                    ->end()
+                ->end()
+            ->end();
+    }
+
+    /**
+     * Seconds of an ISO 8601 duration between one minute and seven days, or null.
+     */
+    public static function seconds(mixed $duration): ?int
+    {
+        if (!is_string($duration) || preg_match('/\AP(\d+D)?(T(\d+H)?(\d+M)?(\d+S)?)?\z/D', $duration) !== 1 || $duration === 'P' || str_ends_with($duration, 'T')) {
+            return null;
+        }
+        $interval = new DateInterval($duration);
+        $seconds  = ((int) $interval->d * 86400) + ((int) $interval->h * 3600) + ((int) $interval->i * 60) + (int) $interval->s;
+
+        return $seconds >= 60 && $seconds <= 604800 ? $seconds : null;
     }
 
     /**

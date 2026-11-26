@@ -67,7 +67,7 @@ final class ConfigurationTreeTest extends TestCase
         self::assertSame(['batch_size' => 500, 'lease_seconds' => 300], $config['apply']);
         self::assertSame(['max_replays' => 3], $config['transaction']);
         self::assertSame(['max_ratio' => 0.5], $config['prune']);
-        self::assertSame(['history_days' => 365], $config['runs']);
+        self::assertSame(['history_days' => 365, 'document_ttl' => 'PT1H'], $config['runs']);
         self::assertSame(['validator' => null, 'vault_bridge' => ['enabled' => false, 'scope_format' => '{kind}:{id}']], $config['secrets']);
         self::assertSame(['auditkit' => true, 'sink' => null, 'log_level' => 'notice'], $config['audit']);
         self::assertTrue($this->at($config, 'console', 'require_actor'));
@@ -125,7 +125,7 @@ final class ConfigurationTreeTest extends TestCase
         yield 'bad mapping' => [['doctrine' => ['mapping' => 'yaml']], 'mapping'];
         yield 'batch size above range' => [['apply' => ['batch_size' => 5001]], 'batch_size'];
         yield 'prune ratio below range' => [['prune' => ['max_ratio' => 0.0]], 'max_ratio'];
-        yield 'unknown key' => [['ui' => ['enabled' => true]], 'Unrecognized option "ui"'];
+        yield 'unknown key' => [['ux' => ['enabled' => true]], 'Unrecognized option "ux"'];
         yield 'role override not a list' => [['security' => ['providers' => ['a.b' => ['export_roles' => ['x' => 'ROLE_A']]]]], 'export_roles must be null or a list'];
         yield 'role override not strings' => [['security' => ['providers' => ['a.b' => ['apply_roles' => [1]]]]], 'apply_roles must be null or a list'];
         yield 'role override a string' => [['security' => ['providers' => ['a.b' => ['prune_roles' => 'ROLE_A']]]], 'prune_roles must be null or a list'];

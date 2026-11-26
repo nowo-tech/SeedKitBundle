@@ -22,6 +22,13 @@
 | Lease renew / release | One statement each | `UPDATE … WHERE … AND run_id = ?` | Renew lost (lease expired and taken): the run stops as a conflict (`CONFLICT_002` after a commit) |
 | Run create | One write unit | Insert of a fresh UUID v7 row (`running`) after the leases and the stale-plan check | — |
 | Run finish | One write unit | `UPDATE … WHERE id = ?` (`applied`, `partially_applied`, `failed` + error code) | Best effort: a failure is logged, the lease expires anyway |
+| UI run create (upload, 0.2) | One write unit | Insert of a `planned` row with the gzip document; the same actor + scope + document + plan + prune reuses the live planned run instead | — |
+| **Run claim** (UI apply, Messenger, 0.2) | One write unit | `UPDATE … SET status = 'running', version = version + 1 WHERE id = ? AND status IN (planned, queued, partially_applied[, running]) AND version = ? [AND (status <> 'running' OR updated_at < now − lease)]`: one request or worker wins; a crashed worker's run is taken over after `apply.lease_seconds` | 0 rows: another request has it, or it is over: the page shows the run (idempotent double click / redelivery); a lock on the row: replays, then `CONFLICT_001` 409 + `Retry-After` |
+| Queue (0.2) | One write unit | Same compare-and-set `planned / partially_applied → queued` before the message is dispatched; a failed dispatch puts it back | 0 rows: already queued / running |
+| Release of a claim (0.2) | One write unit, fenced by the claim's version | `running →` back to `planned` (web) / `queued` (Messenger) / `partially_applied` when nothing was written (lease held, lock conflict before the first batch, prune guard, a provider failure in the re-plan); `running → failed` on a stale plan | Best effort: a stuck claim is taken over after the lease |
+| Heartbeat (0.2) | One statement | `UPDATE … SET updated_at = now, version = version + 1 WHERE id = ? AND version = ? AND status = 'running'` | 0 rows: the claim was lost, the attempt stops (`CONFLICT_001`) |
+| Discard (0.2) | One write unit | Compare-and-set `planned / partially_applied → discarded`, document deleted | 0 rows: `SEED_008` (404) |
+| Document expiry (0.2) | Batches of 500 ids (100 on an upload) | Keyset; `planned / queued → expired`, `partially_applied` keeps its status; document deleted | Best effort on upload; the purge command / schedule retry |
 | `runs:purge` | Batches of 500 ids | Keyset `SELECT id … ORDER BY id LIMIT 500`, `DELETE … WHERE id IN (…)` | Lock: exit 1, run it again |
 | `actor:forget` | Batches of 500 | `UPDATE … SET actor_ref = NULL` by id batch | Lock: exit 1 |
 
@@ -39,6 +46,27 @@ The dry run (`diff`) and exports write nothing and take no lock.
    → re-plan the slice with `lockForUpdate` → compare the batch digest → `applyBatch()` through the provider →
    `markBatch()` → commit → `afterBatch()` → renew the leases → `SeedBatchCommittedEvent`.
 6. **Finish** the run (`applied`), release the leases in `finally`, dispatch `SeedRunAppliedEvent`, audit.
+
+### Stored runs (0.2)
+
+**Fencing (ZCE-L1).** A claim takes the row's `version` as its fencing token and a lease holder of its own (a fresh
+id per claim). Every later write of that attempt requires them: the heartbeats (after the leases and after the
+re-plan), `markBatch()` (`AND version = ? AND status = 'running'`), the final `finish()`, the release of the claim and
+the lease renew / release (by holder). A worker whose run was taken over after the lease therefore stops at its next
+write: its batch rolls back, it changes no status and it cannot release the new claimer's leases.
+
+**Stalled runs (ZCE-M1).** A `running` run without progress for longer than `apply.lease_seconds` (killed request,
+dead worker) is taken over by its actor's next apply on the web (queued again above the async threshold, reverted to
+`partially_applied` / `planned` if the hand-over fails) or by the next Messenger delivery; its actor may
+discard it, and so may an admin of the kind. The expiry sweep (upload, history page, `runs:purge`, Scheduler) ends a
+stalled run past its TTL: `partially_applied` when batches were committed, else `expired`, document deleted.
+
+A UI run is applied by whoever claims it (the web request or the Messenger worker). The batches use the same unit as
+above, but their numbering and reviewed digests come from the **stored batch layout** of the reviewed plan, and the
+batches up to `batches_done` are skipped: a redelivered message, a second worker or a retry after a partial apply
+never applies a batch twice (`markBatch()` is a compare-and-set on `batches_done`; when another worker recorded the
+batch first, ours rolls back with a conflict). Only a run with no committed batch is compared with its reviewed plan
+hash; after that, each remaining batch must still match its digest under the row locks.
 
 ## Atomicity
 
@@ -110,6 +138,13 @@ answers these codes with 409, `Retry-After` and `X-Conflict-Code`.
   nested, without replay).
 
 ## Tests and the Databases job
+
+0.2 adds `tests/Integration/Database/StoredRunConcurrencyTest` (two connections): a run claimed on the other
+connection is busy and writes nothing; a batch recorded by another worker makes ours roll back; a lock on the run row
+makes the claim replay and give up with nothing written, then the run applies; a crashed worker's run is taken over
+after the lease; a slow live worker taken over by another claim (with its own lease holder) changes nothing any
+more: its batch rolls back, the status and the new lease stay. `DbalStoredRunTest` checks the fencing of heartbeats,
+batches and `finish()`, the expiry of stalled runs, the compare-and-set, the binary document and the expiry on each database.
 
 `tests/Integration/Database` runs on SQLite by default and on a server with `NOWO_TEST_DATABASE_URL`
 (`make test-with-db`, MySQL 8.4 from the `db` Compose profile). `ConcurrencyTest` uses **two connections**:

@@ -8,6 +8,8 @@ seed_kit:
     SEED_005: The data changed since the reviewed plan; review the new diff and apply again.
     SEED_006: A row changed while the plan was applied; the batches already applied stay. Apply the document again.
     SEED_007: The document scope kind does not match the target scope.
+    SEED_008: The seed run is not available; it does not exist, it is not yours, or its document expired.
+    SEED_009: The plan is too large to apply in a web request; apply the file from the console.
     SEED_010: The provider failed to apply a batch; the batches already applied stay.
     SEED_011: A seed provider broke its contract; nothing was written by the bundle.
     SEED_012: A prune guard refused the plan; confirm it explicitly.
@@ -65,3 +67,118 @@ seed_kit:
     schema_maxItems: The list has too many entries.
     schema_minItems: The list has too few entries.
     schema_uniqueItems: The list has repeated entries.
+  warning:
+    exported_from_differs: The file was exported from another scope than the one you are applying it to; check the diff.
+  ui:
+    index:
+      title: Import / export
+      intro: Download a template or the current data of each kind of data, edit the file, upload it, review the diff and apply it.
+      caption: Kinds of data you may export or import here
+      provider: Data
+      description: Description
+      key: Natural key
+      depends: Depends on
+      data: Notes
+      personal_data: Personal data
+      secrets: Secrets as references
+      export_only: Export only
+      download_empty: Empty template
+      download_current: Current data
+      download_schema: JSON Schema
+      empty_title: Nothing to import or export
+      empty: You may not export or import any kind of data in this scope.
+    export:
+      confirm_title: Download personal data?
+      personal_data: 'The file of %provider% contains personal data. Keep it safe, share it only as your organisation allows, and delete it when you no longer need it. The download is recorded.'
+      download: Download
+    upload:
+      open: Upload file
+      title: Upload a seed file
+      intro: 'YAML, JSON or JSON Lines, one or several kinds of data. Nothing is written yet: you will see the diff first.'
+      file: File
+      file_help: 'A .yaml, .json or .jsonl file exported here or written with the JSON Schema.'
+      prune: Delete the rows the file leaves out
+      prune_help: Only rows you may delete in this scope. You will confirm the number of deletions before anything is deleted.
+      submit: Check the file
+      errors_title: '%count% problem(s) found; nothing was stored.'
+      error_row: Row
+      error_key: Key
+      error_field: Field
+      error_message: Problem
+    run:
+      title: Run %id%
+      intro: Review the changes, then apply them or discard the run.
+      summary: Summary
+      providers: Data
+      scope: Scope
+      planned: Planned
+      counts: '%create% to create, %update% to update, %delete% to delete, %unchanged% unchanged'
+      written: Written
+      written_counts: '%create% created, %update% updated, %delete% deleted'
+      batches: Batches
+      prune: Deletes the rows the file leaves out
+      plan_hash: Plan hash
+      created: Uploaded
+      error: Last error
+      apply: Apply
+      apply_confirm_title: Apply this run?
+      apply_confirm: '%changes% row(s) will be written. Rows that did not change are not touched.'
+      discard: Discard
+      discard_confirm_title: Discard this run?
+      discard_confirm: The uploaded document is deleted; nothing is written.
+      confirm_deletes: Number of rows to delete
+      confirm_deletes_help: Type the number of deletions shown above to confirm them.
+      confirm_deletes_wrong: The number does not match the deletions of this run.
+      mass_prune: 'This run deletes %count% row(s), more than the allowed share of the current rows. Type the number to confirm.'
+      stale: The data changed since this file was checked. Upload it again to see the new diff.
+      stalled: 'This run stopped responding: its request or worker ended. Apply it again to continue after the last committed batch, or discard it.'
+      progress: '%done% of %total% batches applied'
+      refresh: Refresh
+      no_changes: No changes for this kind of data.
+      preview_caption: Changes of %provider%
+      op: Change
+      key: Key
+      fields: Fields (before → after)
+      hidden: hidden
+    runs:
+      title: History
+      intro: Seed files uploaded and applied in this scope.
+      caption: Runs, newest first
+      created: Uploaded
+      status: Status
+      providers: Data
+      changes: Changes
+      actor: By
+      channel: From
+      empty_title: No runs yet
+      empty: Upload a file to start.
+      older: Older runs
+      pager: Runs pages
+    status:
+      planned: Ready to apply
+      queued: Queued
+      running: Applying
+      applied: Applied
+      partially_applied: Partially applied
+      failed: Failed
+      discarded: Discarded
+      expired: Expired
+    channel:
+      http: Web
+      console: Console
+      messenger: Background
+    op:
+      create: Create
+      update: Update
+      unchanged: Unchanged
+      delete: Delete
+    message:
+      title: The run could not continue
+      what: What happened
+      code: Code
+      back: Back to import / export
+      conflict: Another run is applying the same data right now. Wait a moment and try again.
+      interrupted: 'The apply stopped after %done% of %total% batches; the applied batches stay. Apply the run again to finish it, or upload the file again.'
+      stale: The data changed since the file was checked. Upload it again to review the new diff.
+      too_large: 'The run writes %changes% rows; a web request may write at most %limit%. Apply the file from the console.'
+      refused: The request was refused.

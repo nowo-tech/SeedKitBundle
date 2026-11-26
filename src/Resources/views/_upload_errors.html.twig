@@ -1,0 +1,29 @@
+{#- Row errors of a refused upload (index, natural key, field, rule, message; never the submitted value). Variable: errors, bundle. -#}
+{% if errors is not empty %}
+    <section class="{{ nowo_ui_class('section', bundle) }}" role="alert" aria-labelledby="seed-kit-errors-title" data-testid="seed-kit-upload-errors">
+        <h2 id="seed-kit-errors-title" class="{{ nowo_ui_class('card_title', bundle) }}">{{ 'seed_kit.ui.upload.errors_title'|trans({'%count%': errors|length}, 'NowoSeedKitBundle') }}</h2>
+        <div class="{{ nowo_ui_class('table_wrap', bundle) }}" tabindex="0">
+            <table class="{{ nowo_ui_class('table', bundle) }}">
+                <caption class="visually-hidden">{{ 'seed_kit.ui.upload.errors_title'|trans({'%count%': errors|length}, 'NowoSeedKitBundle') }}</caption>
+                <thead>
+                    <tr>
+                        <th scope="col">{{ 'seed_kit.ui.upload.error_row'|trans({}, 'NowoSeedKitBundle') }}</th>
+                        <th scope="col">{{ 'seed_kit.ui.upload.error_key'|trans({}, 'NowoSeedKitBundle') }}</th>
+                        <th scope="col">{{ 'seed_kit.ui.upload.error_field'|trans({}, 'NowoSeedKitBundle') }}</th>
+                        <th scope="col">{{ 'seed_kit.ui.upload.error_message'|trans({}, 'NowoSeedKitBundle') }}</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for error in errors %}
+                        <tr data-testid="seed-kit-upload-error">
+                            <td>{{ error.provider }}{{ error.index >= 0 ? ' #' ~ error.index : '' }}</td>
+                            <td>{% if error.key is not null %}<code class="nowo-ui-code">{{ error.key }}</code>{% else %}—{% endif %}</td>
+                            <td><code class="nowo-ui-code">{{ error.path ?: '/' }}</code></td>
+                            <td>{{ error.message }} <span class="{{ nowo_ui_class('table_cell_muted', bundle) }}">({{ error.rule }})</span></td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </section>
+{% endif %}

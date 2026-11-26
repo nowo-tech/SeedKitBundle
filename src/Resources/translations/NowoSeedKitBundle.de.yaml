@@ -8,6 +8,8 @@ seed_kit:
     SEED_005: Die Daten haben sich seit dem geprüften Plan geändert; prüfen Sie den neuen Diff und wenden Sie erneut an.
     SEED_006: Eine Zeile hat sich während der Anwendung geändert; bereits angewendete Batches bleiben. Wenden Sie das Dokument erneut an.
     SEED_007: Die Bereichsart des Dokuments passt nicht zum Zielbereich.
+    SEED_008: Der Seed-Lauf ist nicht verfügbar; er existiert nicht, gehört nicht dir oder sein Dokument ist abgelaufen.
+    SEED_009: Der Plan ist zu groß, um in einer Web-Anfrage angewendet zu werden; wende die Datei über die Konsole an.
     SEED_010: Der Provider konnte einen Batch nicht anwenden; bereits angewendete Batches bleiben.
     SEED_011: Ein Seed-Provider hat seinen Vertrag verletzt; das Bundle hat nichts geschrieben.
     SEED_012: Ein Löschschutz hat den Plan abgelehnt; bestätigen Sie ihn ausdrücklich.
@@ -65,3 +67,118 @@ seed_kit:
     schema_maxItems: Die Liste hat zu viele Einträge.
     schema_minItems: Die Liste hat zu wenige Einträge.
     schema_uniqueItems: Die Liste hat doppelte Einträge.
+  warning:
+    exported_from_differs: Die Datei wurde aus einem anderen Bereich exportiert als dem, auf den du sie anwendest; prüfe den Diff.
+  ui:
+    index:
+      title: Import / Export
+      intro: Lade eine Vorlage oder die aktuellen Daten jeder Datenart herunter, bearbeite die Datei, lade sie hoch, prüfe den Diff und wende sie an.
+      caption: Datenarten, die du hier exportieren oder importieren darfst
+      provider: Daten
+      description: Beschreibung
+      key: Natürlicher Schlüssel
+      depends: Hängt ab von
+      data: Hinweise
+      personal_data: Personenbezogene Daten
+      secrets: Geheimnisse als Referenzen
+      export_only: Nur Export
+      download_empty: Leere Vorlage
+      download_current: Aktuelle Daten
+      download_schema: JSON Schema
+      empty_title: Nichts zu importieren oder zu exportieren
+      empty: Du darfst in diesem Bereich keine Datenart exportieren oder importieren.
+    export:
+      confirm_title: Personenbezogene Daten herunterladen?
+      personal_data: Die Datei von %provider% enthält personenbezogene Daten. Bewahre sie sicher auf, gib sie nur im Rahmen deiner Organisation weiter und lösche sie, wenn du sie nicht mehr brauchst. Der Download wird protokolliert.
+      download: Herunterladen
+    upload:
+      open: Datei hochladen
+      title: Seed-Datei hochladen
+      intro: 'YAML, JSON oder JSON Lines, mit einer oder mehreren Datenarten. Es wird noch nichts geschrieben: Du siehst zuerst den Diff.'
+      file: Datei
+      file_help: Eine .yaml-, .json- oder .jsonl-Datei, die hier exportiert oder mit dem JSON Schema geschrieben wurde.
+      prune: Zeilen löschen, die in der Datei fehlen
+      prune_help: Nur Zeilen, die du in diesem Bereich löschen darfst. Du bestätigst die Anzahl der Löschungen, bevor etwas gelöscht wird.
+      submit: Datei prüfen
+      errors_title: '%count% Problem(e) gefunden; nichts wurde gespeichert.'
+      error_row: Zeile
+      error_key: Schlüssel
+      error_field: Feld
+      error_message: Problem
+    run:
+      title: Lauf %id%
+      intro: Prüfe die Änderungen und wende sie dann an oder verwirf den Lauf.
+      summary: Zusammenfassung
+      providers: Daten
+      scope: Bereich
+      planned: Geplant
+      counts: '%create% zu erstellen, %update% zu aktualisieren, %delete% zu löschen, %unchanged% unverändert'
+      written: Geschrieben
+      written_counts: '%create% erstellt, %update% aktualisiert, %delete% gelöscht'
+      batches: Batches
+      prune: Löscht die Zeilen, die in der Datei fehlen
+      plan_hash: Plan-Hash
+      created: Hochgeladen
+      error: Letzter Fehler
+      apply: Anwenden
+      apply_confirm_title: Diesen Lauf anwenden?
+      apply_confirm: '%changes% Zeile(n) werden geschrieben. Unveränderte Zeilen werden nicht angefasst.'
+      discard: Verwerfen
+      discard_confirm_title: Diesen Lauf verwerfen?
+      discard_confirm: Das hochgeladene Dokument wird gelöscht; nichts wird geschrieben.
+      confirm_deletes: Anzahl der zu löschenden Zeilen
+      confirm_deletes_help: Gib die oben angezeigte Anzahl der Löschungen ein, um sie zu bestätigen.
+      confirm_deletes_wrong: Die Zahl stimmt nicht mit den Löschungen dieses Laufs überein.
+      mass_prune: Dieser Lauf löscht %count% Zeile(n), mehr als der erlaubte Anteil der aktuellen Zeilen. Gib die Anzahl zur Bestätigung ein.
+      stale: Die Daten haben sich seit der Prüfung dieser Datei geändert. Lade sie erneut hoch, um den neuen Diff zu sehen.
+      stalled: 'Dieser Lauf reagiert nicht mehr: seine Anfrage oder sein Worker wurde beendet. Wenden Sie ihn erneut an, um nach dem letzten bestätigten Batch fortzufahren, oder verwerfen Sie ihn.'
+      progress: '%done% von %total% Batches angewendet'
+      refresh: Aktualisieren
+      no_changes: Keine Änderungen für diese Datenart.
+      preview_caption: Änderungen von %provider%
+      op: Änderung
+      key: Schlüssel
+      fields: Felder (vorher → nachher)
+      hidden: verborgen
+    runs:
+      title: Verlauf
+      intro: In diesem Bereich hochgeladene und angewendete Seed-Dateien.
+      caption: Läufe, neueste zuerst
+      created: Hochgeladen
+      status: Status
+      providers: Daten
+      changes: Änderungen
+      actor: Von
+      channel: Über
+      empty_title: Noch keine Läufe
+      empty: Lade eine Datei hoch, um zu beginnen.
+      older: Ältere Läufe
+      pager: Seiten der Läufe
+    status:
+      planned: Bereit zum Anwenden
+      queued: In der Warteschlange
+      running: Wird angewendet
+      applied: Angewendet
+      partially_applied: Teilweise angewendet
+      failed: Fehlgeschlagen
+      discarded: Verworfen
+      expired: Abgelaufen
+    channel:
+      http: Web
+      console: Konsole
+      messenger: Hintergrund
+    op:
+      create: Erstellen
+      update: Aktualisieren
+      unchanged: Unverändert
+      delete: Löschen
+    message:
+      title: Der Lauf konnte nicht fortgesetzt werden
+      what: Was passiert ist
+      code: Code
+      back: Zurück zu Import / Export
+      conflict: Ein anderer Lauf wendet gerade dieselben Daten an. Warte einen Moment und versuche es erneut.
+      interrupted: Das Anwenden wurde nach %done% von %total% Batches gestoppt; die angewendeten Batches bleiben bestehen. Wende den Lauf erneut an, um ihn abzuschließen, oder lade die Datei erneut hoch.
+      stale: Die Daten haben sich seit der Prüfung der Datei geändert. Lade sie erneut hoch, um den neuen Diff zu prüfen.
+      too_large: Der Lauf schreibt %changes% Zeilen; eine Web-Anfrage darf höchstens %limit% schreiben. Wende die Datei über die Konsole an.
+      refused: Die Anfrage wurde abgelehnt.

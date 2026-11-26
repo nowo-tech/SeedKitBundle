@@ -1,0 +1,25 @@
+{#-
+  SeedKit Import / export page (contract 12.5, REQ-UI-003 list scaffold). Variables: page (View\ListPage; rows keyed by
+  provider name), upload_dialog (dialog id, or null when the viewer may not apply anything).
+  Data blocks: nowo_ui_list_row (cells), nowo_ui_list_after (the upload dialog shell, loaded when it opens).
+-#}
+{% extends '@NowoUiKit/page/list.html.twig' %}
+
+{% block nowo_ui_list_row %}
+    {%- set _b = page.bundle -%}
+    <td class="{{ nowo_ui_class('table_cell', _b) }}" data-label="{{ 'seed_kit.ui.index.provider'|trans({}, 'NowoSeedKitBundle') }}"><code class="nowo-ui-code" data-testid="seed-kit-provider-{{ row.name }}">{{ row.name }}</code> <span class="{{ nowo_ui_class('table_cell_muted', _b) }}">v{{ row.version }}</span></td>
+    <td class="{{ nowo_ui_class('table_cell', _b) }}" data-label="{{ 'seed_kit.ui.index.description'|trans({}, 'NowoSeedKitBundle') }}" data-nowo-ui-priority="2">{{ row.title }}</td>
+    <td class="{{ nowo_ui_class('table_cell', _b) }}" data-label="{{ 'seed_kit.ui.index.key'|trans({}, 'NowoSeedKitBundle') }}" data-nowo-ui-priority="3"><code class="nowo-ui-code">{{ row.key }}</code></td>
+    <td class="{{ nowo_ui_class('table_cell', _b) }}{{ row.depends ? '' : ' ' ~ nowo_ui_class('table_cell_muted', _b) }}" data-label="{{ 'seed_kit.ui.index.depends'|trans({}, 'NowoSeedKitBundle') }}" data-nowo-ui-priority="3">{{ row.depends ?: '—' }}</td>
+    <td class="{{ nowo_ui_class('table_cell', _b) }}" data-label="{{ 'seed_kit.ui.index.data'|trans({}, 'NowoSeedKitBundle') }}">
+        {%- if row.personal %}<span class="{{ nowo_ui_class('badge_warning', _b) }}" data-testid="seed-kit-personal-{{ row.name }}">{{ 'seed_kit.ui.index.personal_data'|trans({}, 'NowoSeedKitBundle') }}</span> {% endif -%}
+        {%- if row.secret %}<span class="{{ nowo_ui_class('badge_info', _b) }}">{{ 'seed_kit.ui.index.secrets'|trans({}, 'NowoSeedKitBundle') }}</span> {% endif -%}
+        {%- if not row.can_apply %}<span class="{{ nowo_ui_class('badge', _b) }}">{{ 'seed_kit.ui.index.export_only'|trans({}, 'NowoSeedKitBundle') }}</span>{% endif -%}
+    </td>
+{% endblock %}
+
+{% block nowo_ui_list_after %}
+    {% if upload_dialog %}
+        {{ include(nowo_ui_partial('remote_form_dialog', page.bundle), {id: upload_dialog, title: 'seed_kit.ui.upload.title'|trans({}, 'NowoSeedKitBundle'), size: 'md', bundle: page.bundle, attr: {'data-testid': 'seed-kit-upload-dialog'}}) }}
+    {% endif %}
+{% endblock %}

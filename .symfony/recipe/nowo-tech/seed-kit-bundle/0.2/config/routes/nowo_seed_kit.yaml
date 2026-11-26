@@ -1,0 +1,4 @@
+# Seed Kit pages (0.2): one route set per nowo_seed_kit.ui.mounts entry; nothing is registered while ui.enabled is false.
+nowo_seed_kit:
+    resource: .
+    type: nowo_seed_kit

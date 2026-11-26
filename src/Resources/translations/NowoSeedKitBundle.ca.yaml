@@ -8,6 +8,8 @@ seed_kit:
     SEED_005: Les dades han canviat des del pla revisat; revisa el nou diff i torna a aplicar.
     SEED_006: Una fila ha canviat mentre s'aplicava el pla; els lots ja aplicats es mantenen. Torna a aplicar el document.
     SEED_007: El tipus d'àmbit del document no coincideix amb l'àmbit de destinació.
+    SEED_008: L'execució de seeds no està disponible; no existeix, no és teva o el seu document ha caducat.
+    SEED_009: El pla és massa gran per aplicar-se en una petició web; aplica el fitxer des de la consola.
     SEED_010: El proveïdor ha fallat en aplicar un lot; els lots ja aplicats es mantenen.
     SEED_011: Un proveïdor de seeds ha incomplert el seu contracte; el bundle no ha escrit res.
     SEED_012: Una protecció d'esborrat ha rebutjat el pla; confirma-ho explícitament.
@@ -65,3 +67,118 @@ seed_kit:
     schema_maxItems: La llista té massa entrades.
     schema_minItems: La llista té massa poques entrades.
     schema_uniqueItems: La llista té entrades repetides.
+  warning:
+    exported_from_differs: El fitxer es va exportar des d'un àmbit diferent d'aquell al qual l'apliques; revisa el diff.
+  ui:
+    index:
+      title: Importar / exportar
+      intro: Descarrega una plantilla o les dades actuals de cada tipus de dades, edita el fitxer, puja'l, revisa el diff i aplica'l.
+      caption: Tipus de dades que pots exportar o importar aquí
+      provider: Dades
+      description: Descripció
+      key: Clau natural
+      depends: Depèn de
+      data: Notes
+      personal_data: Dades personals
+      secrets: Secrets com a referències
+      export_only: Només exportar
+      download_empty: Plantilla buida
+      download_current: Dades actuals
+      download_schema: JSON Schema
+      empty_title: Res per importar ni exportar
+      empty: No pots exportar ni importar cap tipus de dades en aquest àmbit.
+    export:
+      confirm_title: Descarregar dades personals?
+      personal_data: El fitxer de %provider% conté dades personals. Guarda'l de manera segura, comparteix-lo només com permeti la teva organització i esborra'l quan ja no el necessitis. La descàrrega queda registrada.
+      download: Descarrega
+    upload:
+      open: Puja un fitxer
+      title: Puja un fitxer de seeds
+      intro: 'YAML, JSON o JSON Lines, d''un o diversos tipus de dades. Encara no s''escriu res: primer veuràs el diff.'
+      file: Fitxer
+      file_help: Un fitxer .yaml, .json o .jsonl exportat aquí o escrit amb el JSON Schema.
+      prune: Esborra les files que el fitxer omet
+      prune_help: Només les files que pots esborrar en aquest àmbit. Confirmaràs el nombre d'esborrats abans d'esborrar res.
+      submit: Comprova el fitxer
+      errors_title: S'han trobat %count% problema(es); no s'ha desat res.
+      error_row: Fila
+      error_key: Clau
+      error_field: Camp
+      error_message: Problema
+    run:
+      title: Execució %id%
+      intro: Revisa els canvis i després aplica'ls o descarta l'execució.
+      summary: Resum
+      providers: Dades
+      scope: Àmbit
+      planned: Previst
+      counts: '%create% per crear, %update% per actualitzar, %delete% per esborrar, %unchanged% sense canvis'
+      written: Escrit
+      written_counts: '%create% creades, %update% actualitzades, %delete% esborrades'
+      batches: Lots
+      prune: Esborra les files que el fitxer omet
+      plan_hash: Hash del pla
+      created: Pujat
+      error: Últim error
+      apply: Aplica
+      apply_confirm_title: Aplicar aquesta execució?
+      apply_confirm: S'escriuran %changes% fila(es). Les files sense canvis no es toquen.
+      discard: Descarta
+      discard_confirm_title: Descartar aquesta execució?
+      discard_confirm: El document pujat s'elimina; no s'escriu res.
+      confirm_deletes: Nombre de files a esborrar
+      confirm_deletes_help: Escriu el nombre d'esborrats indicat a dalt per confirmar-los.
+      confirm_deletes_wrong: El nombre no coincideix amb els esborrats d'aquesta execució.
+      mass_prune: Aquesta execució esborra %count% fila(es), més de la proporció permesa de les files actuals. Escriu el nombre per confirmar.
+      stale: Les dades han canviat des que es va comprovar aquest fitxer. Puja'l de nou per veure el nou diff.
+      stalled: 'Aquesta execució ha deixat de respondre: la seva petició o el seu worker ha acabat. Aplica-la de nou per continuar després de l''últim lot confirmat, o descarta-la.'
+      progress: '%done% de %total% lots aplicats'
+      refresh: Actualitza
+      no_changes: Sense canvis per a aquest tipus de dades.
+      preview_caption: Canvis de %provider%
+      op: Canvi
+      key: Clau
+      fields: Camps (abans → després)
+      hidden: ocult
+    runs:
+      title: Historial
+      intro: Fitxers de seeds pujats i aplicats en aquest àmbit.
+      caption: Execucions, les més recents primer
+      created: Pujat
+      status: Estat
+      providers: Dades
+      changes: Canvis
+      actor: Per
+      channel: Des de
+      empty_title: Encara no hi ha execucions
+      empty: Puja un fitxer per començar.
+      older: Execucions anteriors
+      pager: Pàgines d'execucions
+    status:
+      planned: Llesta per aplicar
+      queued: En cua
+      running: Aplicant
+      applied: Aplicada
+      partially_applied: Aplicada parcialment
+      failed: Fallida
+      discarded: Descartada
+      expired: Caducada
+    channel:
+      http: Web
+      console: Consola
+      messenger: Segon pla
+    op:
+      create: Crea
+      update: Actualitza
+      unchanged: Sense canvis
+      delete: Esborra
+    message:
+      title: No s'ha pogut continuar l'execució
+      what: Què ha passat
+      code: Codi
+      back: Torna a importar / exportar
+      conflict: Una altra execució està aplicant ara mateix les mateixes dades. Espera un moment i torna-ho a provar.
+      interrupted: L'aplicació s'ha aturat després de %done% de %total% lots; els lots aplicats es mantenen. Torna a aplicar l'execució per acabar-la, o puja el fitxer de nou.
+      stale: Les dades han canviat des que es va comprovar el fitxer. Puja'l de nou per revisar el nou diff.
+      too_large: L'execució escriu %changes% files; una petició web pot escriure com a màxim %limit%. Aplica el fitxer des de la consola.
+      refused: La petició s'ha rebutjat.

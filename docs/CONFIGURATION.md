@@ -3,6 +3,8 @@
 ## Table of contents
 
 - [Full reference](#full-reference)
+- [UI](#ui)
+- [Messenger and Scheduler](#messenger-and-scheduler)
 - [Scopes and resolvers](#scopes-and-resolvers)
 - [Doctrine](#doctrine)
 - [Reader caps](#reader-caps)
@@ -15,7 +17,7 @@
 - [Timeouts](#timeouts)
 - [Rules checked at build time](#rules-checked-at-build-time)
 - [Translations](#translations)
-- [Not configurable in 0.1](#not-configurable-in-01)
+- [Not configurable](#not-configurable)
 
 The tree is strict (REQ-SF-006): an unknown key, a value out of range or an invalid combination fails the container
 build with a message naming the path. Every key below is optional. None of them is an `.env` setting or a secret.
@@ -53,8 +55,6 @@ nowo_seed_kit:
         max_ratio: 0.5                  # share of current rows a prune may delete without --allow-mass-prune, 0.01..1.0
     plan:
         preview_rows: 200               # changes kept per operation in a plan preview, 1..100000
-    runs:
-        history_days: 365               # runs:purge default window, 1..3650
     secrets:
         validator: null                 # SecretReferenceValidatorInterface service id
         vault_bridge:
@@ -76,7 +76,52 @@ nowo_seed_kit:
         apply_roles: [ROLE_ADMIN]       # SEED_APPLY
         prune_roles: []                 # SEED_PRUNE: nobody until mapped
         providers: {}                   # per-provider overrides: name => { export_roles, apply_roles, prune_roles }
+    runs:
+        history_days: 365               # runs:purge default window, 1..3650
+        document_ttl: PT1H              # how long a UI run keeps its document while planned / queued (PT1M..P7D)
+    ui:                                 # 0.2: opt-in pages
+        enabled: false                  # needs SecurityBundle, Twig, symfony/form + validator, UiKit, FormKit
+        layout: null                    # base layout of every page (null: nowo_ui_kit.layouts.admin)
+        max_upload_bytes: 2097152       # 2 MiB, 1024..268435456
+        max_items: 10000                # items per document of an upload
+        max_sync_changes: 2000          # rows a web request may apply (above: queued, or SEED_009 without Messenger)
+        runs_per_page: 50               # 5..200
+        poll_interval_ms: 3000          # progress refresh of a queued / running run, 2000..60000
+        breadcrumbs: true               # page-header crumbs (BreadcrumbKit through UiKit when installed)
+        breadcrumb_collection: null
+        current_scope: null             # SeedCurrentScopeInterface service id for mounts without {scopeId}
+        mounts: {}                      # kind => { path }, e.g. platform: { path: /developer/seeds }
+    messenger:                          # 0.2: asynchronous apply
+        enabled: false                  # needs symfony/messenger; route ApplySeedRun to an async transport
+        async_threshold_changes: 2000   # rows above which a UI apply is queued
+        trust_run_actor: false          # grant queued applies without canForActor()
+    scheduler:                          # 0.2: purge schedule "nowo_seed_kit"
+        enabled: false                  # needs symfony/scheduler + symfony/messenger
+        frequency: '1 hour'             # "30 minutes", "PT1H"…
 ```
+
+## UI
+
+`ui.enabled` registers the pages of every `ui.mounts` entry (`nowo_seed_kit_<kind>_<page>`; import them with
+`resource: . type: nowo_seed_kit`). A path holds `{scopeId}` when its kind requires an id; a kind that requires an id
+may leave it out when `ui.current_scope` names a `SeedCurrentScopeInterface` (the actor's current organization, for
+example). Checked at build time: the kind exists, `{scopeId}` is the only placeholder, an id-less kind has no
+`{scopeId}`, at least one mount. The prefixes are the parameter `nowo_seed_kit.ui_paths` (for `access_control`).
+`ui.layout` wraps every page in the host shell; the UiKit theme (`nowo_ui_kit.theme`) styles them. Uploads are read by
+the same hardened reader with the web caps: `ui.max_upload_bytes`, `ui.max_items`, and `reader.max_tree_bytes` capped at
+the upload size. See [TEMPLATES.md](TEMPLATES.md).
+
+## Messenger and Scheduler
+
+`messenger.enabled` registers the queue port and the handler of `Nowo\SeedKitBundle\Bridge\Messenger\ApplySeedRun`
+(stable class name; route it with `framework.messenger.routing`). Without a route the message is handled in the
+request. Retry policy: a lock conflict or a held lease is retryable (`RecoverableMessageHandlingException` with the
+wait as delay); every other refusal is final (`UnrecoverableMessageHandlingException`, the run is `failed` and
+audited). Queued applies run as the run's actor on the Messenger channel: your checker's `canForActor()` decides, or
+`trust_run_actor: true` grants them; `system` is always refused there.
+
+`scheduler.enabled` adds the schedule `nowo_seed_kit` (consume `scheduler_nowo_seed_kit`) with `PurgeSeedRuns`: expiry
+of stored documents and deletion of runs older than `runs.history_days`.
 
 ## Scopes and resolvers
 
@@ -216,8 +261,7 @@ seed_kit:
 
 Without `symfony/translation` the console prints the English fallback.
 
-## Not configurable in 0.1
+## Not configurable
 
-There is no dead configuration: the `ui` and `messenger` sections, `runs.document_ttl`, separate HTTP reader caps and
-`messenger.trust_run_actor` arrive with the 0.2 UI and Messenger apply. The deviations from the contract are listed in
-[CONTRACT.md](CONTRACT.md#24-deviations-in-010).
+No `.env` setting or secret. The deviations from the contract are listed in
+[CONTRACT.md](CONTRACT.md#24-deviations-in-010) and [CONTRACT.md](CONTRACT.md#25-deviations-in-020).
