@@ -29,6 +29,7 @@ use Nowo\SeedKitBundle\Domain\Port\LeaseStoreInterface;
 use Nowo\SeedKitBundle\Domain\Port\RunStoreInterface;
 use Nowo\SeedKitBundle\Domain\Port\WriteRunnerInterface;
 use Nowo\SeedKitBundle\Domain\Run\BatchManifest;
+use Nowo\SeedKitBundle\Domain\Run\Channel;
 use Nowo\SeedKitBundle\Domain\Run\RunRecord;
 use Nowo\SeedKitBundle\Domain\Run\RunStatus;
 use Nowo\TransactionContract\ConcurrencyConflict;
@@ -126,7 +127,7 @@ final readonly class Applier
                 return null;
             });
 
-            return $this->run($set, $documents, $context, $prune, $plan, $record, $held, false);
+            return $this->run($set, $documents, $context, $prune, $plan, $record, $held, new RunClaim($runId, $runId, $record->version), false);
         } finally {
             foreach ($held as $name) {
                 $this->release($name, $context, $runId);
@@ -135,16 +136,17 @@ final readonly class Applier
     }
 
     /**
-     * Applies a run the UI stored and the caller claimed (`running`): leases, the stale check of a run that has not
-     * committed a batch yet (`$run->planHash`), then the batches of the stored layout after `batches_done`.
+     * Applies a run the UI stored and the caller claimed (`running`): leases under the claim's holder, a heartbeat, the
+     * stale check of a run that has not committed a batch yet (`$run->planHash`), another heartbeat, then the batches
+     * of the stored layout after `batches_done`. Every write is fenced by `$claim` (ZCE-L1).
      *
      * @param list<PreparedDocument> $documents from {@see Planner::prepare()} over the stored document
      *
      * @throws LeaseHeldException when another run holds a lease (nothing written; the caller releases the claim)
      * @throws StalePlanException when the data changed since the review and no batch was committed (nothing written)
-     * @throws ApplyInterruptedException when the run stopped after it started writing (the run row is updated)
+     * @throws ApplyInterruptedException when the run stopped after it started writing, or its claim was taken over
      */
-    public function applyStored(RunRecord $run, DocumentSet $set, array $documents, SeedContext $context, PruneOptions $prune): ApplyResult
+    public function applyStored(RunRecord $run, RunClaim $claim, DocumentSet $set, array $documents, SeedContext $context, PruneOptions $prune): ApplyResult
     {
         if (!$run->manifest instanceof BatchManifest) {
             throw new RunNotAvailableException();
@@ -157,24 +159,40 @@ final readonly class Applier
         $held = [];
         try {
             foreach ($names as $name) {
-                $left = $this->leases->acquire($name, $context->scope, $run->id, $this->settings->leaseSeconds);
+                $left = $this->leases->acquire($name, $context->scope, $claim->holder, $this->settings->leaseSeconds);
                 if ($left > 0) {
                     throw new LeaseHeldException($left);
                 }
                 $held[] = $name;
             }
+            $this->heartbeat($claim, $run);
             $planContext = new SeedContext($context->scope, $context->actor, $context->channel, null, new PendingKeys(), $prune->prune, $context->canSeeCurrentValues);
             $plan        = $this->planner->plan($documents, $planContext, $prune);
             if ($run->batchesDone === 0 && !$plan->hash->equals($run->planHash)) {
                 throw new StalePlanException();
             }
+            // The re-plan may be long: show the claim is alive before the batches.
+            $this->heartbeat($claim, $run);
 
-            return $this->run($set, $documents, $context, $prune, $plan, $run, $held, true);
+            return $this->run($set, $documents, $context, $prune, $plan, $run, $held, $claim, true);
         } finally {
             foreach ($held as $name) {
-                $this->release($name, $context, $run->id);
+                $this->release($name, $context, $claim->holder);
             }
         }
+    }
+
+    /**
+     * A fenced heartbeat of a stored run.
+     *
+     * @throws ApplyInterruptedException when the claim was taken over (nothing written by this attempt)
+     */
+    private function heartbeat(RunClaim $claim, RunRecord $run): void
+    {
+        if (!$this->runs->heartbeat($claim->run, $claim->version)) {
+            throw new ApplyInterruptedException(ApplyInterruptedException::CONFLICT, $run->batchesDone, $run->manifest?->writingBatches() ?? 0, $run->id->value, $this->settings->leaseSeconds);
+        }
+        $claim->advance();
     }
 
     /**
@@ -185,7 +203,7 @@ final readonly class Applier
      *
      * @throws ApplyInterruptedException
      */
-    private function run(DocumentSet $set, array $documents, SeedContext $context, PruneOptions $prune, SeedPlan $plan, RunRecord $record, array $held, bool $stored): ApplyResult
+    private function run(DocumentSet $set, array $documents, SeedContext $context, PruneOptions $prune, SeedPlan $plan, RunRecord $record, array $held, RunClaim $claim, bool $stored): ApplyResult
     {
         $runId    = $record->id;
         $manifest = $record->manifest ?? BatchManifest::fromPlan($plan);
@@ -203,7 +221,7 @@ final readonly class Applier
         $runContext = new SeedContext($context->scope, $context->actor, $context->channel, $runId, new PendingKeys(), $prune->prune, $context->canSeeCurrentValues);
         $done       = $record->batchesDone;
         $sequence   = 0;
-        $step       = new BatchStep($runId, $total, $held);
+        $step       = new BatchStep($runId, $total, $held, $claim);
         try {
             $seenByProvider = [];
             foreach ($documents as $document) {
@@ -249,28 +267,28 @@ final readonly class Applier
                 }
             }
         } catch (ApplyInterruptedException $e) {
-            $this->fail($runId, $e, $stored);
+            $this->fail($e, $claim, $stored, $context->channel);
 
             throw $e;
         } catch (ConcurrencyConflict $e) {
             $interrupted = new ApplyInterruptedException(ApplyInterruptedException::CONFLICT, $done, $total, $runId->value, $e->retryAfterSeconds(), $e);
-            $this->fail($runId, $interrupted, $stored);
+            $this->fail($interrupted, $claim, $stored, $context->channel);
 
             throw $interrupted;
         } catch (Throwable $e) {
             // Class and code only: driver messages quote row values (personal data, contract 13.1 / 14).
             $this->logger?->error('Seed run {run} failed in a provider: {exception_class} ({exception_code}).', ['run' => $runId->value, 'exception_class' => $e::class, 'exception_code' => (string) $e->getCode()]);
             $interrupted = new ApplyInterruptedException(ApplyInterruptedException::PROVIDER_FAILED, $done, $total, $runId->value, null, $e);
-            $this->fail($runId, $interrupted, $stored);
+            $this->fail($interrupted, $claim, $stored, $context->channel);
 
             throw $interrupted;
         }
         // @igor-ignore - the write runner calls the closure inside one write unit and keeps nothing.
-        $this->writer->write(function () use ($runId): null {
-            $this->runs->finish($runId, RunStatus::Applied, null);
-
-            return null;
-        });
+        $finished = $this->writer->write(fn (): bool => $this->runs->finish($runId, RunStatus::Applied, null, $claim->version));
+        if ($finished !== true) {
+            // Taken over after the last batch: the new claimer ends the run.
+            $this->logger?->warning('Seed run {run} was taken over before it could be marked applied.', ['run' => $runId->value]);
+        }
         $written = [ChangeOp::Create->value => $counts[ChangeOp::Create->value], ChangeOp::Update->value => $counts[ChangeOp::Update->value], ChangeOp::Delete->value => $counts[ChangeOp::Delete->value]];
         $this->dispatcher?->dispatch(new SeedRunAppliedEvent($runId, array_keys($providers), $context->scope, $written, $set->hash, $record->planHash, $context->actor, $context->channel));
 
@@ -312,7 +330,7 @@ final readonly class Applier
             $counts[ChangeOp::Create->value] += $result->created;
             $counts[ChangeOp::Update->value] += $result->updated;
             $counts[ChangeOp::Delete->value] += $result->deleted;
-            if (!$this->runs->markBatch($step->runId, $sequence, $counts)) {
+            if (!$this->runs->markBatch($step->runId, $sequence, $counts, $step->claim->version)) {
                 // The run's progress moved on without us (a replayed or skipped batch): roll the unit back.
                 throw new ApplyInterruptedException(ApplyInterruptedException::CONFLICT, $before, $step->total, $step->runId->value);
             }
@@ -320,6 +338,7 @@ final readonly class Applier
             return [$counts, $result, $changes];
         });
         $done = $sequence;
+        $step->claim->advance();
         foreach ($changes as $change) {
             if ($change->op === ChangeOp::Create) {
                 $context->pending->add($name, $change->key);
@@ -327,7 +346,7 @@ final readonly class Applier
         }
         $document->provider->afterBatch($context);
         foreach ($step->held as $lease) {
-            if (!$this->leases->renew($lease, $context->scope, $step->runId, $this->settings->leaseSeconds)) {
+            if (!$this->leases->renew($lease, $context->scope, $step->claim->holder, $this->settings->leaseSeconds)) {
                 throw new ApplyInterruptedException(ApplyInterruptedException::CONFLICT, $done, $step->total, $step->runId->value, 1);
             }
         }
@@ -335,22 +354,21 @@ final readonly class Applier
     }
 
     /**
-     * Marks the run failed or partially applied (best effort) and dispatches the failure event. A stored (UI) run that
-     * met a lock conflict before its first batch goes back to `planned`, so it can simply be applied again.
+     * Marks the run failed or partially applied (best effort, fenced by the claim: a taken-over attempt changes nothing)
+     * and dispatches the failure event. A stored run that met a lock conflict before its first batch is handed back:
+     * to `queued` on the Messenger channel (the transport's retry applies it, ZCE-L2), to `planned` on the web.
      */
-    private function fail(RunId $runId, ApplyInterruptedException $e, bool $stored): void
+    private function fail(ApplyInterruptedException $e, RunClaim $claim, bool $stored, Channel $channel): void
     {
+        $runId = $claim->run;
         try {
             // @igor-ignore - the write runner calls the closure inside one write unit and keeps nothing.
-            $this->writer->write(function () use ($runId, $e, $stored): null {
+            $this->writer->write(function () use ($claim, $e, $stored, $channel): bool {
                 if ($stored && !$e->isPartial() && $e->kind === ApplyInterruptedException::CONFLICT) {
-                    $this->runs->transition($runId, null, [RunStatus::Running], RunStatus::Planned, $e->errorCode());
-
-                    return null;
+                    return $this->runs->transition($claim->run, $claim->version, [RunStatus::Running], $channel === Channel::Messenger ? RunStatus::Queued : RunStatus::Planned, $e->errorCode());
                 }
-                $this->runs->finish($runId, $e->isPartial() ? RunStatus::PartiallyApplied : RunStatus::Failed, $e->errorCode());
 
-                return null;
+                return $this->runs->finish($claim->run, $e->isPartial() ? RunStatus::PartiallyApplied : RunStatus::Failed, $e->errorCode(), $claim->version);
             });
         } catch (Throwable $failure) {
             $this->logger?->warning('Seed run {run} could not be marked as failed: {exception_class}.', ['run' => $runId->value, 'exception_class' => $failure::class]);

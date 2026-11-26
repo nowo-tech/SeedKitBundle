@@ -65,6 +65,7 @@ use Nowo\SeedKitBundle\Infrastructure\Symfony\Command\RunsPurgeCommand;
 use Nowo\SeedKitBundle\Infrastructure\Symfony\Command\SchemaCommand;
 use Nowo\SeedKitBundle\Infrastructure\Symfony\Controller\SeedKitController;
 use Nowo\SeedKitBundle\Infrastructure\Symfony\Controller\UiOptions;
+use Nowo\SeedKitBundle\Infrastructure\Symfony\DependencyInjection\Compiler\CsrfProtectionPass;
 use Nowo\SeedKitBundle\Infrastructure\Symfony\DependencyInjection\Compiler\SeedProviderPass;
 use Nowo\SeedKitBundle\Infrastructure\Symfony\Form\SeedActionType;
 use Nowo\SeedKitBundle\Infrastructure\Symfony\Form\SeedApplyType;
@@ -221,7 +222,7 @@ final class ServiceDefinitions
             $logger,
             $events,
         ]))->setPublic(true)->addTag('monolog.logger', ['channel' => 'seed_kit']));
-        $container->setDefinition(RunMaintenance::class, new Definition(RunMaintenance::class, [new Reference(RunStoreInterface::class), $clock, $config['runs']['history_days']]))->setPublic(true);
+        $container->setDefinition(RunMaintenance::class, new Definition(RunMaintenance::class, [new Reference(RunStoreInterface::class), $clock, $config['runs']['history_days'], $config['apply']['lease_seconds']]))->setPublic(true);
         $container->setDefinition(SchemaLintWarmer::class, (new Definition(SchemaLintWarmer::class, [new Reference(ProviderRegistry::class), new Reference(SchemaLinter::class), $logger]))
             ->addTag('kernel.cache_warmer')
             ->addTag('monolog.logger', ['channel' => 'seed_kit']));
@@ -305,6 +306,7 @@ final class ServiceDefinitions
             $paths[(string) $kind] = $mount['path'];
         }
         $container->setParameter(self::P . 'ui_paths', $ui['enabled'] ? array_values($paths) : []);
+        $container->setParameter(CsrfProtectionPass::UI_PARAMETER, $ui['enabled']);
         // Always registered, so a routes import of type nowo_seed_kit stays valid while the UI is off (no route then).
         $container->setDefinition(SeedKitRouteLoader::class, (new Definition(SeedKitRouteLoader::class, [$ui['enabled'] ? $paths : [], '%kernel.environment%']))->addTag('routing.loader'));
         if (!$ui['enabled']) {

@@ -4,7 +4,7 @@
   the mass-prune confirmation form and the diff preview (changed fields before → after; values of the current data are
   hidden without SEED_EXPORT).
   Variables: page (View\ShowPage), run (RunRecord), documents (preview), warnings, stale, error, owner, apply_form
-  (FormView of a mass prune, or null), deletes, active, poll_ms, self_href, upload_href, progress_href.
+  (FormView of a mass prune, or null), deletes, active, stalled, poll_ms, self_href, upload_href, progress_href.
 -#}
 {% extends '@NowoUiKit/page/show.html.twig' %}
 
@@ -19,6 +19,9 @@
         </section>
     {% endif %}
 
+    {% if stalled %}
+        <div class="{{ nowo_ui_class('flash_warning', _b) }}" role="alert" data-testid="seed-kit-run-stalled">{{ 'seed_kit.ui.run.stalled'|trans({}, 'NowoSeedKitBundle') }}</div>
+    {% endif %}
     {% if stale %}
         <div class="{{ nowo_ui_class('flash_warning', _b) }}" role="alert" data-testid="seed-kit-run-stale">{{ 'seed_kit.ui.run.stale'|trans({}, 'NowoSeedKitBundle') }} <a class="nowo-ui-link" href="{{ upload_href }}">{{ 'seed_kit.ui.upload.open'|trans({}, 'NowoSeedKitBundle') }}</a></div>
     {% endif %}

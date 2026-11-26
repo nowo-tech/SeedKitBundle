@@ -131,6 +131,7 @@ seed_kit:
       confirm_deletes_wrong: O número non coincide cos borrados desta execución.
       mass_prune: Esta execución borra %count% fila(s), máis da proporción permitida das filas actuais. Escribe o número para confirmar.
       stale: Os datos cambiaron desde que se comprobou este ficheiro. Súbeo de novo para ver o novo diff.
+      stalled: 'Esta execución deixou de responder: a súa petición ou o seu worker rematou. Aplícaa de novo para seguir tras o último lote confirmado, ou descártaa.'
       progress: '%done% de %total% lotes aplicados'
       refresh: Actualizar
       no_changes: Sen cambios para este tipo de datos.

@@ -7,6 +7,7 @@
 - [Templates and data blocks](#templates-and-data-blocks)
 - [Dialogs](#dialogs)
 - [Progress of a queued run](#progress-of-a-queued-run)
+- [Action kinds and icons](#action-kinds-and-icons)
 - [Theme](#theme)
 - [Overriding a template](#overriding-a-template)
 
@@ -64,6 +65,23 @@ the confirmation page.
 
 A `queued` / `running` run shows a `<progress>` meter in a region marked for UiKit's `auto-refresh` Stimulus peer
 (`data-controller="auto-refresh"`, `ui.poll_interval_ms`) and a *Refresh* link that works without it.
+
+## Action kinds and icons
+
+Every action of the pages is a UiKit action **kind**; none carries an icon name, so the host maps each kind once in
+`nowo_ui_kit.action_icons` (else UiKit's default glyph of the kind in your `icon_set`):
+
+| Kind | Used for | UiKit default (`bootstrap-icons` / `ux_icon`) |
+| --- | --- | --- |
+| `view` | *History* (header), *View* (runs list) | `bi:eye` |
+| `download` | *Empty template*, *Current data*, *JSON Schema*, the personal-data download | `bi:download` |
+| `import` | *Upload file* | `bi:upload` |
+| `run` | *Apply* | `bi:play` |
+| `cancel` | *Discard* | `bi:x-lg` |
+| `prev` | *Back to import / export* (message page) | `bi:chevron-left` |
+
+A test resolves these defaults against the Bootstrap Icons package, and a host icon set without any `bi:` icon renders
+every page (`tests/Integration/Ui/HostIntegrationTest`).
 
 ## Theme
 

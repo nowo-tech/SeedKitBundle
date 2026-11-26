@@ -131,6 +131,7 @@ seed_kit:
       confirm_deletes_wrong: O número não corresponde às eliminações desta execução.
       mass_prune: Esta execução apaga %count% linha(s), mais do que a proporção permitida das linhas atuais. Escreva o número para confirmar.
       stale: Os dados mudaram desde que este ficheiro foi verificado. Carregue-o novamente para ver o novo diff.
+      stalled: 'Esta execução deixou de responder: o seu pedido ou worker terminou. Aplique-a de novo para continuar após o último lote confirmado, ou descarte-a.'
       progress: '%done% de %total% lotes aplicados'
       refresh: Atualizar
       no_changes: Sem alterações para este tipo de dados.

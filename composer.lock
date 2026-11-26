@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "fde8c4c8d7913081c612fac15b7d738a",
+    "content-hash": "1baff5bc9948e7416d250710e2ae4be5",
     "packages": [
         {
             "name": "doctrine/collections",
@@ -11016,6 +11016,46 @@
             ],
             "time": "2025-11-17T20:03:58+00:00",
             "published-time": "2025-11-17T20:04:52+00:00"
+        },
+        {
+            "name": "twbs/bootstrap-icons",
+            "version": "v1.13.2",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/twbs/icons.git",
+                "reference": "afbfcbcb9bea79ea9923fa9ef82ea03d7ee6c01f"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/twbs/icons/zipball/afbfcbcb9bea79ea9923fa9ef82ea03d7ee6c01f",
+                "reference": "afbfcbcb9bea79ea9923fa9ef82ea03d7ee6c01f",
+                "shasum": ""
+            },
+            "type": "library",
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Mark Otto",
+                    "email": "markdotto@gmail.com"
+                }
+            ],
+            "description": "Official open source SVG icon library for Bootstrap",
+            "homepage": "https://icons.getbootstrap.com/",
+            "keywords": [
+                "bootstrap",
+                "icon font",
+                "icons",
+                "svg"
+            ],
+            "support": {
+                "issues": "https://github.com/twbs/icons/issues",
+                "source": "https://github.com/twbs/icons/tree/v1.13.2"
+            },
+            "time": "2026-10-08T17:11:52+00:00",
+            "published-time": "2026-10-08T17:18:34+00:00"
         },
         {
             "name": "twig/extra-bundle",

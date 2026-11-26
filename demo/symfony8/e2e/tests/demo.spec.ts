@@ -50,7 +50,8 @@ test.describe('Seed Kit demo', () => {
     expect(jsonl.status()).toBe(200);
     const lines = (await jsonl.text()).trim().split('\n');
     expect(JSON.parse(lines[0]).provider).toBe('catalog.categories');
-    expect(lines.slice(1).map((line) => JSON.parse(line).slug)).toEqual(['books', 'games', 'stationery']);
+    // Other specs (UI uploads) may add categories to the shared demo database.
+    expect(lines.slice(1).map((line) => JSON.parse(line).slug)).toEqual(expect.arrayContaining(['books', 'games', 'stationery']));
 
     await page.goto('/');
     await expect(page.getByTestId('demo-download-empty-catalog.products')).toBeVisible();

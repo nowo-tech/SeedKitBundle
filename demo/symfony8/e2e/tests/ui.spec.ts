@@ -18,6 +18,9 @@ test.describe('Seed Kit UI', () => {
     await expect(page.getByTestId('seed-kit-index')).toBeVisible();
     await expect(page.getByTestId('seed-kit-provider-catalog.products')).toBeVisible();
     await expect(page.getByTestId('seed-kit-provider-catalog.categories')).toBeVisible();
+    // Actions pass UiKit kinds, never icon names: the kit draws the icon of the kind (History = view, Upload = import).
+    await expect(page.getByTestId('seed-kit-history').locator('svg')).toHaveCount(1);
+    await expect(page.getByTestId('seed-kit-upload-open').locator('svg')).toHaveCount(1);
 
     await page.getByTestId('seed-kit-upload-open').click();
     const dialog = page.locator('dialog[open]');

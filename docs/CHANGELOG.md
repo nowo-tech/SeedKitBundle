@@ -42,8 +42,26 @@ core. No schema change: the 0.1 tables already hold the new columns' data.
   history (`scheduler.frequency`, default 1 hour). `runs:purge` also expires stored documents.
 - Error codes `SEED_008` (run not available, 404) and `SEED_009` (plan too large, 413); conflict pages answer 409 with
   `Retry-After` and `X-Conflict-Code`.
-- `RunStoreInterface`: `document()`, `findPlanned()`, `transition()`, `expire()`, `create(..., $document)`,
-  `list(..., $actor)`; `RunRecord`: `manifest`, `version`, `expiresAt`, `hasDocument`, `updatedAt`, planned counts.
+- `RunStoreInterface`: `document()`, `findPlanned()`, `transition()`, `expire(..., $staleBefore)`, `heartbeat()`,
+  `create(..., $document)`, `list(..., $actor)`, fenced `markBatch(..., $version)` and `finish(..., $version): bool`; `RunRecord`: `manifest`, `version`, `expiresAt`, `hasDocument`, `updatedAt`, planned counts.
+
+### Fixed (security audit ZCE, before any release)
+
+- A web apply killed mid-run (timeout, OOM) no longer leaves the run `running` forever: a run without progress for
+  longer than `apply.lease_seconds` is stalled; its actor takes it over (resume after the last committed batch) or
+  discards it, an admin of the kind may discard it, and the expiry sweep ends it past its TTL (ZCE-M1).
+- Every claim is fenced by the row version and a lease holder of its own: a taken-over worker cannot record a batch,
+  change the final status, release the claim or touch the new claimer's leases; heartbeats during the re-plan
+  (ZCE-L1).
+- Messenger: a lock conflict before the first batch puts the run back to `queued`, so the retry applies it (ZCE-L2).
+- `ui.enabled` without form CSRF fails the container build (`CsrfProtectionPass`, ZCE-L3).
+- No exception thrown to Messenger chains the driver or provider exception; `ApplyInterruptedException` keeps only
+  `causeClass` / `causeCode` (ZCE-L4).
+- A document past `runs.document_ttl` is never shown or applied (`SEED_005`) and is ended on the spot; the history page
+  sweeps too (ZCE-L5).
+- The *History* action used the explicit icon `history` (rendered as the nonexistent `bi:history`, a 500 for hosts
+  with their own icon set): every action now passes a UiKit kind only (`view`, `download`, `import`, `run`, `cancel`,
+  `prev`), mapped by the host's `action_icons`.
 
 ### Changed
 

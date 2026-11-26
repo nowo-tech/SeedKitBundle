@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Nowo\SeedKitBundle;
 
+use Nowo\SeedKitBundle\Infrastructure\Symfony\DependencyInjection\Compiler\CsrfProtectionPass;
 use Nowo\SeedKitBundle\Infrastructure\Symfony\DependencyInjection\Compiler\SeedProviderPass;
 use Nowo\SeedKitBundle\Infrastructure\Symfony\DependencyInjection\ConfigurationTree;
 use Nowo\SeedKitBundle\Infrastructure\Symfony\DependencyInjection\ServiceDefinitions;
@@ -59,12 +60,13 @@ final class NowoSeedKitBundle extends AbstractBundle
     }
 
     /**
-     * Adds the provider pass.
+     * Adds the provider pass and the CSRF guard of the pages.
      */
     public function build(ContainerBuilder $container): void
     {
         parent::build($container);
         $container->addCompilerPass(new SeedProviderPass(), PassConfig::TYPE_BEFORE_OPTIMIZATION, 10);
+        $container->addCompilerPass(new CsrfProtectionPass());
     }
 
     /**

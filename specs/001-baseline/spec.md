@@ -218,12 +218,15 @@ document, batch manifest and a TTL, and is applied or resumed by claim), the Mes
 - **FR-RUN-001**: A stored UI run is a planned run row carrying the gzip-compressed document (codec port), the batch
   manifest, the plan hash, the actor and an expiry (`runs.document_ttl`, default `PT1H`); an identical pending upload
   of the same actor and document reuses its run; `SeedRuns` plans, stores and reads runs through `RunStoreInterface`.
-- **FR-RUN-002**: A run is claimed by compare-and-set (`planned` or interrupted to `applying` or `queued`); apply
+- **FR-RUN-002**: A run is claimed by compare-and-set (`planned`, `partially_applied`, `queued`, or a stalled
+  `running` run, to `running`); every write of the claim is fenced by its version and lease holder (`RunClaim`); apply
   re-checks access and the plan hash, applies the remaining batches (resuming after `batches_done`), reports an
   `ApplyOutcome`, can be queued (`RunQueueInterface`) or discarded; unavailable, expired or foreign runs raise
-  `RunNotAvailableException`, plans over `ui.max_sync_changes` without a queue raise `PlanTooLargeException`.
-- **FR-RUN-003**: Expired stored documents are cleared and expired runs purged in batches (`RunMaintenance`, command
-  `runs:purge`, scheduled purge).
+  `RunNotAvailableException`, plans over `ui.max_sync_changes` without a queue raise `PlanTooLargeException`; a
+  document past its TTL is never used (`SEED_005`); a stalled run is taken over by its actor or discarded by its actor
+  or an admin of the kind.
+- **FR-RUN-003**: Expired stored documents are cleared (also of stalled `running` runs past their TTL plus the lease)
+  and old runs purged in batches (`RunMaintenance`, command `runs:purge`, scheduled purge, upload and history sweeps).
 
 ### UI
 
@@ -235,7 +238,8 @@ document, batch manifest and a TTL, and is applied or resumed by claim), the Mes
 - **FR-UI-002**: Upload (dialog or page, `ui.max_upload_bytes`, `ui.max_items`), diff, apply, discard, runs list
   (`ui.runs_per_page`, bound to the actor) and progress JSON (`ui.poll_interval_ms`); mass prune needs the delete
   count typed; errors never echo values.
-- **FR-UI-003**: Forms (upload, apply, discard) are FormKit forms with CSRF protection and a form profile.
+- **FR-UI-003**: Forms (upload, apply, discard) are FormKit forms with CSRF protection and a form profile; with
+  `ui.enabled` the container build fails when form CSRF or the token manager is missing (`CsrfProtectionPass`).
 - **FR-UI-004**: Twig templates on UiKit scaffolds (index, upload page and fragment, upload errors, runs, run,
   message) honouring `ui.layout`, breadcrumbs and translations.
 
@@ -292,8 +296,8 @@ document, batch manifest and a TTL, and is applied or resumed by claim), the Mes
 
 ## Success criteria
 
-- **SC-001**: Every file under `src/` appears in [`code-inventory.md`](code-inventory.md): **185 files mapped at
-  0.2.0** (185 / 185, `find src -type f | wc -l`).
+- **SC-001**: Every file under `src/` appears in [`code-inventory.md`](code-inventory.md): **187 files mapped at
+  0.2.0** (187 / 187, `find src -type f | wc -l`).
 - **SC-002**: Exporting the current rows and applying the file plans 0 changes; a second apply writes nothing to the
   host tables (database test and contract test kit).
 - **SC-003**: The query count per batch is constant (database test); JSON Lines files are read line by line.

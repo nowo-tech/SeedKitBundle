@@ -116,6 +116,41 @@ final class DbalStoredRunTest extends DatabaseTestCase
     }
 
     #[Test]
+    public function writesOfAClaimAreFencedByItsVersion(): void
+    {
+        $this->runs->create($this->planned(1), 'gz');
+        self::assertTrue($this->runs->transition(self::runId(1), 1, [RunStatus::Planned], RunStatus::Running));
+        $counts = ['create' => 1, 'update' => 0, 'delete' => 0];
+
+        self::assertFalse($this->runs->heartbeat(self::runId(1), 1), 'an old version');
+        self::assertTrue($this->runs->heartbeat(self::runId(1), 2));
+        self::assertFalse($this->runs->markBatch(self::runId(1), 1, $counts, 2), 'the heartbeat moved the version on');
+        self::assertTrue($this->runs->markBatch(self::runId(1), 1, $counts, 3));
+        self::assertFalse($this->runs->finish(self::runId(1), RunStatus::Applied, null, 3));
+        self::assertTrue($this->runs->finish(self::runId(1), RunStatus::PartiallyApplied, 'SEED_006', 4));
+        self::assertFalse($this->runs->heartbeat(self::runId(1), 5), 'not running any more');
+        self::assertFalse($this->runs->finish(self::runId(1), RunStatus::Applied, null, 5));
+        self::assertSame(RunStatus::PartiallyApplied, $this->runs->find(self::runId(1))?->status);
+    }
+
+    #[Test]
+    public function aStalledRunningRunExpiresAfterItsTtlAndTheLease(): void
+    {
+        $this->runs->create($this->planned(1, RunStatus::Running), 'gz');
+        $this->runs->create($this->planned(2, RunStatus::Running), 'gz');
+        $this->connection->executeStatement('UPDATE nowo_seed_run SET batches_done = 1 WHERE id = ?', [self::runId(2)->value]);
+        $this->runs->create($this->planned(3, RunStatus::Running), 'gz');
+        $this->connection->executeStatement("UPDATE nowo_seed_run SET updated_at = '2026-11-24 10:20:00' WHERE id = ?", [self::runId(3)->value]);
+
+        self::assertSame(0, $this->runs->expire(new DateTimeImmutable('2026-11-24 10:30:00 UTC'), 10), 'without a stale limit a running run is left alone');
+        self::assertSame(2, $this->runs->expire(new DateTimeImmutable('2026-11-24 10:30:00 UTC'), 1, new DateTimeImmutable('2026-11-24 10:00:00 UTC')));
+        self::assertSame(RunStatus::Expired, $this->runs->find(self::runId(1))?->status);
+        self::assertSame(RunStatus::PartiallyApplied, $this->runs->find(self::runId(2))?->status, 'committed batches stay');
+        self::assertFalse($this->runs->find(self::runId(2))->hasDocument);
+        self::assertSame(RunStatus::Running, $this->runs->find(self::runId(3))?->status, 'still showing progress');
+    }
+
+    #[Test]
     public function theListCanBeLimitedToOneActor(): void
     {
         $this->runs->create($this->record(1, RunStatus::Applied, 'alice'));

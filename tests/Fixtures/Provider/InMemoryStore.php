@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Nowo\SeedKitBundle\Tests\Fixtures\Provider;
 
+use Closure;
+
 use function is_scalar;
 
 /**
@@ -22,6 +24,9 @@ final class InMemoryStore
 
     /** Makes the fixture providers fail while planning (a host failure in a re-plan). */
     public bool $failPlan = false;
+
+    /** Called by the fixture providers on every plan (tests of what happens meanwhile). */
+    public ?Closure $onPlan = null;
 
     /** Whether planBatch() was asked for locks. */
     public int $lockedPlans = 0;

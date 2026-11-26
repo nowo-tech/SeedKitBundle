@@ -131,6 +131,7 @@ seed_kit:
       confirm_deletes_wrong: Die Zahl stimmt nicht mit den Löschungen dieses Laufs überein.
       mass_prune: Dieser Lauf löscht %count% Zeile(n), mehr als der erlaubte Anteil der aktuellen Zeilen. Gib die Anzahl zur Bestätigung ein.
       stale: Die Daten haben sich seit der Prüfung dieser Datei geändert. Lade sie erneut hoch, um den neuen Diff zu sehen.
+      stalled: 'Dieser Lauf reagiert nicht mehr: seine Anfrage oder sein Worker wurde beendet. Wenden Sie ihn erneut an, um nach dem letzten bestätigten Batch fortzufahren, oder verwerfen Sie ihn.'
       progress: '%done% von %total% Batches angewendet'
       refresh: Aktualisieren
       no_changes: Keine Änderungen für diese Datenart.

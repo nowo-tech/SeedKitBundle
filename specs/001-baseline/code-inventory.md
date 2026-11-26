@@ -2,11 +2,11 @@
 
 **Baseline spec**: [`spec.md`](spec.md)  
 **Package**: `nowo-tech/seed-kit-bundle`  
-**Last audited**: 2026-11-26 (0.2.0, branch `feat/0.2.0-ui-messenger`)
+**Last audited**: 2026-11-26 (ZCE fixes) (0.2.0, branch `feat/0.2.0-ui-messenger`)
 
 Scope: every file under `src/` (PHP classes, interfaces and enums, the two Doctrine XML mappings, the Twig templates, the
 translation catalogues; `src/Testing` ships with the package and counts as production). Audit command: `find src -type f | wc -l`
-→ **185**. Requirement IDs are defined in [`spec.md`](spec.md#functional-requirements).
+→ **187**. Requirement IDs are defined in [`spec.md`](spec.md#functional-requirements).
 
 | Source file | Spec section | Requirement IDs |
 | --- | --- | --- |
@@ -22,6 +22,7 @@ translation catalogues; `src/Testing` ships with the package and counts as produ
 | `src/Application/PreparedDocument.php` | Plan | FR-PLAN-001 |
 | `src/Application/ProviderRegistry.php` | Provider SPI | FR-PROVIDER-001 |
 | `src/Application/PruneOptions.php` | Apply | FR-APPLY-002 |
+| `src/Application/RunClaim.php` | Stored runs | FR-RUN-002 |
 | `src/Application/RunMaintenance.php` | Storage | FR-STORAGE-002, FR-RUN-003 |
 | `src/Application/RunView.php` | UI | FR-UI-002 |
 | `src/Application/SchemaLinter.php` | Schema | FR-SCHEMA-002 |
@@ -150,6 +151,7 @@ translation catalogues; `src/Testing` ships with the package and counts as produ
 | `src/Infrastructure/Symfony/Command/SchemaCommand.php` | Console | FR-CLI-001 |
 | `src/Infrastructure/Symfony/Controller/SeedKitController.php` | UI | FR-UI-001, FR-UI-002 |
 | `src/Infrastructure/Symfony/Controller/UiOptions.php` | UI | FR-UI-001 |
+| `src/Infrastructure/Symfony/DependencyInjection/Compiler/CsrfProtectionPass.php` | UI | FR-UI-003 |
 | `src/Infrastructure/Symfony/DependencyInjection/Compiler/SeedProviderPass.php` | Provider SPI | FR-PROVIDER-001 |
 | `src/Infrastructure/Symfony/DependencyInjection/ConfigurationTree.php` | Bundle and DI | FR-BUNDLE-001, FR-BUNDLE-002, FR-UI-001 |
 | `src/Infrastructure/Symfony/DependencyInjection/Requirement.php` | Bundle and DI | FR-BUNDLE-001, FR-BUNDLE-002 |
@@ -210,16 +212,16 @@ translation catalogues; `src/Testing` ships with the package and counts as produ
 | Apply | 10 |
 | Concurrency | 3 |
 | Storage | 12 |
-| Stored runs | 5 |
+| Stored runs | 6 |
 | Secrets | 3 |
 | Access | 16 |
-| UI | 16 |
+| UI | 17 |
 | Messenger and Scheduler | 7 |
 | Audit and events | 9 |
 | Errors | 16 |
 | Console | 12 |
 | Contract test kit | 6 |
 | Translations | 10 |
-| **Total** | **185** |
+| **Total** | **187** |
 
-Mapped files: **185 / 185** (100%). Excluded from the inventory: `tests/`, `demo/`, `docs/` and the repository tooling.
+Mapped files: **187 / 187** (100%). Excluded from the inventory: `tests/`, `demo/`, `docs/` and the repository tooling.

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Nowo\SeedKitBundle\Tests\Fixtures\Provider;
 
+use Closure;
 use Nowo\SeedKitBundle\Domain\Context\SeedContext;
 use Nowo\SeedKitBundle\Domain\Document\SeedItem;
 use Nowo\SeedKitBundle\Domain\Model\NaturalKey;
@@ -134,6 +135,9 @@ final class TagProvider extends AbstractSeedProvider
     {
         if ($this->store->failPlan) {
             throw new RuntimeException('host failure while planning');
+        }
+        if ($this->store->onPlan instanceof Closure) {
+            ($this->store->onPlan)($options);
         }
         if ($options->lockForUpdate) {
             ++$this->store->lockedPlans;

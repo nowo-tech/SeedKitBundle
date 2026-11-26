@@ -9,7 +9,6 @@ use DateTimeImmutable;
 use Nowo\SeedKitBundle\Domain\Audit\SeedAuditRecord;
 use Nowo\SeedKitBundle\Domain\Document\DocumentSet;
 use Nowo\SeedKitBundle\Domain\Exception\ApplyInterruptedException;
-use Nowo\SeedKitBundle\Domain\Exception\LeaseHeldException;
 use Nowo\SeedKitBundle\Domain\Exception\PlanTooLargeException;
 use Nowo\SeedKitBundle\Domain\Exception\PruneRefusedException;
 use Nowo\SeedKitBundle\Domain\Exception\RunNotAvailableException;
@@ -164,19 +163,26 @@ final readonly class SeedRuns
      */
     public function view(RunId $id, SeedScope $requested, ActorRef $viewer): RunView
     {
-        $scope = $this->operations->resolveScope($requested, $viewer, Channel::Http);
-        $run   = $this->visible($id, $scope, $viewer);
-        $owner = $run->isOwnedBy($viewer);
-        if (!$owner || !$run->hasDocument || !in_array($run->status, [RunStatus::Planned, RunStatus::PartiallyApplied], true)) {
-            return new RunView($run, null, false, $owner);
+        $scope   = $this->operations->resolveScope($requested, $viewer, Channel::Http);
+        $run     = $this->visible($id, $scope, $viewer);
+        $owner   = $run->isOwnedBy($viewer);
+        $stalled = $this->isStalled($run);
+        if ($this->isExpired($run)) {
+            // The document outlived its TTL (no sweep ran yet): end it now, show nothing of it (ZCE-L5).
+            $this->expire();
+
+            return new RunView($this->runs->find($run->id) ?? $run, null, false, $owner, (new StalePlanException())->errorCode());
+        }
+        if (!$owner || !$run->hasDocument || (!$stalled && !in_array($run->status, [RunStatus::Planned, RunStatus::PartiallyApplied], true))) {
+            return new RunView($run, null, false, $owner, null, $stalled);
         }
         try {
             $plan = $this->operations->diff($this->load($run), $scope, $viewer, Channel::Http, new PruneOptions($run->prune, true, true), false);
         } catch (SeedKitException $e) {
-            return new RunView($run, null, false, true, $e->errorCode());
+            return new RunView($run, null, false, true, $e->errorCode(), $stalled);
         }
 
-        return new RunView($run, $plan, $run->batchesDone === 0 && !$plan->hash->equals($run->planHash), true);
+        return new RunView($run, $plan, $run->batchesDone === 0 && !$plan->hash->equals($run->planHash), true, null, $stalled);
     }
 
     /**
@@ -199,10 +205,11 @@ final readonly class SeedRuns
     {
         $scope = $this->operations->resolveScope($requested, $actor, Channel::Http);
         $run   = $this->owned($id, $scope, $actor);
-        if (in_array($run->status, [RunStatus::Applied, RunStatus::Running, RunStatus::Queued], true)) {
+        if (in_array($run->status, [RunStatus::Applied, RunStatus::Queued], true) || ($run->status === RunStatus::Running && !$this->isStalled($run))) {
             return new ApplyOutcome(ApplyOutcome::BUSY, $run);
         }
-        if (!in_array($run->status, [RunStatus::Planned, RunStatus::PartiallyApplied], true)) {
+        // A stalled `running` run (its request or worker died, ZCE-M1) is taken over like a partial one.
+        if (!in_array($run->status, [RunStatus::Planned, RunStatus::PartiallyApplied, RunStatus::Running], true)) {
             throw new RunNotAvailableException();
         }
         if (!$expected->equals($run->planHash)) {
@@ -220,7 +227,7 @@ final readonly class SeedRuns
             throw new PlanTooLargeException($run->changes(), $this->settings->maxSyncChanges);
         }
 
-        return $this->execute($run, $set, $scope, $actor, Channel::Http, $prune, [RunStatus::Planned, RunStatus::PartiallyApplied]);
+        return $this->execute($run, $set, $scope, $actor, Channel::Http, $prune, [RunStatus::Planned, RunStatus::PartiallyApplied, RunStatus::Running]);
     }
 
     /**
@@ -262,16 +269,23 @@ final readonly class SeedRuns
     }
 
     /**
-     * Discards a run before it is applied (its document is deleted).
+     * Discards a run before it is applied (its document is deleted): its actor discards a planned, partially applied or
+     * stalled run; a viewer with `SEED_APPLY` on every provider of the run (an admin of the kind) discards a stalled
+     * run of another actor (ZCE-M1).
      *
      * @throws SeedKitException
      */
     public function discard(RunId $id, SeedScope $requested, ActorRef $actor): RunRecord
     {
-        $scope = $this->operations->resolveScope($requested, $actor, Channel::Http);
-        $run   = $this->owned($id, $scope, $actor);
+        $scope   = $this->operations->resolveScope($requested, $actor, Channel::Http);
+        $run     = $this->visible($id, $scope, $actor);
+        $stalled = $this->isStalled($run);
+        if (!$run->isOwnedBy($actor) && !$stalled) {
+            throw new RunNotAvailableException();
+        }
+        $from = $run->isOwnedBy($actor) ? [RunStatus::Planned, RunStatus::PartiallyApplied, RunStatus::Running] : [RunStatus::Running];
         // @igor-ignore - the write runner calls the closure inside one write unit and keeps nothing.
-        $done = $this->writer->write(fn (): bool => $this->runs->transition($run->id, $run->version, [RunStatus::Planned, RunStatus::PartiallyApplied], RunStatus::Discarded));
+        $done = $this->writer->write(fn (): bool => $this->runs->transition($run->id, $run->version, $from, RunStatus::Discarded, null, null, $this->staleBefore()));
         if ($done !== true) {
             throw new RunNotAvailableException();
         }
@@ -291,7 +305,9 @@ final readonly class SeedRuns
     public function history(SeedScope $requested, ActorRef $viewer, int $limit, ?RunId $before = null): array
     {
         $scope = $this->operations->resolveScope($requested, $viewer, Channel::Http);
-        $all   = false;
+        // Opportunistic, bounded: the history page also ends documents past their TTL and stalled runs (ZCE-M1 / L5).
+        $this->expire(null, self::EXPIRE_BATCH);
+        $all = false;
         foreach ($this->operations->providers($scope) as $provider) {
             $all = $this->operations->isGranted(SeedAction::Apply, $provider->name(), $scope, Channel::Http, $viewer);
             if (!$all) {
@@ -308,9 +324,10 @@ final readonly class SeedRuns
     public function expire(?DateTimeImmutable $now = null, int $batchSize = 500): int
     {
         $now ??= DateTimeImmutable::createFromInterface($this->clock->now());
+        $stale = $now->sub(new DateInterval('PT' . $this->settings->leaseSeconds . 'S'));
         try {
             // @igor-ignore - the write runner calls the closure inside one write unit and keeps nothing.
-            $changed = $this->writer->write(fn (): int => $this->runs->expire($now, $batchSize));
+            $changed = $this->writer->write(fn (): int => $this->runs->expire($now, $batchSize, $stale));
         } catch (Throwable $e) {
             $this->logger?->warning('Seed run documents could not be expired: {exception_class}.', ['exception_class' => $e::class]);
 
@@ -381,30 +398,38 @@ final readonly class SeedRuns
 
             throw $e;
         }
-        $stale = DateTimeImmutable::createFromInterface($this->clock->now())->sub(new DateInterval('PT' . $this->settings->leaseSeconds . 'S'));
+        $stale = $this->staleBefore();
         // @igor-ignore - the write runner calls the closure inside one write unit and keeps nothing.
         $claimed = $this->writer->write(fn (): bool => $this->runs->transition($run->id, $run->version, $from, RunStatus::Running, null, null, $stale));
         $current = $claimed === true ? $this->runs->find($run->id) : null;
         if (!$current instanceof RunRecord) {
             return new ApplyOutcome(ApplyOutcome::BUSY, $this->runs->find($run->id) ?? $run);
         }
-        // What the run goes back to when nothing was written (a crashed worker's run counts as partially applied).
-        $back = $run->status === RunStatus::Running ? RunStatus::PartiallyApplied : $run->status;
+        // The claim: its fencing version and a lease holder of its own (ZCE-L1).
+        $claim = new RunClaim($run->id, $this->ids->runId(), $current->version);
+        // What the run goes back to when nothing was written: a queued run back to the queue, a taken-over run to
+        // partially applied (or planned when nothing was committed).
+        $back = match (true) {
+            $channel === Channel::Messenger     => RunStatus::Queued,
+            $run->status !== RunStatus::Running => $run->status,
+            $run->batchesDone > 0               => RunStatus::PartiallyApplied,
+            default                             => RunStatus::Planned,
+        };
         try {
-            $result = $this->applier->applyStored($current, $set, $documents, $context, $prune);
+            $result = $this->applier->applyStored($current, $claim, $set, $documents, $context, $prune);
         } catch (ApplyInterruptedException $e) {
-            // The applier recorded the outcome on the run row.
+            // The applier recorded the outcome on the run row (fenced by the claim).
             $this->auditFailure($run, $actor, $scope, $channel, $e);
 
             throw $e;
         } catch (StalePlanException $e) {
-            $this->release($run->id, RunStatus::Failed, $e->errorCode());
+            $this->release($claim, RunStatus::Failed, $e->errorCode());
             $this->auditFailure($run, $actor, $scope, $channel, $e);
 
             throw $e;
         } catch (Throwable $e) {
             // Lease held, prune refused, a provider failing in the re-plan: nothing written.
-            $this->release($run->id, $e instanceof LeaseHeldException && $channel === Channel::Messenger ? RunStatus::Queued : $back, $e instanceof SeedKitException ? $e->errorCode() : null);
+            $this->release($claim, $back, $e instanceof SeedKitException ? $e->errorCode() : null);
             $this->auditFailure($run, $actor, $scope, $channel, $e);
 
             throw $e;
@@ -426,16 +451,42 @@ final readonly class SeedRuns
     }
 
     /**
-     * Moves a claimed run out of `running` (best effort: a stuck claim is taken over after the lease anyway).
+     * Moves a claimed run out of `running`, fenced by the claim (a taken-over attempt changes nothing; best effort: a
+     * stuck claim is taken over after the lease anyway).
      */
-    private function release(RunId $id, RunStatus $to, ?string $errorCode): void
+    private function release(RunClaim $claim, RunStatus $to, ?string $errorCode): void
     {
         try {
             // @igor-ignore - the write runner calls the closure inside one write unit and keeps nothing.
-            $this->writer->write(fn (): bool => $this->runs->transition($id, null, [RunStatus::Running], $to, $errorCode));
+            $this->writer->write(fn (): bool => $this->runs->transition($claim->run, $claim->version, [RunStatus::Running], $to, $errorCode));
         } catch (Throwable $e) {
-            $this->logger?->warning('Seed run {run} could not be released: {exception_class}.', ['run' => $id->value, 'exception_class' => $e::class]);
+            $this->logger?->warning('Seed run {run} could not be released: {exception_class}.', ['run' => $claim->run->value, 'exception_class' => $e::class]);
         }
+    }
+
+    /**
+     * The instant before which a `running` run without progress counts as stalled (its lease is over).
+     */
+    private function staleBefore(): DateTimeImmutable
+    {
+        return DateTimeImmutable::createFromInterface($this->clock->now())->sub(new DateInterval('PT' . $this->settings->leaseSeconds . 'S'));
+    }
+
+    /**
+     * Whether a `running` run stopped showing progress for longer than the lease (its request or worker died).
+     */
+    private function isStalled(RunRecord $run): bool
+    {
+        return $run->status === RunStatus::Running && ($run->updatedAt ?? $run->createdAt) < $this->staleBefore();
+    }
+
+    /**
+     * Whether the run's document is past its expiry (a live `running` run is never cut short).
+     */
+    private function isExpired(RunRecord $run): bool
+    {
+        return $run->hasDocument && $run->expiresAt instanceof DateTimeImmutable && $run->expiresAt < $this->clock->now()
+            && ($run->status !== RunStatus::Running || $this->isStalled($run));
     }
 
     /**
@@ -499,9 +550,16 @@ final readonly class SeedRuns
      * The stored document of a run.
      *
      * @throws RunNotAvailableException when it is gone
+     * @throws StalePlanException when it is past its expiry
      */
     private function load(RunRecord $run): DocumentSet
     {
+        if ($this->isExpired($run)) {
+            // Past `runs.document_ttl` (no sweep ran yet): ended now, never used (ZCE-L5).
+            $this->expire();
+
+            throw new StalePlanException();
+        }
         $stored = $this->runs->document($run->id);
         if ($stored === null) {
             throw new RunNotAvailableException();

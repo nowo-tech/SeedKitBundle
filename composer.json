@@ -89,7 +89,8 @@
         "symfony/security-csrf": "^7.4 || ^8.0",
         "symfony/translation": "^7.4 || ^8.0",
         "symfony/twig-bundle": "^7.4 || ^8.0",
-        "symfony/validator": "^7.4 || ^8.0"
+        "symfony/validator": "^7.4 || ^8.0",
+        "twbs/bootstrap-icons": "^1.13.2"
     },
     "suggest": {
         "symfony/security-bundle": "SEED_EXPORT / SEED_APPLY / SEED_PRUNE voter, role-based access checker and the user-identifier actor resolver (required by ui.enabled)",

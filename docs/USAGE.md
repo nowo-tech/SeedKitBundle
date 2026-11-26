@@ -786,3 +786,27 @@ lease is retried, any other refusal fails the run for good (audited).
 For `/organization/seeds` ("the organization I am working in"), implement `SeedCurrentScopeInterface::currentId()` and
 set `ui.current_scope`; the id is then resolved and checked by your scope resolver like an id from the URL.
 
+`currentId()` MUST derive the id from server-side state of the authenticated actor (session or user record), never
+from request input (query, header, body). It MAY return null; it MUST NOT throw for an unknown actor. The bundle treats
+the result as untrusted input: it is resolved by `SeedScopeResolverInterface` (unknown or invisible ⇒ 404) and checked
+by `canUseArea()` (⇒ 403), exactly like a `{scopeId}` from the URL. Runs stay bound to the scope they were planned in,
+so a change of current scope makes earlier run URLs answer 404. It is called once per request and must be stateless
+(worker mode).
+
+### A run that stopped responding
+
+A `running` run without progress for longer than `apply.lease_seconds` (its web request timed out or ran out of
+memory, its worker died) is **stalled**: the run page says so and stops polling; its actor applies it again (the apply
+takes it over and continues after the last committed batch) or discards it, and a viewer with `SEED_APPLY` on every
+provider of the run (an admin of the kind) may discard it. The expiry sweep ends a stalled run past
+`runs.document_ttl` (to `partially_applied` when batches were committed, else `expired`) and deletes its document, so
+a document never outlives its TTL plus the lease.
+
+### Document expiry
+
+A document past `runs.document_ttl` is never used: viewing the run shows "upload again" (`SEED_005`) and ends it on the
+spot, applying it answers `SEED_005`. Storage is cleaned by the sweeps that run on each upload and history page (100
+rows at a time), by `nowo:seed-kit:runs:purge` and by the Scheduler bridge when you enable it (`scheduler.enabled`,
+off by default because it needs `symfony/scheduler` and a Messenger setup); the checks at use make the TTL hold without
+it.
+

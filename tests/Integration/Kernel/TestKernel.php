@@ -69,7 +69,7 @@ final class TestKernel extends Kernel
 
     /**
      * @param array<string, mixed> $bundleConfig `nowo_seed_kit` configuration (merged over the host defaults)
-     * @param array<string, bool> $features security, ui (TwigBundle, UiKit, FormKit, SecurityBundle with http_basic, the UI routes), messenger (with ui: in-memory `async` transport), vault, auditkit, broken, no_providers, quiet, query_log, no_debug (production-like: no traceable dispatcher, no DBAL logging)
+     * @param array<string, bool> $features security, ui (TwigBundle, UiKit, FormKit, SecurityBundle with http_basic, the UI routes), no_csrf (with ui: form CSRF off), tabler_icons (with ui: tabler-icons set + action_icons), messenger (with ui: in-memory `async` transport), vault, auditkit, broken, no_providers, quiet, query_log, no_debug (production-like: no traceable dispatcher, no DBAL logging)
      * @param 'ddd'|'first'|'named'|'standard' $host
      */
     public function __construct(
@@ -215,7 +215,7 @@ final class TestKernel extends Kernel
                 'router'          => ['utf8' => true],
                 'session'         => ['storage_factory_id' => 'session.storage.factory.mock_file'],
                 'csrf_protection' => true,
-                'form'            => true,
+                'form'            => $this->feature('no_csrf') ? ['csrf_protection' => false] : true,
                 'validation'      => true,
                 'property_access' => true,
                 'messenger'       => $this->feature('messenger') ? [
@@ -224,6 +224,13 @@ final class TestKernel extends Kernel
                 ] : false,
             ]);
             $container->extension('twig', ['strict_variables' => true]);
+            if ($this->feature('tabler_icons')) {
+                // A host on its own icon set that maps every kind of the bundle and has no bi:* icon at all.
+                $container->extension('nowo_ui_kit', ['icon_set' => 'tabler-icons', 'action_icons' => [
+                    'view' => 'tabler:list', 'download' => 'tabler:download', 'import' => 'tabler:upload',
+                    'run'  => 'tabler:player-play', 'cancel' => 'tabler:x', 'prev' => 'tabler:arrow-left',
+                ]]);
+            }
             $container->extension('security', [
                 'password_hashers' => [InMemoryUser::class => 'plaintext'],
                 'providers'        => ['memory' => ['memory' => ['users' => [

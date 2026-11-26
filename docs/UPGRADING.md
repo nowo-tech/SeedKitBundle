@@ -71,9 +71,16 @@ them every queued run is refused for good.
 
 ### Breaking changes (0.x minor)
 
-- `RunStoreInterface` has new methods (`document`, `findPlanned`, `transition`, `expire`) and new optional parameters
-  (`create(..., ?string $document = null)`, `list(..., ?ActorRef $actor = null)`); a host implementation of the port
-  must add them (the bundle's DBAL store and `Testing\Support\InMemoryRunStore` do).
+- `RunStoreInterface` has new methods (`document`, `findPlanned`, `transition`, `expire`, `heartbeat`) and new
+  optional parameters (`create(..., ?string $document = null)`, `list(..., ?ActorRef $actor = null)`,
+  `markBatch(..., ?int $version = null)`, `expire(..., ?DateTimeImmutable $staleBefore = null)`); `finish(..., ?int
+  $version = null)` now returns `bool` (false: a fenced run was taken over). A host implementation of the port must
+  follow (the bundle's DBAL store and `Testing\Support\InMemoryRunStore` do).
+- `ApplyInterruptedException` no longer chains its cause (`getPrevious()` is null): read `causeClass` / `causeCode`.
+- `ui.enabled` needs form CSRF (`framework.form.csrf_protection`) and a CSRF token manager; the container build fails
+  otherwise.
+- Host icons: the pages use the UiKit action kinds `view`, `download`, `import`, `run`, `cancel`, `prev`; map them in
+  `nowo_ui_kit.action_icons` when you use your own icon set ([TEMPLATES.md](TEMPLATES.md#action-kinds-and-icons)).
 - `RunStoreInterface::finish()` keeps the document of a `partially_applied` run.
 - `RunRecord`, `SeedKitSettings` and `SeedKitGuard::__construct()` have new trailing optional parameters.
 - `runs:purge` prints `N run(s) deleted, M stored document(s) expired.`.

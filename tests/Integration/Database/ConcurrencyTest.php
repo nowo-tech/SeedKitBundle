@@ -114,8 +114,8 @@ final class ConcurrencyTest extends ApplyTestCase
         } catch (ApplyInterruptedException $e) {
             self::assertSame('CONFLICT_001', $e->errorCode());
             self::assertSame(0, $e->batchesCommitted);
-            self::assertInstanceOf(ConcurrencyConflict::class, $e->getPrevious());
-            self::assertSame(3, $e->getPrevious()->attempts, 'replayed before giving up');
+            self::assertSame(ConcurrencyConflict::class, $e->causeClass, 'replayed, then given up');
+            self::assertNull($e->getPrevious());
             self::assertNotNull($e->retryAfterSeconds);
             self::assertSame('failed', $this->connection()->fetchOne('SELECT status FROM nowo_seed_run WHERE id = ?', [$e->runId]));
         }

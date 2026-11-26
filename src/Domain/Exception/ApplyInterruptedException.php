@@ -10,7 +10,8 @@ use Throwable;
  * An apply stopped after it had started writing (contract sections 10.2 / 10.3, Q-SK-3): a batch digest changed inside
  * its transaction (`SEED_006`), the provider's handler failed (`SEED_010`), or a lock conflict survived the replays
  * (`CONFLICT_001` when no batch of this run was committed yet, `CONFLICT_002` after one was). Committed batches stay;
- * re-applying the same document converges (idempotent). The cause is kept as previous exception for the log only.
+ * re-applying the same document converges (idempotent). Only the class and code of the cause are kept, never the
+ * cause itself (its message may quote row values).
  */
 final class ApplyInterruptedException extends SeedKitException
 {
@@ -23,12 +24,21 @@ final class ApplyInterruptedException extends SeedKitException
     /** A lock conflict survived the replays. */
     public const CONFLICT = 'CONFLICT';
 
+    /** Class of the cause (no message, no previous exception). */
+    public readonly ?string $causeClass;
+
+    /** Code of the cause, as text. */
+    public readonly ?string $causeCode;
+
     /**
      * @param string $kind one of the class constants
      * @param int $batchesCommitted batches of this run committed before the failure
      * @param int $batchesTotal batches of the run
      * @param string|null $runId the run row (history), when one was created
      * @param int|null $retryAfterSeconds for a conflict
+     * @param Throwable|null $cause the failure behind it: only its class and code are kept (`$causeClass`,
+     *                              `$causeCode`), never the exception itself, whose message may quote row values
+     *                              (personal data) and would reach logs and Messenger failure transports (ZCE-L4)
      */
     public function __construct(
         public readonly string $kind,
@@ -36,13 +46,15 @@ final class ApplyInterruptedException extends SeedKitException
         public readonly int $batchesTotal,
         public readonly ?string $runId = null,
         public readonly ?int $retryAfterSeconds = null,
-        ?Throwable $previous = null,
+        ?Throwable $cause = null,
     ) {
+        $this->causeClass = $cause instanceof Throwable ? $cause::class : null;
+        $this->causeCode  = $cause instanceof Throwable ? (string) $cause->getCode() : null;
         parent::__construct(match ($kind) {
             self::ROW_CHANGED     => 'A row changed while the plan was applied; ',
             self::PROVIDER_FAILED => 'The provider failed to apply a batch; ',
             default               => 'The database kept refusing the write because of a lock conflict; ',
-        } . $batchesCommitted . ' of ' . $batchesTotal . ' batch(es) were applied and stay. Apply the document again.', 0, $previous);
+        } . $batchesCommitted . ' of ' . $batchesTotal . ' batch(es) were applied and stay. Apply the document again.');
     }
 
     /**

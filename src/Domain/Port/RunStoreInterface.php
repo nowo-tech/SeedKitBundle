@@ -48,25 +48,39 @@ interface RunStoreInterface
 
     /**
      * Ends the documents older than their expiry, in batches: `planned` / `queued` runs become `expired`; a
-     * `partially_applied` run keeps its status and loses its document. Returns the rows changed.
+     * `partially_applied` run keeps its status and loses its document; with `$staleBefore`, a `running` run without
+     * progress since that instant (a killed request or worker) becomes `partially_applied` (batches committed) or
+     * `expired` and loses its document too. Returns the rows changed.
      */
-    public function expire(DateTimeImmutable $now, int $batchSize): int;
+    public function expire(DateTimeImmutable $now, int $batchSize, ?DateTimeImmutable $staleBefore = null): int;
+
+    /**
+     * Heartbeat of a claimed run (fenced): moves `updated_at` on and bumps the version, only while the run is
+     * `running` at `$version`. False when another claim took the run over.
+     */
+    public function heartbeat(RunId $run, int $version): bool;
 
     /**
      * Records that batch `$number` committed, in the batch transaction: succeeds only when the run's progress is
      * `$number - 1` (a replayed batch is never counted twice).
      *
-     * @param array<string, int> $counts ChangeOp value → rows written so far
+     * @param array<string, int> $counts changeOp value → rows written so far
      *
-     * @return bool false when the batch was already recorded
+     * With `$version` (the claim's fencing version) it also requires the run to be `running` at that version, and bumps
+     * it: a worker whose run was taken over can no longer record a batch
+     *
+     * @return bool false when the batch was already recorded or the claim was lost
      */
-    public function markBatch(RunId $run, int $number, array $counts): bool;
+    public function markBatch(RunId $run, int $number, array $counts, ?int $version = null): bool;
 
     /**
      * Ends a run with a status and an optional error code. A final status clears the stored document; a
-     * `partially_applied` run keeps it until it expires (it may be resumed).
+     * `partially_applied` run keeps it until it expires (it may be resumed). With `$version` (fenced) only a `running`
+     * run at that version is ended.
+     *
+     * @return bool false when the fenced run was taken over (nothing changed)
      */
-    public function finish(RunId $run, RunStatus $status, ?string $errorCode): void;
+    public function finish(RunId $run, RunStatus $status, ?string $errorCode, ?int $version = null): bool;
 
     /**
      * One run, or null.

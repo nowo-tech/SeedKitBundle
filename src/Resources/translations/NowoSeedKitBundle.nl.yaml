@@ -131,6 +131,7 @@ seed_kit:
       confirm_deletes_wrong: Het aantal komt niet overeen met de verwijderingen van deze run.
       mass_prune: Deze run verwijdert %count% rij(en), meer dan het toegestane aandeel van de huidige rijen. Typ het aantal om te bevestigen.
       stale: De gegevens zijn gewijzigd sinds dit bestand is gecontroleerd. Upload het opnieuw om de nieuwe diff te zien.
+      stalled: 'Deze run reageert niet meer: het verzoek of de worker is gestopt. Pas hem opnieuw toe om verder te gaan na de laatste vastgelegde batch, of verwerp hem.'
       progress: '%done% van %total% batches toegepast'
       refresh: Vernieuwen
       no_changes: Geen wijzigingen voor dit soort gegevens.

@@ -63,6 +63,7 @@ use function array_keys;
 use function array_map;
 use function count;
 use function in_array;
+use function json_encode;
 
 use const DATE_ATOM;
 
@@ -627,30 +628,168 @@ final class SeedRunsTest extends TestCase
         self::assertSame(RunStatus::Queued, $this->runs->find($run->id)?->status, 'back in the queue');
         $this->leases->release(new ProviderName('demo.tags'), SeedScope::platform(), new RunId('01936f2a-0000-7000-8000-000000000077'));
 
-        // Writes: 1 claim, 2 batch (lock conflict): planned again, retried by the transport.
+        // Writes: 1 claim, 2 batch (lock conflict before the first batch): back in the queue, and the transport's
+        // retry really applies it (ZCE-L2).
         $this->hook(static function (int $call): void {
             if ($call === 2) {
-                throw new ConcurrencyConflict(3, TransientFailureKind::Deadlock, 2, new RuntimeException('deadlock'));
+                throw new ConcurrencyConflict(3, TransientFailureKind::Deadlock, 2, new RuntimeException('deadlock ana@example.com'));
             }
         });
-        $this->assertThrows(RecoverableMessageHandlingException::class, static fn () => $handler(new ApplySeedRun($run->id->value, $run->planHash->value)));
-        $this->runs->transition($run->id, null, [RunStatus::Planned], RunStatus::Queued);
+        try {
+            $handler(new ApplySeedRun($run->id->value, $run->planHash->value));
+            self::fail('retryable');
+        } catch (RecoverableMessageHandlingException $e) {
+            self::assertNull($e->getPrevious(), 'no driver message reaches the failure transport (ZCE-L4)');
+            self::assertStringNotContainsString('ana@', $e->getMessage());
+        }
+        self::assertSame(RunStatus::Queued, $this->runs->find($run->id)?->status, 'still queued: the retry applies it');
+        $this->hook(null);
+        $handler(new ApplySeedRun($run->id->value, $run->planHash->value));
+        self::assertSame(RunStatus::Applied, $this->runs->find($run->id)?->status);
+        self::assertSame(2, $this->tagCount());
 
+        $next = $runs->upload($this->set([['slug' => 'c', 'label' => 'C'], ['slug' => 'd', 'label' => 'D']]), SeedScope::platform(), $this->alice(), false);
+        $runs->apply($next->id, $next->planHash, SeedScope::platform(), $this->alice());
         $this->hook(static function (int $call): void {
             if ($call === 2) {
-                throw new RuntimeException('provider down');
+                throw new RuntimeException('Duplicate entry ana@example.com');
             }
         });
-        $this->assertThrows(UnrecoverableMessageHandlingException::class, static fn () => $handler(new ApplySeedRun($run->id->value, $run->planHash->value)));
-        self::assertSame(RunStatus::Failed, $this->runs->find($run->id)?->status);
+        try {
+            $handler(new ApplySeedRun($next->id->value, $next->planHash->value));
+            self::fail('final');
+        } catch (UnrecoverableMessageHandlingException $e) {
+            self::assertNull($e->getPrevious(), 'no provider message reaches the failure transport (ZCE-L4)');
+            self::assertStringNotContainsString('ana@', $e->getMessage());
+        }
+        self::assertSame(RunStatus::Failed, $this->runs->find($next->id)?->status);
+        foreach ($this->logger->records as [, $message, $context]) {
+            self::assertStringNotContainsString('ana@', $message . json_encode($context));
+        }
+        $this->hook(static function (): never {
+            throw new RuntimeException('Duplicate entry ana@example.com');
+        });
+        try {
+            $handler(new ApplySeedRun($next->id->value, $next->planHash->value));
+        } catch (RuntimeException $e) {
+            self::fail('an ended run is a no-op: ' . $e::class);
+        }
 
         $other = $this->rerun($run, RunStatus::Queued, ActorRef::system(), 4);
         $this->hook(null);
         $this->assertThrows(UnrecoverableMessageHandlingException::class, static fn () => $handler(new ApplySeedRun($other->id->value, $other->planHash->value)));
 
-        $fine = $this->rerun($run, RunStatus::Queued, $this->alice(), 5, [['slug' => 'a', 'label' => 'A'], ['slug' => 'b', 'label' => 'B']]);
-        $handler(new ApplySeedRun($fine->id->value, $fine->planHash->value));
-        self::assertSame(RunStatus::Applied, $this->runs->find($fine->id)?->status);
+        // An unexpected failure (a driver error on the claim): retried by the transport, class only.
+        $last = $runs->upload($this->set([['slug' => 'e', 'label' => 'E'], ['slug' => 'f', 'label' => 'F']]), SeedScope::platform(), $this->alice(), false);
+        $runs->apply($last->id, $last->planHash, SeedScope::platform(), $this->alice());
+        $this->hook(static function (): never {
+            throw new RuntimeException('SQLSTATE ana@example.com');
+        });
+        try {
+            $handler(new ApplySeedRun($last->id->value, $last->planHash->value));
+            self::fail('unexpected');
+        } catch (RuntimeException $e) {
+            self::assertNull($e->getPrevious());
+            self::assertSame('Seed run failed unexpectedly (RuntimeException).', $e->getMessage());
+        }
+        self::assertSame(RunStatus::Queued, $this->runs->find($last->id)?->status);
+    }
+
+    #[Test]
+    public function aStalledWebRunIsTakenOverOrDiscarded(): void
+    {
+        $runs = $this->service();
+        $run  = $runs->upload($this->set([['slug' => 'a', 'label' => 'A'], ['slug' => 'b', 'label' => 'B']]), SeedScope::platform(), $this->alice(), false);
+        // The request that applied it died (timeout, OOM): the row stays `running` (ZCE-M1).
+        self::assertTrue($this->runs->transition($run->id, $run->version, [RunStatus::Planned], RunStatus::Running));
+        $this->runs->touch($run->id, new DateTimeImmutable('2026-11-24T09:58:00Z'));
+
+        self::assertSame(ApplyOutcome::BUSY, $runs->apply($run->id, $run->planHash, SeedScope::platform(), $this->alice())->kind, 'not before the lease');
+        self::assertFalse($runs->view($run->id, SeedScope::platform(), $this->alice())->stalled);
+        $this->assertThrows(RunNotAvailableException::class, static fn (): RunRecord => $runs->discard($run->id, SeedScope::platform(), new ActorRef('bob')));
+
+        $this->runs->touch($run->id, new DateTimeImmutable('2026-11-24T09:50:00Z'));
+        $view = $runs->view($run->id, SeedScope::platform(), $this->alice());
+        self::assertTrue($view->stalled);
+        self::assertNotNull($view->plan, 'its actor sees the diff to take it over');
+        self::assertTrue($runs->view($run->id, SeedScope::platform(), new ActorRef('bob'))->stalled);
+
+        $outcome = $runs->apply($run->id, $run->planHash, SeedScope::platform(), $this->alice());
+        self::assertSame(ApplyOutcome::APPLIED, $outcome->kind, 'taken over by its actor');
+        self::assertSame(2, $this->tagCount());
+
+        // An admin of the kind (apply on every provider) discards another actor's stalled run.
+        $other = $runs->upload($this->set([['slug' => 'c', 'label' => 'C']]), SeedScope::platform(), $this->alice(), false);
+        self::assertTrue($this->runs->transition($other->id, $other->version, [RunStatus::Planned], RunStatus::Running));
+        $this->runs->touch($other->id, new DateTimeImmutable('2026-11-24T09:50:00Z'));
+        self::assertSame(RunStatus::Discarded, $runs->discard($other->id, SeedScope::platform(), new ActorRef('bob'))->status);
+        self::assertNull($this->runs->document($other->id));
+    }
+
+    #[Test]
+    public function aDocumentPastItsTtlIsNeverUsed(): void
+    {
+        $runs = $this->service();
+        $run  = $runs->upload($this->set([['slug' => 'a', 'label' => 'A']]), SeedScope::platform(), $this->alice(), false);
+        $this->clock->modify('+2 hours');
+
+        $view = $runs->view($run->id, SeedScope::platform(), $this->alice());
+        self::assertSame('SEED_005', $view->error, 'upload again');
+        self::assertNull($view->plan);
+        self::assertSame(RunStatus::Expired, $this->runs->find($run->id)?->status, 'ended on the spot');
+
+        $late = $runs->upload($this->set([['slug' => 'b', 'label' => 'B']]), SeedScope::platform(), $this->alice(), false);
+        $this->clock->modify('+2 hours');
+        $this->assertThrows(StalePlanException::class, fn (): ApplyOutcome => $runs->apply($late->id, $late->planHash, SeedScope::platform(), $this->alice()));
+        self::assertNull($this->runs->document($late->id));
+        self::assertSame([], $this->store->rows);
+
+        // A stalled run past its TTL plus the lease is ended by the sweep (the history page runs it too).
+        $stuck = $runs->upload($this->set([['slug' => 'c', 'label' => 'C']]), SeedScope::platform(), $this->alice(), false);
+        self::assertTrue($this->runs->transition($stuck->id, $stuck->version, [RunStatus::Planned], RunStatus::Running));
+        $this->runs->touch($stuck->id, DateTimeImmutable::createFromInterface($this->clock->now()));
+        $this->clock->modify('+2 hours');
+        $runs->history(SeedScope::platform(), $this->alice(), 10);
+        self::assertSame(RunStatus::Expired, $this->runs->find($stuck->id)?->status);
+        self::assertNull($this->runs->document($stuck->id));
+    }
+
+    #[Test]
+    public function aClaimTakenOverMeanwhileStopsAtItsNextFencedWrite(): void
+    {
+        $runs = $this->service();
+        $run  = $runs->upload($this->set([['slug' => 'a', 'label' => 'A']]), SeedScope::platform(), $this->alice(), false);
+        $take = function () use ($run): void {
+            $current = $this->runs->find($run->id);
+            self::assertNotNull($current);
+            // Another claimer takes the run over (its version moves on).
+            self::assertTrue($this->runs->transition($run->id, $current->version, [RunStatus::Running], RunStatus::Running, null, null, new DateTimeImmutable('2030-01-01T00:00:00Z')));
+        };
+
+        // During the re-plan: the heartbeat before the batches finds the claim lost.
+        $this->store->onPlan = static function () use (&$take): void {
+            if ($take !== null) {
+                $take();
+                $take = null;
+            }
+        };
+        $this->assertThrows(ApplyInterruptedException::class, fn (): ApplyOutcome => $runs->apply($run->id, $run->planHash, SeedScope::platform(), $this->alice()));
+        self::assertSame(RunStatus::Running, $this->runs->find($run->id)?->status, 'the other claimer owns it');
+        self::assertSame([], $this->store->rows);
+        $this->store->onPlan = null;
+
+        // After the last batch: the fenced finish changes nothing, the new claimer ends the run.
+        $fresh = $runs->upload($this->set([['slug' => 'b', 'label' => 'B']]), SeedScope::platform(), $this->alice(), false);
+        $this->hook(function (int $call) use ($fresh): void {
+            if ($call === 3) {
+                $current = $this->runs->find($fresh->id);
+                self::assertNotNull($current);
+                $this->runs->transition($fresh->id, $current->version, [RunStatus::Running], RunStatus::Running, null, null, new DateTimeImmutable('2030-01-01T00:00:00Z'));
+            }
+        });
+        $outcome = $runs->apply($fresh->id, $fresh->planHash, SeedScope::platform(), $this->alice());
+        self::assertSame(RunStatus::Running, $outcome->run->status, 'not marked applied by the old claim');
+        self::assertSame(1, $this->logger->count('warning'));
     }
 
     /**

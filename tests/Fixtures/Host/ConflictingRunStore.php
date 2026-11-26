@@ -27,12 +27,17 @@ final readonly class ConflictingRunStore implements RunStoreInterface
         throw $this->conflict();
     }
 
-    public function markBatch(RunId $run, int $number, array $counts): bool
+    public function markBatch(RunId $run, int $number, array $counts, ?int $version = null): bool
     {
         throw $this->conflict();
     }
 
-    public function finish(RunId $run, RunStatus $status, ?string $errorCode): void
+    public function heartbeat(RunId $run, int $version): bool
+    {
+        throw $this->conflict();
+    }
+
+    public function finish(RunId $run, RunStatus $status, ?string $errorCode, ?int $version = null): bool
     {
         throw $this->conflict();
     }
@@ -62,7 +67,7 @@ final readonly class ConflictingRunStore implements RunStoreInterface
         throw $this->conflict();
     }
 
-    public function expire(DateTimeImmutable $now, int $batchSize): int
+    public function expire(DateTimeImmutable $now, int $batchSize, ?DateTimeImmutable $staleBefore = null): int
     {
         throw $this->conflict();
     }

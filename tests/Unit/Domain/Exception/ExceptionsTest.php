@@ -146,10 +146,12 @@ final class ExceptionsTest extends TestCase
     #[Test]
     public function applyInterruptedProviderFailed(): void
     {
-        $cause     = new RuntimeException('boom');
+        $cause     = new RuntimeException('Duplicate entry ana@example.com', 1062);
         $exception = new ApplyInterruptedException(ApplyInterruptedException::PROVIDER_FAILED, 1, 2, null, null, $cause);
         self::assertSame('SEED_010', $exception->errorCode());
-        self::assertSame($cause, $exception->getPrevious());
+        self::assertNull($exception->getPrevious(), 'the cause is never chained (ZCE-L4)');
+        self::assertSame([RuntimeException::class, '1062'], [$exception->causeClass, $exception->causeCode]);
+        self::assertNull((new ApplyInterruptedException(ApplyInterruptedException::CONFLICT, 0, 1))->causeClass);
         self::assertStringStartsWith('The provider failed to apply a batch; 1 of 2', $exception->getMessage());
         self::assertStringNotContainsString('boom', $exception->getMessage());
     }

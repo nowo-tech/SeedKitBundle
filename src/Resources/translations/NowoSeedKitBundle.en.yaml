@@ -131,6 +131,7 @@ seed_kit:
       confirm_deletes_wrong: The number does not match the deletions of this run.
       mass_prune: 'This run deletes %count% row(s), more than the allowed share of the current rows. Type the number to confirm.'
       stale: The data changed since this file was checked. Upload it again to see the new diff.
+      stalled: 'This run stopped responding: its request or worker ended. Apply it again to continue after the last committed batch, or discard it.'
       progress: '%done% of %total% batches applied'
       refresh: Refresh
       no_changes: No changes for this kind of data.

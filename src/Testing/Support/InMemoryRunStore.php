@@ -33,6 +33,9 @@ final class InMemoryRunStore implements RunStoreInterface
     /** @var array<string, string> */
     private array $documents = [];
 
+    /** The instant heartbeats record (tests of the stale-claim takeover; null keeps the previous instant). */
+    public ?DateTimeImmutable $updatedAt = null;
+
     /**
      * {@inheritDoc}
      */
@@ -101,11 +104,18 @@ final class InMemoryRunStore implements RunStoreInterface
     /**
      * {@inheritDoc}
      */
-    public function expire(DateTimeImmutable $now, int $batchSize): int
+    public function expire(DateTimeImmutable $now, int $batchSize, ?DateTimeImmutable $staleBefore = null): int
     {
         $changed = 0;
         foreach ($this->runs as $id => $run) {
             if (!isset($this->documents[$id]) || !$run->expiresAt instanceof DateTimeImmutable || $run->expiresAt >= $now) {
+                continue;
+            }
+            if ($run->status === RunStatus::Running && $staleBefore instanceof DateTimeImmutable && ($run->updatedAt ?? $run->createdAt) < $staleBefore) {
+                unset($this->documents[$id]);
+                $this->runs[$id] = $this->copy($run, ['status' => $run->batchesDone > 0 ? RunStatus::PartiallyApplied : RunStatus::Expired, 'hasDocument' => false, 'finishedAt' => $now, 'version' => $run->version + 1]);
+                ++$changed;
+
                 continue;
             }
             if (in_array($run->status, [RunStatus::Planned, RunStatus::Queued], true)) {
@@ -125,10 +135,10 @@ final class InMemoryRunStore implements RunStoreInterface
     /**
      * {@inheritDoc}
      */
-    public function markBatch(RunId $run, int $number, array $counts): bool
+    public function markBatch(RunId $run, int $number, array $counts, ?int $version = null): bool
     {
         $record = $this->runs[$run->value] ?? null;
-        if ($record === null || $record->batchesDone !== $number - 1) {
+        if ($record === null || $record->batchesDone !== $number - 1 || !$this->holds($record, $version)) {
             return false;
         }
         $this->runs[$run->value] = $this->copy($record, ['batchesDone' => $number, 'counts' => $counts, 'version' => $record->version + 1]);
@@ -139,17 +149,34 @@ final class InMemoryRunStore implements RunStoreInterface
     /**
      * {@inheritDoc}
      */
-    public function finish(RunId $run, RunStatus $status, ?string $errorCode): void
+    public function heartbeat(RunId $run, int $version): bool
     {
         $record = $this->runs[$run->value] ?? null;
-        if ($record !== null) {
-            $changes = ['status' => $status, 'errorCode' => $errorCode, 'finishedAt' => new DateTimeImmutable(), 'version' => $record->version + 1];
-            if ($status->isFinal()) {
-                unset($this->documents[$run->value]);
-                $changes['hasDocument'] = false;
-            }
-            $this->runs[$run->value] = $this->copy($record, $changes);
+        if ($record === null || !$this->holds($record, $version)) {
+            return false;
         }
+        $this->runs[$run->value] = $this->copy($record, ['version' => $record->version + 1, 'updatedAt' => $this->updatedAt ?? $record->updatedAt]);
+
+        return true;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    public function finish(RunId $run, RunStatus $status, ?string $errorCode, ?int $version = null): bool
+    {
+        $record = $this->runs[$run->value] ?? null;
+        if ($record === null || !$this->holds($record, $version)) {
+            return false;
+        }
+        $changes = ['status' => $status, 'errorCode' => $errorCode, 'finishedAt' => new DateTimeImmutable(), 'version' => $record->version + 1];
+        if ($status->isFinal()) {
+            unset($this->documents[$run->value]);
+            $changes['hasDocument'] = false;
+        }
+        $this->runs[$run->value] = $this->copy($record, $changes);
+
+        return true;
     }
 
     /**
@@ -239,6 +266,14 @@ final class InMemoryRunStore implements RunStoreInterface
     public function count(): int
     {
         return count($this->runs);
+    }
+
+    /**
+     * Whether the run is held by the fencing version (no version: always).
+     */
+    private function holds(RunRecord $run, ?int $version): bool
+    {
+        return $version === null || ($run->version === $version && $run->status === RunStatus::Running);
     }
 
     /**

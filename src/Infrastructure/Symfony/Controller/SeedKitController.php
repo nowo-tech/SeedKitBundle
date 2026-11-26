@@ -124,6 +124,12 @@ use const JSON_UNESCAPED_UNICODE;
  */
 final readonly class SeedKitController
 {
+    /**
+     * The UiKit action kinds of the pages. No action carries an explicit icon: the host maps each kind once in
+     * `nowo_ui_kit.action_icons` (else UiKit's default of the kind); docs/TEMPLATES.md lists them.
+     */
+    public const ACTION_KINDS = ['view', 'download', 'import', 'run', 'cancel', 'prev'];
+
     /** Dialog id of the upload dialog. */
     public const UPLOAD_DIALOG = 'nowo-seed-kit-upload';
 
@@ -182,7 +188,7 @@ final readonly class SeedKitController
                 ];
                 $actions[$key] = $export ? $this->downloadActions($provider, $kind, $request) : [];
             }
-            $header = [new Action('custom', $this->label('seed_kit.ui.runs.title'), $this->url($kind, 'runs', $request), icon: 'history', attributes: ['data-testid' => 'seed-kit-history'])];
+            $header = [new Action('view', $this->label('seed_kit.ui.runs.title'), $this->url($kind, 'runs', $request), attributes: ['data-testid' => 'seed-kit-history'])];
             if ($apply) {
                 $header[] = $this->uploadAction($kind, $request);
             }
@@ -440,8 +446,9 @@ final readonly class SeedKitController
     {
         $run     = $view->run;
         $href    = $this->url($kind, 'run', $request, ['run' => $run->id->value]);
-        $active  = in_array($run->status, [RunStatus::Queued, RunStatus::Running], true);
-        $canAct  = $view->owner && $view->plan instanceof SeedPlan && !$view->stale && in_array($run->status, [RunStatus::Planned, RunStatus::PartiallyApplied], true);
+        $active  = !$view->stalled && in_array($run->status, [RunStatus::Queued, RunStatus::Running], true);
+        $open    = $view->stalled || in_array($run->status, [RunStatus::Planned, RunStatus::PartiallyApplied], true);
+        $canAct  = $view->owner && $view->plan instanceof SeedPlan && !$view->stale && $open;
         $actions = [];
         $apply   = null;
         if ($canAct) {
@@ -457,7 +464,8 @@ final readonly class SeedKitController
                 $apply = $applyForm->createView();
             }
         }
-        if ($view->owner && in_array($run->status, [RunStatus::Planned, RunStatus::PartiallyApplied], true)) {
+        // Its actor discards an open run; an admin of the kind (who can see it) discards a stalled one (ZCE-M1).
+        if (($view->owner && $open) || $view->stalled) {
             $actions[] = new Action('cancel', $this->label('seed_kit.ui.run.discard'), $this->url($kind, 'run_discard', $request, ['run' => $run->id->value]), method: 'POST', confirm: new Confirm(
                 $this->label('seed_kit.ui.run.discard_confirm_title'),
                 $this->label('seed_kit.ui.run.discard_confirm'),
@@ -496,6 +504,7 @@ final readonly class SeedKitController
             'apply_form'    => $apply,
             'deletes'       => $run->planned(ChangeOp::Delete->value),
             'active'        => $active,
+            'stalled'       => $view->stalled,
             'poll_ms'       => $this->options->pollMilliseconds,
             'self_href'     => $href,
             'upload_href'   => $this->url($kind, 'upload', $request),

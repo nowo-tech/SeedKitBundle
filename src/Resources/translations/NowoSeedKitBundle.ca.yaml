@@ -131,6 +131,7 @@ seed_kit:
       confirm_deletes_wrong: El nombre no coincideix amb els esborrats d'aquesta execució.
       mass_prune: Aquesta execució esborra %count% fila(es), més de la proporció permesa de les files actuals. Escriu el nombre per confirmar.
       stale: Les dades han canviat des que es va comprovar aquest fitxer. Puja'l de nou per veure el nou diff.
+      stalled: 'Aquesta execució ha deixat de respondre: la seva petició o el seu worker ha acabat. Aplica-la de nou per continuar després de l''últim lot confirmat, o descarta-la.'
       progress: '%done% de %total% lots aplicats'
       refresh: Actualitza
       no_changes: Sense canvis per a aquest tipus de dades.

@@ -177,30 +177,45 @@ final readonly class DbalRunStore implements RunStoreInterface
     /**
      * {@inheritDoc}
      */
-    public function expire(DateTimeImmutable $now, int $batchSize): int
+    public function expire(DateTimeImmutable $now, int $batchSize, ?DateTimeImmutable $staleBefore = null): int
     {
         $at      = $this->format($now);
         $changed = 0;
-        foreach ([[RunStatus::Planned, RunStatus::Queued], [RunStatus::PartiallyApplied]] as $statuses) {
+        $groups  = [
+            [[RunStatus::Planned, RunStatus::Queued], "status = 'expired', finished_at = ?", '', true],
+            [[RunStatus::PartiallyApplied], 'status = status', '', false],
+        ];
+        if ($staleBefore instanceof DateTimeImmutable) {
+            // A killed request or worker: never past the TTL plus the lease.
+            $groups[] = [[RunStatus::Running], "status = CASE WHEN batches_done > 0 THEN 'partially_applied' ELSE 'expired' END, finished_at = ?", ' AND updated_at < ?', true];
+        }
+        foreach ($groups as [$statuses, $set, $extra, $finished]) {
             $values = [];
             foreach ($statuses as $status) {
                 $values[] = $status->value;
             }
+            $select = [$values, $at];
+            $types  = [ArrayParameterType::STRING, ParameterType::STRING];
+            if ($extra !== '' && $staleBefore instanceof DateTimeImmutable) {
+                $select[] = $this->format($staleBefore);
+                $types[]  = ParameterType::STRING;
+            }
             do {
                 $ids = $this->connection->fetchFirstColumn(
-                    $this->connection->getDatabasePlatform()->modifyLimitQuery(sprintf('SELECT id FROM %s WHERE status IN (?) AND expires_at < ? AND document IS NOT NULL ORDER BY id', $this->tables->run()), $batchSize),
-                    [$values, $at],
-                    [ArrayParameterType::STRING, ParameterType::STRING],
+                    $this->connection->getDatabasePlatform()->modifyLimitQuery(sprintf('SELECT id FROM %s WHERE status IN (?) AND expires_at < ? AND document IS NOT NULL%s ORDER BY id', $this->tables->run(), $extra), $batchSize),
+                    $select,
+                    $types,
                 );
                 if ($ids !== []) {
-                    $sql = $statuses === [RunStatus::PartiallyApplied]
-                        ? sprintf('UPDATE %s SET document = NULL, updated_at = ?, version = version + 1 WHERE id IN (?) AND status IN (?)', $this->tables->run())
-                        : sprintf("UPDATE %s SET document = NULL, updated_at = ?, version = version + 1, status = 'expired', finished_at = ? WHERE id IN (?) AND status IN (?)", $this->tables->run());
-                    $params = $statuses === [RunStatus::PartiallyApplied] ? [$at, $ids, $values] : [$at, $at, $ids, $values];
-                    $types  = $statuses === [RunStatus::PartiallyApplied]
-                        ? [ParameterType::STRING, ArrayParameterType::STRING, ArrayParameterType::STRING]
-                        : [ParameterType::STRING, ParameterType::STRING, ArrayParameterType::STRING, ArrayParameterType::STRING];
-                    $changed += (int) $this->connection->executeStatement($sql, $params, $types);
+                    $params = $finished ? [$at, $at, $ids, $values] : [$at, $ids, $values];
+                    $ptypes = $finished
+                        ? [ParameterType::STRING, ParameterType::STRING, ArrayParameterType::STRING, ArrayParameterType::STRING]
+                        : [ParameterType::STRING, ArrayParameterType::STRING, ArrayParameterType::STRING];
+                    $changed += (int) $this->connection->executeStatement(
+                        sprintf('UPDATE %s SET document = NULL, updated_at = ?, version = version + 1, %s WHERE id IN (?) AND status IN (?)', $this->tables->run(), $set),
+                        $params,
+                        $ptypes,
+                    );
                 }
             } while (count($ids) === $batchSize);
         }
@@ -211,25 +226,49 @@ final readonly class DbalRunStore implements RunStoreInterface
     /**
      * {@inheritDoc}
      */
-    public function markBatch(RunId $run, int $number, array $counts): bool
+    public function markBatch(RunId $run, int $number, array $counts, ?int $version = null): bool
+    {
+        $sql    = 'UPDATE %s SET batches_done = ?, counts = ?, updated_at = ?, version = version + 1 WHERE id = ? AND batches_done = ?';
+        $params = [$number, json_encode($counts, JSON_THROW_ON_ERROR), $this->format($this->clock->now()), $run->value, $number - 1];
+        $types  = [ParameterType::INTEGER, ParameterType::STRING, ParameterType::STRING, ParameterType::STRING, ParameterType::INTEGER];
+        if ($version !== null) {
+            $sql .= ' AND version = ? AND status = ?';
+            $params[] = $version;
+            $params[] = RunStatus::Running->value;
+            $types[]  = ParameterType::INTEGER;
+            $types[]  = ParameterType::STRING;
+        }
+
+        return $this->connection->executeStatement(sprintf($sql, $this->tables->run()), $params, $types) === 1;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    public function heartbeat(RunId $run, int $version): bool
     {
         return $this->connection->executeStatement(
-            sprintf('UPDATE %s SET batches_done = ?, counts = ?, updated_at = ?, version = version + 1 WHERE id = ? AND batches_done = ?', $this->tables->run()),
-            [$number, json_encode($counts, JSON_THROW_ON_ERROR), $this->format($this->clock->now()), $run->value, $number - 1],
-            [ParameterType::INTEGER, ParameterType::STRING, ParameterType::STRING, ParameterType::STRING, ParameterType::INTEGER],
+            sprintf('UPDATE %s SET updated_at = ?, version = version + 1 WHERE id = ? AND version = ? AND status = ?', $this->tables->run()),
+            [$this->format($this->clock->now()), $run->value, $version, RunStatus::Running->value],
+            [ParameterType::STRING, ParameterType::STRING, ParameterType::INTEGER, ParameterType::STRING],
         ) === 1;
     }
 
     /**
      * {@inheritDoc}
      */
-    public function finish(RunId $run, RunStatus $status, ?string $errorCode): void
+    public function finish(RunId $run, RunStatus $status, ?string $errorCode, ?int $version = null): bool
     {
-        $now = $this->format($this->clock->now());
-        $this->connection->executeStatement(
-            sprintf('UPDATE %s SET status = ?, error_code = ?, finished_at = ?, updated_at = ?%s, version = version + 1 WHERE id = ?', $this->tables->run(), $status->isFinal() ? ', document = NULL' : ''),
-            [$status->value, $errorCode, $now, $now, $run->value],
-        );
+        $now    = $this->format($this->clock->now());
+        $sql    = sprintf('UPDATE %s SET status = ?, error_code = ?, finished_at = ?, updated_at = ?%s, version = version + 1 WHERE id = ?', $this->tables->run(), $status->isFinal() ? ', document = NULL' : '');
+        $params = [$status->value, $errorCode, $now, $now, $run->value];
+        if ($version !== null) {
+            $sql .= ' AND version = ? AND status = ?';
+            $params[] = $version;
+            $params[] = RunStatus::Running->value;
+        }
+
+        return $this->connection->executeStatement($sql, $params) === 1;
     }
 
     /**

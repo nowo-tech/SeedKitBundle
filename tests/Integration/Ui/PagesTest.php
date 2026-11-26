@@ -359,6 +359,29 @@ final class PagesTest extends UiTestCase
     }
 
     #[Test]
+    public function aStalledRunIsTakenOverByItsActorOrDiscardedByAnAdmin(): void
+    {
+        $browser = $this->ui();
+        $this->login('admin');
+        $crawler  = $this->planned(self::VALID);
+        $location = (string) $browser->getRequest()->getUri();
+        // The request that applied it died: `running`, no progress for longer than the lease (ZCE-M1).
+        $this->connection()->executeStatement("UPDATE nowo_seed_run SET status = 'running', updated_at = '2026-11-24 08:00:00'");
+
+        $crawler = $browser->request('GET', $location);
+        self::assertCount(1, $crawler->filter('[data-testid="seed-kit-run-stalled"]'));
+        self::assertCount(0, $crawler->filter('[data-testid="seed-kit-run-progress"]'), 'no endless polling');
+        self::assertCount(1, $crawler->filter('form[action$="/apply"]'), 'its actor takes it over');
+
+        $this->login('pruner', 'ROLE_PRUNE');
+        $crawler = $browser->request('GET', $location);
+        self::assertCount(0, $crawler->filter('form[action$="/apply"]'));
+        $browser->submit($crawler->filter('form[action$="/discard"]')->form());
+        self::assertSame(303, $this->code(), 'an admin of the kind discards it');
+        self::assertSame('discarded', $this->connection()->fetchOne('SELECT status FROM nowo_seed_run'));
+    }
+
+    #[Test]
     public function aDemoMayAllowEveryone(): void
     {
         $browser = $this->ui(['security' => ['allow_unauthenticated' => true, 'access_checker' => 'allow_all']]);

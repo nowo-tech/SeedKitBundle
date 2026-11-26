@@ -131,6 +131,7 @@ seed_kit:
       confirm_deletes_wrong: Zenbakia ez dator bat exekuzio honen ezabaketekin.
       mass_prune: Exekuzio honek %count% errenkada ezabatzen ditu, oraingo errenkaden onartutako zatia baino gehiago. Idatzi zenbakia baieztatzeko.
       stale: Datuak aldatu dira fitxategi hau egiaztatu zenetik. Igo berriro diff berria ikusteko.
+      stalled: 'Exekuzio honek erantzuteari utzi dio: bere eskaera edo workerra amaitu da. Aplikatu berriro baieztatutako azken sortaren ondoren jarraitzeko, edo baztertu.'
       progress: '%total% loteetatik %done% aplikatu dira'
       refresh: Freskatu
       no_changes: Ez dago aldaketarik datu mota honetarako.

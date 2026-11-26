@@ -131,6 +131,7 @@ seed_kit:
       confirm_deletes_wrong: Il numero non corrisponde alle eliminazioni di questa esecuzione.
       mass_prune: Questa esecuzione elimina %count% riga/righe, più della quota consentita delle righe attuali. Digita il numero per confermare.
       stale: I dati sono cambiati da quando il file è stato controllato. Caricalo di nuovo per vedere il nuovo diff.
+      stalled: 'Questa esecuzione ha smesso di rispondere: la sua richiesta o il suo worker è terminato. Applicala di nuovo per continuare dopo l''ultimo lotto confermato, oppure scartala.'
       progress: '%done% di %total% batch applicati'
       refresh: Aggiorna
       no_changes: Nessuna modifica per questo tipo di dati.

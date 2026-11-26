@@ -10,9 +10,12 @@ use Nowo\SeedKitBundle\Application\ApplyOutcome;
 use Nowo\SeedKitBundle\Application\SeedRuns;
 use Nowo\SeedKitBundle\Domain\Exception\ApplyInterruptedException;
 use Nowo\SeedKitBundle\Domain\Model\ActorRef;
+use Nowo\SeedKitBundle\Domain\Model\ProviderName;
+use Nowo\SeedKitBundle\Domain\Model\RunId;
 use Nowo\SeedKitBundle\Domain\Model\SeedScope;
 use Nowo\SeedKitBundle\Domain\Plan\AppliedBatch;
 use Nowo\SeedKitBundle\Domain\Run\RunStatus;
+use Nowo\SeedKitBundle\Infrastructure\Dbal\DbalLeaseStore;
 use Nowo\SeedKitBundle\Infrastructure\Dbal\DbalRunStore;
 use Nowo\SeedKitBundle\Infrastructure\Dbal\TableNames;
 use Nowo\SeedKitBundle\Tests\Support\TestDatabase;
@@ -130,5 +133,39 @@ final class StoredRunConcurrencyTest extends ApplyTestCase
         self::assertSame(['a' => 'A1', 'b' => 'B1'], $this->labels());
         self::assertNull($this->runs()->applyQueued($run->id, $run->planHash), 'redelivered afterwards: a no-op');
         self::assertInstanceOf(DateTimeImmutable::class, $this->runs()->progress($run->id, SeedScope::platform(), new ActorRef('ops'))->finishedAt);
+    }
+
+    #[Test]
+    public function aSlowWorkerTakenOverChangesNothingAnyMore(): void
+    {
+        $run                        = $this->runs()->upload($this->read(self::tags(['a' => 'A1', 'b' => 'B1'])), SeedScope::platform(), new ActorRef('ops'), false);
+        $other                      = $this->other;
+        $runs                       = $this->otherRuns;
+        $taken                      = null;
+        $this->hooks()->beforeApply = static function (string $provider, AppliedBatch $batch) use ($other, $runs, $run, &$taken): void {
+            if ($batch->number !== 1 || $taken !== null) {
+                return;
+            }
+            // Worker A is slow: its lease and heartbeat are older than the lease, worker B takes the run over on its
+            // own connection, with a lease holder of its own.
+            $other->executeStatement("UPDATE nowo_seed_lease SET locked_until = '2026-11-24 08:00:00'");
+            $other->executeStatement('UPDATE nowo_seed_run SET updated_at = ? WHERE id = ?', ['2026-11-24 08:00:00', $run->id->value]);
+            $version = TestDatabase::int($other->fetchOne('SELECT version FROM nowo_seed_run WHERE id = ?', [$run->id->value]));
+            $taken   = $runs->transition($run->id, $version, [RunStatus::Running], RunStatus::Running, null, null, new DateTimeImmutable('2026-11-24 09:55:00 UTC'));
+            $leases  = new DbalLeaseStore($other, new TableNames(), new MockClock('2026-11-24 10:00:00', 'UTC'));
+            self::assertSame(0, $leases->acquire(new ProviderName('host.tags'), SeedScope::platform(), new RunId('01936f2a-0000-7000-8000-00000000b0b0'), 300), 'B holds the lease');
+        };
+
+        try {
+            $this->runs()->apply($run->id, $run->planHash, SeedScope::platform(), new ActorRef('ops'));
+            self::fail('A must stop');
+        } catch (ApplyInterruptedException $e) {
+            self::assertSame('CONFLICT_001', $e->errorCode());
+        }
+        self::assertTrue($taken);
+        self::assertSame([], $this->labels(), 'A\'s batch rolled back: its fenced progress failed');
+        self::assertSame('running', $this->connection()->fetchOne('SELECT status FROM nowo_seed_run WHERE id = ?', [$run->id->value]), 'A did not change the final status');
+        self::assertSame(0, TestDatabase::int($this->connection()->fetchOne('SELECT batches_done FROM nowo_seed_run WHERE id = ?', [$run->id->value])));
+        self::assertSame('01936f2a-0000-7000-8000-00000000b0b0', $this->connection()->fetchOne('SELECT run_id FROM nowo_seed_lease'), 'A did not release B\'s lease');
     }
 }
