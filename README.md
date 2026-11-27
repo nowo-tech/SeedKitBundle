@@ -90,7 +90,7 @@ bin/console nowo:seed-kit:apply config/seeds/categories.yaml --yes --actor=admin
 
 ## Requirements
 
-- PHP >= 8.2, < 8.6 with `ext-json` and `ext-mbstring` (`ext-intl` for the `nfc` key normaliser)
+- PHP >= 8.2, < 8.7 with `ext-json` and `ext-mbstring` (`ext-intl` for the `nfc` key normaliser)
 - Symfony 7.4, 8.0 or 8.1; Doctrine DBAL 3.8+ / 4, ORM 3.7+, DoctrineBundle 2.8+ / 3
 - `opis/json-schema` ^2.6, `nowo-tech/transaction-contract` ^1.1, `nowo-tech/transaction-doctrine` ^1.10.1
 - MySQL 8.4, MariaDB 11.4, PostgreSQL 16+ or SQLite
