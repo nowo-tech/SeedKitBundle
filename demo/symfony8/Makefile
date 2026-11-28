@@ -124,7 +124,7 @@ seed: ensure-up
 release-check: update-bundle test verify
 
 # REQ-DEMO-013: Playwright in the official image (no Node on the host); the demo must be up (make up).
-PLAYWRIGHT_IMAGE ?= mcr.microsoft.com/playwright:v1.64.0-jammy
+PLAYWRIGHT_IMAGE ?= mcr.microsoft.com/playwright:v1.65.1-jammy
 
 test-e2e: verify seed
 	@mkdir -p e2e/node_modules
