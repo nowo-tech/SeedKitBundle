@@ -565,7 +565,8 @@ final class DocumentReaderTest extends TestCase
             stream_wrapper_restore('php');
         }
         self::assertCount(1, $warnings);
-        self::assertStringContainsString('php://temp/maxmemory:2097152', $warnings[0]);
+        // PHP 8.6 names the refusing wrapper instead of the URL.
+        self::assertMatchesRegularExpression('~php://temp/maxmemory:2097152|RefusingOpenStream::stream_open~', $warnings[0]);
     }
 
     #[Test]

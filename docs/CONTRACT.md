@@ -144,7 +144,7 @@ Beacon (pilots: menus / breadcrumbs, API Studio services, project roles, CRM com
 |---|---|
 | Name | `SeedKitBundle`, Composer `nowo-tech/seed-kit-bundle`, GitHub `nowo-tech/SeedKitBundle` (public, MIT) |
 | Namespace / class | `Nowo\SeedKitBundle` / `NowoSeedKitBundle`; config root `nowo_seed_kit`; Twig `@NowoSeedKit`; translation domain `NowoSeedKitBundle` (en, es, ca, eu, gl, fr, pt); tag `nowo_seed_kit.provider`; attribute `#[AsSeedProvider]`; routes `nowo_seed_kit_*` |
-| PHP / Symfony | `>=8.2 <8.6`; `^7.4 \|\| ^8.0`; demos Symfony 7.4 + 8.1 on FrankenPHP worker, MySQL |
+| PHP / Symfony | `>=8.2 <8.7`; `^7.4 \|\| ^8.0`; demos Symfony 7.4 + 8.1 on FrankenPHP worker, MySQL |
 | Runtime deps | `symfony/{framework-bundle,config,dependency-injection,http-kernel,console,yaml,uid,clock,event-dispatcher}`, `doctrine/dbal ^3.8.2 \|\| ^4.0`, `doctrine/doctrine-bundle`, `doctrine/orm` (read-only mapping of the bundle tables, as CurrencyKit), `opis/json-schema ^2.4` (Q-SK-2), `nowo-tech/transaction-contract ^1.0`, `nowo-tech/transaction-doctrine ^1.7`, `psr/log`, `psr/clock`, `ext-json`, `ext-zlib` |
 | Suggest | `symfony/security-bundle` (required when `ui.enabled` or voters used), `symfony/messenger` (async apply), `symfony/scheduler` (run purge), `nowo-tech/ui-kit-bundle` + `nowo-tech/form-kit-bundle` (UI, latest minors at build time), `nowo-tech/audit-kit-bundle` (audit bridge), `nowo-tech/vault-bundle` (secret-reference bridge), `nowo-tech/breadcrumb-kit-bundle` (crumbs) |
 | Not used | No front-end framework; no own TypeScript in 0.x (UiKit dialogs and polling only; if TS is ever added, REQ-ASSETS-001 … 005 apply) |

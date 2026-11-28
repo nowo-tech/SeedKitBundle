@@ -61,8 +61,10 @@ final class PrependExtensionTest extends TestCase
         if (count($configs) === $before) {
             return null;
         }
+        /** @var array<string, mixed> $first (Symfony 8.2 types the configs as mixed) */
+        $first = $configs[0];
 
-        return $configs[0];
+        return $first;
     }
 
     /**
@@ -161,11 +163,15 @@ final class PrependExtensionTest extends TestCase
         $builder->loadFromExtension('nowo_form_kit', ['profiles' => ['other' => []]]);
         $own->prepend($builder);
 
-        $paths = $builder->getExtensionConfig('twig')[0]['paths'] ?? null;
+        /** @var array<string, mixed> $twig (Symfony 8.2 types the configs as mixed) */
+        $twig  = $builder->getExtensionConfig('twig')[0];
+        $paths = $twig['paths'] ?? null;
         self::assertIsArray($paths);
         self::assertSame(['NowoSeedKitBundle', 'NowoSeedKitBundle'], array_values($paths));
         self::assertSame($project . '/templates/bundles/NowoSeedKitBundle', array_key_first($paths), 'host overrides first');
-        $profiles = $builder->getExtensionConfig('nowo_form_kit')[0]['profiles'] ?? null;
+        /** @var array<string, mixed> $formKit (Symfony 8.2 types the configs as mixed) */
+        $formKit  = $builder->getExtensionConfig('nowo_form_kit')[0];
+        $profiles = $formKit['profiles'] ?? null;
         self::assertIsArray($profiles);
         self::assertArrayHasKey('seed_kit', $profiles);
 
