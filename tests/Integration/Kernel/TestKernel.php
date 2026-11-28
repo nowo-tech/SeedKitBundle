@@ -223,7 +223,7 @@ final class TestKernel extends Kernel
                     'routing'    => [ApplySeedRun::class => 'async'],
                 ] : false,
                 // Symfony 8.2 refuses the scheduler's listener without a message bus.
-                'scheduler'       => $this->feature('messenger') ? true : false,
+                'scheduler' => $this->feature('messenger'),
             ]);
             $container->extension('twig', ['strict_variables' => true]);
             if ($this->feature('tabler_icons')) {
