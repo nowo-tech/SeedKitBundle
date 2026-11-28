@@ -34,6 +34,7 @@ use Symfony\Bundle\FrameworkBundle\FrameworkBundle;
 use Symfony\Bundle\FrameworkBundle\Kernel\MicroKernelTrait;
 use Symfony\Bundle\SecurityBundle\SecurityBundle;
 use Symfony\Bundle\TwigBundle\TwigBundle;
+use Twig\Extra\TwigExtraBundle\TwigExtraBundle;
 use Symfony\Component\Clock\MockClock;
 use Symfony\Component\DependencyInjection\Compiler\PassConfig;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
@@ -97,6 +98,7 @@ final class TestKernel extends Kernel
         }
         if ($this->feature('ui')) {
             yield new TwigBundle();
+            yield new TwigExtraBundle();
             yield new NowoUiKitBundle();
             yield new NowoFormKitBundle();
         }

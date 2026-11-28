@@ -7,6 +7,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+### Added
+
+- REQ-TWIG-004: `twig/extra-bundle` and `twig/string-extra` are required by the package; `make check-twig-extra`
+  (`.scripts/check-twig-extra.sh`) is part of `make release-check` and runs as the CI job "Release gate (make
+  check-twig-extra)"; the integration test kernel registers `TwigExtraBundle`. Because `twig/extra-bundle` makes `symfony/twig-bundle` a
+  runtime package, `symfony/form`, `symfony/validator`, `symfony/security-csrf` and `symfony/translation` (needed by the
+  Twig form and translation extensions) move from `require-dev`/`suggest` to `require`.
+
 ### Changed
 
 - PHP 8.6: `composer.json` allows PHP below 8.7 (was below 8.6). CI adds a forward-compatibility workflow with a
