@@ -42,6 +42,7 @@ use Symfony\Component\DependencyInjection\Reference;
 use Symfony\Component\HttpKernel\Kernel;
 use Symfony\Component\Routing\Loader\Configurator\RoutingConfigurator;
 use Symfony\Component\Security\Core\User\InMemoryUser;
+use Twig\Extra\TwigExtraBundle\TwigExtraBundle;
 
 use function array_replace_recursive;
 use function dirname;
@@ -97,6 +98,7 @@ final class TestKernel extends Kernel
         }
         if ($this->feature('ui')) {
             yield new TwigBundle();
+            yield new TwigExtraBundle();
             yield new NowoUiKitBundle();
             yield new NowoFormKitBundle();
         }

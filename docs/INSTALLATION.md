@@ -3,6 +3,7 @@
 ## Table of contents
 
 - [Require the package](#require-the-package)
+- [Twig Extra](#twig-extra)
 - [Register the bundle](#register-the-bundle)
 - [Flex recipe](#flex-recipe)
 - [Supported databases](#supported-databases)
@@ -15,12 +16,18 @@
 ## Require the package
 
 ```bash
-composer require nowo-tech/seed-kit-bundle
+composer require nowo-tech/seed-kit-bundle   # also installs twig/extra-bundle and twig/string-extra (the pages' Twig)
 # optional
 composer require symfony/security-bundle          # SEED_* voter, role-based checker, user identifier as actor
-composer require symfony/translation              # translated console messages and row errors
 composer require --dev phpunit/phpunit            # the provider contract test kit
 ```
+
+## Twig Extra
+
+The bundle ships Twig templates (the opt-in UI), so it requires `twig/extra-bundle` and `twig/string-extra`
+(REQ-TWIG-004). A host that renders `@NowoSeedKitBundle/...` templates needs the same stack and
+`Twig\Extra\TwigExtraBundle\TwigExtraBundle` in `config/bundles.php` (Flex does both). `make check-twig-extra`, part of
+`make release-check`, checks the package and every Twig demo.
 
 ## Register the bundle
 
@@ -118,8 +125,7 @@ string(36), `locked_until` datetime (UTC).
 | `symfony/security-bundle` | `SeedKitVoter`, the role-based checker with the role hierarchy, the user identifier as actor | always on when installed |
 | `nowo-tech/audit-kit-bundle` | Audit entries in the action log | `audit.auditkit: true` (default); used only when the recorder service exists |
 | `nowo-tech/vault-bundle` | `vault:<item-uuid>` references checked against the target scope and the actor | `secrets.vault_bridge.enabled: true` |
-| `symfony/translation` | Translated console messages and pages (10 locales) | always on when installed |
-| `nowo-tech/ui-kit-bundle` ^2.74.1, `nowo-tech/form-kit-bundle` ^2.25.1, `symfony/twig-bundle`, `symfony/form`, `symfony/validator`, `symfony/security-bundle` | The import / export pages (0.2) | `ui.enabled: true` + `ui.mounts` + the routes below |
+| `nowo-tech/ui-kit-bundle` ^2.74.1, `nowo-tech/form-kit-bundle` ^2.25.1, `symfony/security-bundle` (the package itself requires `symfony/twig-bundle`, `symfony/form`, `symfony/validator`, `symfony/translation`) | The import / export pages (0.2) | `ui.enabled: true` + `ui.mounts` + the routes below |
 | `symfony/messenger` | Asynchronous apply of large UI runs (`ApplySeedRun`) | `messenger.enabled: true` + a route to an async transport |
 | `symfony/scheduler` | Schedule `nowo_seed_kit` (expiry + purge) | `scheduler.enabled: true` |
 

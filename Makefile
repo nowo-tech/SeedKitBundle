@@ -9,7 +9,7 @@ COMPOSE_BIN := $(shell $(DOCKER_BIN) compose version >/dev/null 2>&1 && echo "$(
 COMPOSE     := $(COMPOSE_BIN) -f $(COMPOSE_FILE)
 SERVICE_PHP := php
 
-.PHONY: deptrac help up down down-dev build shell install ensure-up test-e2e demo-screenshots test test-coverage test-coverage-100 coverage-check validate-phpdoc coverage-php-percent cs-check cs-fix qa clean release-check release-check-demos demo-smoke composer-sync rector rector-dry phpstan igor update validate assets setup-hooks check-no-cursor-coauthor check-open-prs check-no-raw-html-form validate-translations db-up test-with-db test-coverage-with-db update-deps strip-cursor-coauthor-from-history
+.PHONY: deptrac help up down down-dev build shell install ensure-up test-e2e demo-screenshots test test-coverage test-coverage-100 coverage-check validate-phpdoc coverage-php-percent cs-check cs-fix qa clean release-check release-check-demos demo-smoke composer-sync rector rector-dry phpstan igor update validate assets setup-hooks check-no-cursor-coauthor check-open-prs check-twig-extra check-no-raw-html-form validate-translations db-up test-with-db test-coverage-with-db update-deps strip-cursor-coauthor-from-history
 
 help:
 	@echo "Seed Kit Bundle - Development Commands"
@@ -38,7 +38,7 @@ help:
 	@echo "  igor          Run Igor worker-state audit (REQ-CS-008)"
 	@echo "  qa            Run all QA checks (cs-check + test)"
 	@echo "Release:"
-	@echo "  release-check Pre-release: ensure-up, co-author/open-PR/raw-form checks, composer-sync, cs-fix, cs-check, rector-dry, phpstan, deptrac, validate-phpdoc, igor, validate-translations, test-coverage + 100% gate, demos"
+	@echo "  release-check Pre-release: ensure-up, co-author/open-PR/Twig Extra/raw-form checks, composer-sync, cs-fix, cs-check, rector-dry, phpstan, deptrac, validate-phpdoc, igor, validate-translations, test-coverage + 100% gate, demos"
 	@echo "  composer-sync Validate composer.json and align composer.lock (no install)"
 	@echo "Cleanup:"
 	@echo "  clean         Remove vendor and cache"
@@ -56,7 +56,7 @@ help:
 	@echo "  validate-phpdoc        Fail when a class or public method in src/ has no PHPDoc (REQ-CS-001)"
 	@echo "  validate-translations  YAML syntax + key parity of the 10 locales (REQ-MAKE-004 / REQ-I18N-002)"
 	@echo "  check-no-raw-html-form No raw form tags in bundle or demo Twig (REQ-TWIG-005)"
-	@echo "        twig/extra-bundle in the package and every Twig demo (REQ-TWIG-004)"
+	@echo "  check-twig-extra       twig/extra-bundle + twig/string-extra in the package and every Twig demo (REQ-TWIG-004)"
 	@echo "  check-open-prs         Fail if unresolved open GitHub PRs remain (REQ-REL-003)"
 	@echo "  setup-hooks            Install git hooks (REQ-GIT-001)"
 	@echo ""
@@ -153,6 +153,7 @@ release-check:
 	@$(MAKE) ensure-up
 	@$(MAKE) check-no-cursor-coauthor
 	@$(MAKE) check-open-prs
+	@$(MAKE) check-twig-extra
 	@$(MAKE) check-no-raw-html-form
 	@$(MAKE) composer-sync
 	@$(MAKE) cs-fix
@@ -197,6 +198,10 @@ test-coverage-with-db: db-up
 	$(COMPOSE) exec -T -e NOWO_TEST_DATABASE_URL='$(TEST_DB_URL)' $(SERVICE_PHP) vendor/bin/phpunit --testsuite Database --coverage-text
 
 # REQ-TWIG-005: no raw <form>/<input>/<textarea>/<select> in bundle or demo Twig templates.
+check-twig-extra:
+	@chmod +x .scripts/check-twig-extra.sh
+	@./.scripts/check-twig-extra.sh
+
 check-no-raw-html-form:
 	@chmod +x .scripts/check-no-raw-html-form.sh
 	@./.scripts/check-no-raw-html-form.sh
